@@ -22,6 +22,11 @@ def new_applicants_notifications():
 def admin_dashboard():
     return render_template('admin/dashboard.html')
 
+# announcements
+@app.route('/admin/announcements')
+def admin_announcements():
+    return render_template('admin/announcements.html')
+
 # admin applicantions.html
 @app.route('/admin/applications')
 def admin_applications():
