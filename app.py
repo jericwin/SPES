@@ -17,5 +17,15 @@ def new_applicants_messages():
 def new_applicants_notifications():
     return render_template('new/notifications.html')
 
+# --------------------------------------------------------ADMIN---------------------------------------------------------------------#
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    return render_template('admin/dashboard.html')
+
+# admin applicantions.html
+@app.route('/admin/applications')
+def admin_applications():
+    return render_template('admin/applications.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
