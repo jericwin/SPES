@@ -161,6 +161,21 @@
   <body>
     <nav class="navbar navbar-expand-lg py-3 px-4">
       <div class="container-fluid justify-content-end gap-2">
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div
+          class="alert alert-{{ category }} alert-dismissible fade show"
+          role="alert"
+        >
+          {{ message }}
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Close"
+          ></button>
+        </div>
+        {% endfor %} {% endif %} {% endwith %}
         <ul class="navbar-nav me-3 gap-3">
           <li class="nav-item">
             <a class="nav-link active" href="#"> HOME </a>
@@ -236,22 +251,26 @@
                     role="tabpanel"
                     aria-labelledby="login-tab"
                   >
-                    <form>
+                    <form action="{{ url_for('login') }}" method="POST">
                       <div class="form-floating mb-3">
                         <input
-                          type="email"
+                          type="text"
                           class="form-control"
-                          id="email"
-                          placeholder="Enter your email"
+                          id="username"
+                          name="username"
+                          placeholder="Enter your username"
+                          required
                         />
-                        <label for="email">Email address</label>
+                        <label for="username">Username</label>
                       </div>
                       <div class="form-floating mb-3 position-relative">
                         <input
                           type="password"
                           class="form-control"
                           id="password"
+                          name="password"
                           placeholder="Enter your password"
+                          required
                         />
                         <label for="password">Password</label>
                         <i
@@ -277,14 +296,16 @@
                     role="tabpanel"
                     aria-labelledby="register-tab"
                   >
-                    <form>
+                    <form action="{{ url_for('register') }}" method="POST">
                       <div class="form-floating mb-3">
                         <select
                           class="form-select"
                           id="applicantType"
+                          name="applicantType"
                           aria-label="Applicant Type"
+                          required
                         >
-                          <option selected>Select Applicant Type</option>
+                          <option value="">Select Applicant Type</option>
                           <option value="new">New Applicant</option>
                           <option value="old">Old Applicant</option>
                         </select>
@@ -295,16 +316,31 @@
                           type="text"
                           class="form-control"
                           id="username"
+                          name="username"
                           placeholder="Enter your username"
+                          required
                         />
                         <label for="username">Username</label>
+                      </div>
+                      <div class="form-floating mb-3">
+                        <input
+                          type="email"
+                          class="form-control"
+                          id="email"
+                          name="email"
+                          placeholder="Enter your email"
+                          required
+                        />
+                        <label for="email">Email</label>
                       </div>
                       <div class="form-floating mb-3 position-relative">
                         <input
                           type="password"
                           class="form-control"
                           id="passwordRegister"
+                          name="password"
                           placeholder="Enter your password"
+                          required
                         />
                         <label for="passwordRegister">Password</label>
                         <i
@@ -323,7 +359,9 @@
                           type="password"
                           class="form-control"
                           id="confirmPassword"
+                          name="confirmPassword"
                           placeholder="Confirm your password"
+                          required
                         />
                         <label for="confirmPassword">Confirm Password</label>
                         <i
@@ -337,12 +375,9 @@
                           onclick="togglePasswordVisibility('confirmPassword', this)"
                         ></i>
                       </div>
-                      <a
-                        href="{{ url_for('new_applicants_dashboard') }}"
-                        class="btn btn-primary w-100"
-                      >
+                      <button type="submit" class="btn btn-primary w-100">
                         Register
-                      </a>
+                      </button>
                     </form>
                   </div>
                 </div>
@@ -370,13 +405,15 @@
                 ></button>
               </div>
               <div class="modal-body">
-                <form>
+                <form action="{{ url_for('login') }}" method="POST">
                   <div class="form-floating mb-3">
                     <input
                       type="text"
                       class="form-control"
                       id="usernameLogin"
+                      name="username"
                       placeholder="Enter your username"
+                      required
                     />
                     <label for="usernameLogin">Username</label>
                   </div>
@@ -385,7 +422,9 @@
                       type="password"
                       class="form-control"
                       id="passwordLogin"
+                      name="password"
                       placeholder="Enter your password"
+                      required
                     />
                     <label for="passwordLogin">Password</label>
                     <i
