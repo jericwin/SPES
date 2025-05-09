@@ -80,17 +80,323 @@ def new_applicants_notifications():
 # --------------------------------------------------------ADMIN---------------------------------------------------------------------#
 @app.route('/admin/dashboard')
 def admin_dashboard():
-    return render_template('admin/dashboard.html')
+    if 'user_id' not in session or session['role'] != 'admin':
+        flash('Please login as admin to access this page', 'error')
+        return redirect(url_for('home'))
+
+    conn = get_db_connection()
+    stats = {
+        'total_applicants': 0,
+        'pending_applicants': 0,
+        'approved_applicants': 0,
+        'rejected_applicants': 0,
+        'for_exam_applicants': 0,
+        'for_interview_applicants': 0
+    }
+    recent_applications = []
+    monthly_data = []
+    exam_overview = {
+        'completed': 0,
+        'scheduled': 0,
+        'in_progress': 0
+    }
+
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            
+            # Get total applicants count
+            cursor.execute("""
+                SELECT COUNT(*) as total FROM applicants
+            """)
+            stats['total_applicants'] = cursor.fetchone()['total']
+
+            # Get counts by status
+            cursor.execute("""
+                SELECT status, COUNT(*) as count 
+                FROM applicants 
+                GROUP BY status
+            """)
+            status_counts = cursor.fetchall()
+            for status_count in status_counts:
+                status = status_count['status']
+                count = status_count['count']
+                if status == 'pending':
+                    stats['pending_applicants'] = count
+                elif status == 'approved':
+                    stats['approved_applicants'] = count
+                elif status == 'rejected':
+                    stats['rejected_applicants'] = count
+                elif status == 'for exam':
+                    stats['for_exam_applicants'] = count
+                elif status == 'for interview':
+                    stats['for_interview_applicants'] = count
+
+            # Get monthly application data for the last 6 months
+            cursor.execute("""
+                SELECT 
+                    DATE_FORMAT(submission_date, '%Y-%m') as month,
+                    COUNT(*) as count
+                FROM applicants
+                WHERE submission_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+                GROUP BY DATE_FORMAT(submission_date, '%Y-%m')
+                ORDER BY month ASC
+            """)
+            monthly_data = cursor.fetchall()
+
+            # Get exam overview data
+            cursor.execute("""
+                SELECT 
+                    CASE 
+                        WHEN status = 'approved' THEN 'completed'
+                        WHEN status = 'for exam' THEN 'in_progress'
+                        WHEN status = 'for interview' THEN 'scheduled'
+                        ELSE NULL
+                    END as exam_status,
+                    COUNT(*) as count
+                FROM applicants
+                WHERE status IN ('approved', 'for exam', 'for interview')
+                GROUP BY exam_status
+            """)
+            exam_data = cursor.fetchall()
+            for data in exam_data:
+                if data['exam_status']:
+                    exam_overview[data['exam_status']] = data['count']
+
+            # Get recent applications (last 5)
+            cursor.execute("""
+                SELECT 
+                    a.id as application_id,
+                    a.status,
+                    a.submission_date,
+                    u.name as applicant_name,
+                    ui.first_name,
+                    ui.middle_name,
+                    ui.last_name,
+                    ur.gwa_decimal,
+                    ur.gwa_percent
+                FROM applicants a
+                JOIN users u ON a.user_id = u.id
+                LEFT JOIN user_info ui ON u.id = ui.user_id
+                LEFT JOIN user_resources ur ON u.id = ur.user_id
+                ORDER BY a.submission_date DESC
+                LIMIT 5
+            """)
+            recent_applications = cursor.fetchall()
+
+            # Format dates for display
+            for app in recent_applications:
+                if app['submission_date']:
+                    app['submission_date'] = app['submission_date'].strftime('%B %d, %Y')
+
+        except Exception as e:
+            print(f"Error fetching dashboard data: {e}")
+            flash('Error loading dashboard data', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+
+    return render_template('admin/dashboard.html', 
+                         stats=stats, 
+                         recent_applications=recent_applications,
+                         monthly_data=monthly_data,
+                         exam_overview=exam_overview)
 
 # announcements
 @app.route('/admin/announcements')
 def admin_announcements():
-    return render_template('admin/announcements.html')
+    if 'user_id' not in session or session['role'] != 'admin':
+        flash('Please login as admin to access this page', 'error')
+        return redirect(url_for('home'))
+
+    conn = get_db_connection()
+    announcements = []
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Fetch announcements with admin name
+            cursor.execute("""
+                SELECT 
+                    a.*,
+                    u.name as admin_name
+                FROM announcements a
+                LEFT JOIN users u ON a.posted_by = u.id
+                ORDER BY a.announcement_date DESC
+            """)
+            announcements = cursor.fetchall()
+
+            # Format dates for display
+            for announcement in announcements:
+                if announcement['announcement_date']:
+                    announcement['announcement_date'] = announcement['announcement_date'].strftime('%B %d, %Y')
+
+        except Exception as e:
+            print(f"Error fetching announcements: {e}")
+            flash('Error loading announcements', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+
+    return render_template('admin/announcements.html', announcements=announcements)
+
+@app.route('/post-announcement', methods=['POST'])
+def post_announcement():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+
+    try:
+        title = request.form.get('title')
+        description = request.form.get('description')
+        target_audience = request.form.get('targetAudience')
+        announcement_type = request.form.get('announcementType')
+        announcement_file = request.files.get('announcementFile')
+
+        if not title or not description or not target_audience or not announcement_type:
+            return jsonify({'success': False, 'message': 'Please fill in all required fields'})
+
+        # Handle file upload if present
+        file_path = None
+        if announcement_file and announcement_file.filename:
+            if not allowed_file(announcement_file.filename):
+                return jsonify({'success': False, 'message': 'Only PDF files are allowed'})
+            
+            filename = secure_filename(announcement_file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            announcement_file.save(file_path)
+
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO announcements 
+                    (title, description, target_audience, announcement_type, announcement_date, file_path, posted_by)
+                    VALUES (%s, %s, %s, %s, CURDATE(), %s, %s)
+                """, (title, description, target_audience, announcement_type, file_path, session['user_id']))
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Announcement posted successfully'})
+            except Exception as e:
+                conn.rollback()
+                print(f"Database error: {str(e)}")
+                return jsonify({'success': False, 'message': f'Database error: {str(e)}'})
+            finally:
+                cursor.close()
+                conn.close()
+
+    except Exception as e:
+        print(f"Error posting announcement: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error posting announcement: {str(e)}'})
+
+@app.route('/delete-announcement/<int:announcement_id>', methods=['POST'])
+def delete_announcement(announcement_id):
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+
+    try:
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                # Get file path before deleting
+                cursor.execute("SELECT file_path FROM announcements WHERE id = %s", (announcement_id,))
+                result = cursor.fetchone()
+                
+                if result and result[0]:
+                    # Delete the file if it exists
+                    file_path = result[0]
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+
+                # Delete the announcement
+                cursor.execute("DELETE FROM announcements WHERE id = %s", (announcement_id,))
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Announcement deleted successfully'})
+            except Exception as e:
+                conn.rollback()
+                print(f"Database error: {str(e)}")
+                return jsonify({'success': False, 'message': f'Database error: {str(e)}'})
+            finally:
+                cursor.close()
+                conn.close()
+
+    except Exception as e:
+        print(f"Error deleting announcement: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error deleting announcement: {str(e)}'})
 
 # admin applicantions.html
 @app.route('/admin/applications')
 def admin_applications():
-    return render_template('admin/applications.html')
+    if 'user_id' not in session or session['role'] != 'admin':
+        flash('Please login as admin to access this page', 'error')
+        return redirect(url_for('home'))
+
+    conn = get_db_connection()
+    applications = []
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Fetch applications with user details
+            cursor.execute("""
+                SELECT 
+                    a.id as application_id,
+                    a.status,
+                    a.submission_date,
+                    u.name as applicant_name,
+                    ui.first_name,
+                    ui.middle_name,
+                    ui.last_name,
+                    ur.gwa_decimal,
+                    ur.gwa_percent
+                FROM applicants a
+                JOIN users u ON a.user_id = u.id
+                LEFT JOIN user_info ui ON u.id = ui.user_id
+                LEFT JOIN user_resources ur ON u.id = ur.user_id
+                ORDER BY a.submission_date DESC
+            """)
+            applications = cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching applications: {e}")
+            flash('Error loading applications', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+
+    return render_template('admin/applications.html', applications=applications)
+
+@app.route('/update-application-status', methods=['POST'])
+def update_application_status():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+
+    try:
+        data = request.get_json()
+        application_id = data.get('application_id')
+        new_status = data.get('status')
+
+        if not application_id or not new_status:
+            return jsonify({'success': False, 'message': 'Missing required data'})
+
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE applicants 
+                    SET status = %s 
+                    WHERE id = %s
+                """, (new_status, application_id))
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Status updated successfully'})
+            except Exception as e:
+                conn.rollback()
+                print(f"Database error: {str(e)}")
+                return jsonify({'success': False, 'message': f'Database error: {str(e)}'})
+            finally:
+                cursor.close()
+                conn.close()
+    except Exception as e:
+        print(f"Error updating status: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error updating status: {str(e)}'})
 
 # -----------------------------------------------------------------------------------------------------
 
@@ -391,6 +697,114 @@ def revoke_application():
     except Exception as e:
         print(f"Application error: {str(e)}")
         return jsonify({'success': False, 'message': f'Error revoking application: {str(e)}'})
+
+@app.route('/get-application-details/<int:application_id>')
+def get_application_details(application_id):
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Fetch only essential application information
+        cursor.execute("""
+            SELECT 
+                a.id as application_id,
+                a.status,
+                a.submission_date,
+                u.name as applicant_name,
+                ui.first_name,
+                ui.middle_name,
+                ui.last_name,
+                ur.gwa_decimal,
+                ur.gwa_percent,
+                ur.cor_filename,
+                ur.cog_filename,
+                ur.upload_date
+            FROM applicants a
+            JOIN users u ON a.user_id = u.id
+            LEFT JOIN user_info ui ON u.id = ui.user_id
+            LEFT JOIN user_resources ur ON u.id = ur.user_id
+            WHERE a.id = %s
+        """, (application_id,))
+        
+        application = cursor.fetchone()
+        
+        if not application:
+            return jsonify({'success': False, 'message': 'Application not found'})
+
+        # Format dates for display
+        if application['submission_date']:
+            application['submission_date'] = application['submission_date'].strftime('%B %d, %Y')
+        if application['upload_date']:
+            application['upload_date'] = application['upload_date'].strftime('%B %d, %Y %H:%M')
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'application': application
+        })
+
+    except Exception as e:
+        print(f"Error fetching application details: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error fetching application details: {str(e)}'})
+
+@app.route('/download-document/<int:application_id>/<document_type>')
+def download_document(application_id, document_type):
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Fetch document data
+        cursor.execute("""
+            SELECT 
+                ur.cor_file,
+                ur.cor_filename,
+                ur.cog_file,
+                ur.cog_filename
+            FROM applicants a
+            JOIN user_resources ur ON a.user_id = ur.user_id
+            WHERE a.id = %s
+        """, (application_id,))
+        
+        result = cursor.fetchone()
+        
+        if not result:
+            return jsonify({'success': False, 'message': 'Document not found'})
+
+        # Get the appropriate file data and filename based on document type
+        if document_type == 'cor':
+            file_data = result['cor_file']
+            filename = result['cor_filename']
+        elif document_type == 'cog':
+            file_data = result['cog_file']
+            filename = result['cog_filename']
+        else:
+            return jsonify({'success': False, 'message': 'Invalid document type'})
+
+        if not file_data:
+            return jsonify({'success': False, 'message': 'File not found'})
+
+        cursor.close()
+        conn.close()
+
+        # Return file as response
+        return send_file(
+            io.BytesIO(file_data),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except Exception as e:
+        print(f"Error downloading document: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error downloading document: {str(e)}'})
 
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
