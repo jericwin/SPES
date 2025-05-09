@@ -45,6 +45,7 @@ CREATE TABLE `announcements` (
   `title` varchar(255) NOT NULL,
   `description` text NOT NULL,
   `target_audience` enum('new','old','all') NOT NULL,
+  `announcement_type` enum('main','notification') NOT NULL DEFAULT 'notification',
   `announcement_date` date NOT NULL,
   `file_path` varchar(255) DEFAULT NULL,
   `posted_by` int(11) DEFAULT NULL
