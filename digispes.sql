@@ -102,6 +102,28 @@ CREATE TABLE `user_info` (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_resources`
+--
+
+CREATE TABLE `user_resources` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `cor_file` LONGBLOB DEFAULT NULL,       -- Store Certificate of Registration file data
+  `cor_filename` varchar(255) DEFAULT NULL, -- Original filename for COR
+  `cog_file` LONGBLOB DEFAULT NULL,       -- Store Copy of Grades file data
+  `cog_filename` varchar(255) DEFAULT NULL, -- Original filename for COG
+  `gwa_decimal` decimal(4,2) DEFAULT NULL,    -- e.g., 1.25
+  `gwa_percent` INT,             -- e.g., 98
+  `remarks` TEXT,                -- optional remarks about the documents
+  `upload_date` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
 --
 -- Indexes for dumped tables
 --
