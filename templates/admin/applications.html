@@ -218,17 +218,17 @@
                     class="d-flex flex-wrap justify-content-between align-items-center mb-3"
                   >
                     <div class="btn-group flex-wrap" role="group">
-                      <button class="btn btn-primary mb-2">Pending</button>
-                      <button class="btn btn-outline-primary mb-2">
+                      <button class="btn btn-primary mb-2" onclick="filterApplications('pending')">Pending</button>
+                      <button class="btn btn-outline-primary mb-2" onclick="filterApplications('approved')">
                         Approved
                       </button>
-                      <button class="btn btn-outline-primary mb-2">
+                      <button class="btn btn-outline-primary mb-2" onclick="filterApplications('rejected')">
                         Rejected
                       </button>
-                      <button class="btn btn-outline-primary mb-2">
+                      <button class="btn btn-outline-primary mb-2" onclick="filterApplications('for interview')">
                         For Interview
                       </button>
-                      <button class="btn btn-outline-primary mb-2">
+                      <button class="btn btn-outline-primary mb-2" onclick="filterApplications('for exam')">
                         For Exam
                       </button>
                     </div>
@@ -245,73 +245,74 @@
                           <tr>
                             <th>NAME</th>
                             <th>SUBMISSION DATE</th>
+                            <th>GWA</th>
                             <th>STATUS</th>
                             <th>ACTIONS</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr>
-                            <td><strong>Maria Cruz</strong></td>
-                            <td>April 25, 2025</td>
+                          {% for app in applications %}
+                          <tr class="application-row" data-status="{{ app.status }}">
                             <td>
-                              <span class="badge bg-warning text-dark"
-                                >Pending</span
-                              >
+                              <strong>
+                                {% if app.first_name and app.last_name %}
+                                  {{ app.first_name }} {{ app.middle_name }} {{ app.last_name }}
+                                {% else %}
+                                  {{ app.applicant_name }}
+                                {% endif %}
+                              </strong>
+                            </td>
+                            <td>{{ app.submission_date.strftime('%B %d, %Y') if app.submission_date else 'N/A' }}</td>
+                            <td>
+                              {% if app.gwa_decimal %}
+                                {{ "%.2f"|format(app.gwa_decimal) }}
+                              {% elif app.gwa_percent %}
+                                {{ app.gwa_percent }}%
+                              {% else %}
+                                N/A
+                              {% endif %}
+                            </td>
+                            <td>
+                              <span class="badge {% if app.status == 'pending' %}bg-warning text-dark
+                                              {% elif app.status == 'approved' %}bg-success
+                                              {% elif app.status == 'rejected' %}bg-danger
+                                              {% elif app.status == 'for interview' %}bg-info
+                                              {% elif app.status == 'for exam' %}bg-primary
+                                              {% endif %}">
+                                {{ app.status|title }}
+                              </span>
                             </td>
                             <td>
                               <button
                                 class="btn btn-sm btn-primary shadow-sm me-1"
+                                onclick="viewApplication({{ app.application_id }})"
                               >
                                 View
                               </button>
                               <button
                                 class="btn btn-sm btn-success shadow-sm me-1"
+                                onclick="updateStatus({{ app.application_id }}, 'approved')"
+                                {% if app.status == 'approved' %}disabled{% endif %}
                               >
                                 Approve
                               </button>
                               <button
                                 class="btn btn-sm btn-danger shadow-sm me-1"
+                                onclick="updateStatus({{ app.application_id }}, 'rejected')"
+                                {% if app.status == 'rejected' %}disabled{% endif %}
                               >
                                 Reject
                               </button>
                               <button
                                 class="btn btn-sm btn-outline-primary shadow-sm"
+                                onclick="updateStatus({{ app.application_id }}, 'for exam')"
+                                {% if app.status == 'for exam' %}disabled{% endif %}
                               >
                                 Send Exam Link
                               </button>
                             </td>
                           </tr>
-                          <tr>
-                            <td><strong>Carlos Diaz</strong></td>
-                            <td>April 19, 2025</td>
-                            <td>
-                              <span class="badge bg-warning text-dark"
-                                >Pending</span
-                              >
-                            </td>
-                            <td>
-                              <button
-                                class="btn btn-sm btn-primary shadow-sm me-1"
-                              >
-                                View
-                              </button>
-                              <button
-                                class="btn btn-sm btn-success shadow-sm me-1"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                class="btn btn-sm btn-danger shadow-sm me-1"
-                              >
-                                Reject
-                              </button>
-                              <button
-                                class="btn btn-sm btn-outline-primary shadow-sm"
-                              >
-                                Send Exam Link
-                              </button>
-                            </td>
-                          </tr>
+                          {% endfor %}
                         </tbody>
                       </table>
                     </div>
@@ -327,6 +328,175 @@
       </div>
     </div>
 
+    <!-- Application Details Modal -->
+    <div class="modal fade" id="applicationDetailsModal" tabindex="-1" aria-labelledby="applicationDetailsModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="applicationDetailsModalLabel">Application Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-12">
+                <table class="table table-sm">
+                  <tr>
+                    <th>Full Name:</th>
+                    <td id="modal-full-name"></td>
+                  </tr>
+                  <tr>
+                    <th>GWA:</th>
+                    <td id="modal-gwa"></td>
+                  </tr>
+                  <tr>
+                    <th>Submission Date:</th>
+                    <td id="modal-submission-date"></td>
+                  </tr>
+                  <tr>
+                    <th>Certificate of Registration:</th>
+                    <td>
+                      <span id="modal-cor"></span>
+                      <button class="btn btn-sm btn-primary ms-2" onclick="downloadDocument('cor')" id="download-cor">
+                        <i class="bi bi-download"></i> Download
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Copy of Grades:</th>
+                    <td>
+                      <span id="modal-cog"></span>
+                      <button class="btn btn-sm btn-primary ms-2" onclick="downloadDocument('cog')" id="download-cog">
+                        <i class="bi bi-download"></i> Download
+                      </button>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Initialize Bootstrap modal
+      const applicationDetailsModal = new bootstrap.Modal(document.getElementById('applicationDetailsModal'));
+      let currentApplicationId = null;
+
+      function filterApplications(status) {
+        const rows = document.querySelectorAll('.application-row');
+        rows.forEach(row => {
+          if (status === 'all' || row.dataset.status === status) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+
+        // Update button styles
+        const buttons = document.querySelectorAll('.btn-group .btn');
+        buttons.forEach(btn => {
+          if (btn.textContent.toLowerCase().includes(status)) {
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-primary');
+          } else {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+          }
+        });
+      }
+
+      function updateStatus(applicationId, newStatus) {
+        if (confirm(`Are you sure you want to mark this application as ${newStatus}?`)) {
+          fetch('/update-application-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              application_id: applicationId,
+              status: newStatus
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert(data.message);
+              location.reload();
+            } else {
+              alert(data.message);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the status');
+          });
+        }
+      }
+
+      function viewApplication(applicationId) {
+        currentApplicationId = applicationId;
+        fetch(`/get-application-details/${applicationId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const app = data.application;
+              
+              // Update modal content
+              document.getElementById('modal-full-name').textContent = 
+                app.first_name && app.last_name 
+                  ? `${app.first_name} ${app.middle_name || ''} ${app.last_name}`
+                  : app.applicant_name;
+              
+              document.getElementById('modal-gwa').textContent = 
+                app.gwa_decimal ? app.gwa_decimal.toFixed(2) : 
+                app.gwa_percent ? `${app.gwa_percent}%` : 'N/A';
+              
+              document.getElementById('modal-submission-date').textContent = app.submission_date || 'N/A';
+              
+              // Update document information and download buttons
+              const corElement = document.getElementById('modal-cor');
+              const cogElement = document.getElementById('modal-cog');
+              const downloadCorBtn = document.getElementById('download-cor');
+              const downloadCogBtn = document.getElementById('download-cog');
+
+              if (app.cor_filename) {
+                corElement.textContent = app.cor_filename;
+                downloadCorBtn.style.display = 'inline-block';
+              } else {
+                corElement.textContent = 'Not uploaded';
+                downloadCorBtn.style.display = 'none';
+              }
+
+              if (app.cog_filename) {
+                cogElement.textContent = app.cog_filename;
+                downloadCogBtn.style.display = 'inline-block';
+              } else {
+                cogElement.textContent = 'Not uploaded';
+                downloadCogBtn.style.display = 'none';
+              }
+
+              // Show the modal
+              applicationDetailsModal.show();
+            } else {
+              alert(data.message);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while fetching application details');
+          });
+      }
+
+      function downloadDocument(documentType) {
+        if (!currentApplicationId) return;
+        
+        window.location.href = `/download-document/${currentApplicationId}/${documentType}`;
+      }
+    </script>
   </body>
 </html>
