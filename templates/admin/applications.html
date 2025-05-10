@@ -308,7 +308,11 @@
                                 onclick="updateStatus({{ app.application_id }}, 'for exam')"
                                 {% if app.status == 'for exam' %}disabled{% endif %}
                               >
-                                Send Exam Link
+                                {% if app.status == 'for exam' %}
+                                  Exam Sent
+                                {% else %}
+                                  Send Exam Link
+                                {% endif %}
                               </button>
                             </td>
                           </tr>
