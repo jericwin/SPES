@@ -208,6 +208,8 @@
                             {% elif notification.type == 'application_approved'
                             %}
                             <i class="bi bi-check-circle fs-1 text-success"></i>
+                            {% elif notification.type == 'general' %}
+                            <i class="bi bi-megaphone fs-1 text-info"></i>
                             {% else %}
                             <i class="bi bi-bell fs-1 text-primary"></i>
                             {% endif %}
