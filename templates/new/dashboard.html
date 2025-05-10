@@ -242,10 +242,7 @@
                 <!-- bootstrap card -->
                 <div class="card mb-3">
                   <div class="card-body" id="card-body">
-                    <h5 class="card-title text-white">
-                      {% if latest_announcement %} {{ latest_announcement.title
-                      }}
-                    </h5>
+                    <h5 class="card-title text-white">Announcement</h5>
                     <div class="grid2">
                       <div class="cfa-img-container">
                         <img
@@ -256,6 +253,8 @@
                       </div>
                       <div>
                         <p class="card-text text-white" id="cfa-text">
+                          {% if latest_announcement %} {{
+                          latest_announcement.title }}
                           <br />
                           <small>{{ latest_announcement.description }}</small>
                           {% else %} Special Program for Employment of Students
