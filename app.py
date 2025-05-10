@@ -249,20 +249,9 @@ def post_announcement():
         description = request.form.get('description')
         target_audience = request.form.get('targetAudience')
         announcement_type = request.form.get('announcementType')
-        announcement_file = request.files.get('announcementFile')
 
         if not title or not description or not target_audience or not announcement_type:
             return jsonify({'success': False, 'message': 'Please fill in all required fields'})
-
-        # Handle file upload if present
-        file_path = None
-        if announcement_file and announcement_file.filename:
-            if not allowed_file(announcement_file.filename):
-                return jsonify({'success': False, 'message': 'Only PDF files are allowed'})
-            
-            filename = secure_filename(announcement_file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            announcement_file.save(file_path)
 
         conn = get_db_connection()
         if conn:
@@ -270,9 +259,9 @@ def post_announcement():
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO announcements 
-                    (title, description, target_audience, announcement_type, announcement_date, file_path, posted_by)
-                    VALUES (%s, %s, %s, %s, CURDATE(), %s, %s)
-                """, (title, description, target_audience, announcement_type, file_path, session['user_id']))
+                    (title, description, target_audience, announcement_type, announcement_date, posted_by)
+                    VALUES (%s, %s, %s, %s, CURDATE(), %s)
+                """, (title, description, target_audience, announcement_type, session['user_id']))
                 conn.commit()
                 return jsonify({'success': True, 'message': 'Announcement posted successfully'})
             except Exception as e:
@@ -287,6 +276,50 @@ def post_announcement():
         print(f"Error posting announcement: {str(e)}")
         return jsonify({'success': False, 'message': f'Error posting announcement: {str(e)}'})
 
+@app.route('/get-announcement/<int:announcement_id>')
+def get_announcement(announcement_id):
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+
+    try:
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("""
+                    SELECT 
+                        a.*,
+                        u.name as admin_name
+                    FROM announcements a
+                    LEFT JOIN users u ON a.posted_by = u.id
+                    WHERE a.id = %s
+                """, (announcement_id,))
+                
+                announcement = cursor.fetchone()
+                
+                if not announcement:
+                    return jsonify({'success': False, 'message': 'Announcement not found'})
+
+                # Format date for display
+                if announcement['announcement_date']:
+                    announcement['announcement_date'] = announcement['announcement_date'].strftime('%B %d, %Y')
+
+                return jsonify({
+                    'success': True,
+                    'announcement': announcement
+                })
+
+            except Exception as e:
+                print(f"Database error: {str(e)}")
+                return jsonify({'success': False, 'message': f'Database error: {str(e)}'})
+            finally:
+                cursor.close()
+                conn.close()
+
+    except Exception as e:
+        print(f"Error fetching announcement: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error fetching announcement: {str(e)}'})
+
 @app.route('/delete-announcement/<int:announcement_id>', methods=['POST'])
 def delete_announcement(announcement_id):
     if 'user_id' not in session or session['role'] != 'admin':
@@ -297,16 +330,6 @@ def delete_announcement(announcement_id):
         if conn:
             try:
                 cursor = conn.cursor()
-                # Get file path before deleting
-                cursor.execute("SELECT file_path FROM announcements WHERE id = %s", (announcement_id,))
-                result = cursor.fetchone()
-                
-                if result and result[0]:
-                    # Delete the file if it exists
-                    file_path = result[0]
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-
                 # Delete the announcement
                 cursor.execute("DELETE FROM announcements WHERE id = %s", (announcement_id,))
                 conn.commit()
