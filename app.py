@@ -41,9 +41,24 @@ def new_applicants_dashboard():
     conn = get_db_connection()
     has_submitted = False
     application_status = None
+    latest_announcement = None
+    
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
+            
+            # Get latest main announcement
+            cursor.execute("""
+                SELECT title, description, announcement_date
+                FROM announcements 
+                WHERE announcement_type = 'main'
+                ORDER BY announcement_date DESC 
+                LIMIT 1
+            """)
+            latest_announcement = cursor.fetchone()
+            if latest_announcement and latest_announcement['announcement_date']:
+                latest_announcement['announcement_date'] = latest_announcement['announcement_date'].strftime('%B %d, %Y')
+            
             # Check if there's an active application
             cursor.execute("""
                 SELECT a.status, a.id 
@@ -67,7 +82,8 @@ def new_applicants_dashboard():
     return render_template('new/dashboard.html', 
                          username=session['username'], 
                          has_submitted=has_submitted,
-                         application_status=application_status)
+                         application_status=application_status,
+                         latest_announcement=latest_announcement)
 
 @app.route('/new-applicants/messages')
 def new_applicants_messages():
@@ -100,10 +116,23 @@ def admin_dashboard():
         'scheduled': 0,
         'in_progress': 0
     }
+    latest_announcement = None
 
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
+            
+            # Get latest main announcement
+            cursor.execute("""
+                SELECT title, description, announcement_date
+                FROM announcements 
+                WHERE announcement_type = 'main'
+                ORDER BY announcement_date DESC 
+                LIMIT 1
+            """)
+            latest_announcement = cursor.fetchone()
+            if latest_announcement and latest_announcement['announcement_date']:
+                latest_announcement['announcement_date'] = latest_announcement['announcement_date'].strftime('%B %d, %Y')
             
             # Get total applicants count
             cursor.execute("""
@@ -200,7 +229,8 @@ def admin_dashboard():
                          stats=stats, 
                          recent_applications=recent_applications,
                          monthly_data=monthly_data,
-                         exam_overview=exam_overview)
+                         exam_overview=exam_overview,
+                         latest_announcement=latest_announcement)
 
 # announcements
 @app.route('/admin/announcements')
