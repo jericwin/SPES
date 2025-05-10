@@ -91,7 +91,39 @@ def new_applicants_messages():
 
 @app.route('/new-applicants/notifications')
 def new_applicants_notifications():
-    return render_template('new/notifications.html')
+    if 'user_id' not in session or session['role'] != 'new':
+        flash('Please login to access this page', 'error')
+        return redirect(url_for('home'))
+        
+    conn = get_db_connection()
+    notifications = []
+    
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Fetch notifications for the current user
+            cursor.execute("""
+                SELECT * FROM notifications 
+                WHERE user_id = %s 
+                ORDER BY created_at DESC
+            """, (session['user_id'],))
+            notifications = cursor.fetchall()
+            
+            # Format dates for display
+            for notification in notifications:
+                if notification['created_at']:
+                    notification['created_at'] = notification['created_at'].strftime('%B %d, %Y %I:%M %p')
+                    
+        except Exception as e:
+            print(f"Error fetching notifications: {e}")
+            flash('Error loading notifications', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+            
+    return render_template('new/notifications.html', 
+                         username=session['username'],
+                         notifications=notifications)
 
 # --------------------------------------------------------ADMIN---------------------------------------------------------------------#
 @app.route('/admin/dashboard')
@@ -432,12 +464,48 @@ def update_application_status():
         conn = get_db_connection()
         if conn:
             try:
-                cursor = conn.cursor()
+                cursor = conn.cursor(dictionary=True)
+                
+                # First get the user_id for this application
+                cursor.execute("""
+                    SELECT user_id FROM applicants WHERE id = %s
+                """, (application_id,))
+                result = cursor.fetchone()
+                if not result:
+                    return jsonify({'success': False, 'message': 'Application not found'})
+                
+                user_id = result['user_id']
+                
+                # Update application status
                 cursor.execute("""
                     UPDATE applicants 
                     SET status = %s 
                     WHERE id = %s
                 """, (new_status, application_id))
+                
+                # Create notification based on status
+                if new_status == 'approved':
+                    cursor.execute("""
+                        INSERT INTO notifications (user_id, title, message, type)
+                        VALUES (%s, %s, %s, %s)
+                    """, (
+                        user_id,
+                        'Application Approved',
+                        'Your application has been approved! Please wait for further instructions regarding the examination.',
+                        'application_approved'
+                    ))
+                elif new_status == 'for exam':
+                    cursor.execute("""
+                        INSERT INTO notifications (user_id, title, message, type, action_url)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (
+                        user_id,
+                        'Examination Link Available',
+                        'Your examination link is now available. Click here to take the exam.',
+                        'exam_link',
+                        '/examinations'  # This will be implemented later
+                    ))
+                
                 conn.commit()
                 return jsonify({'success': True, 'message': 'Status updated successfully'})
             except Exception as e:
