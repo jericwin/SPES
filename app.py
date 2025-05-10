@@ -927,6 +927,43 @@ def download_document(application_id, document_type):
         print(f"Error downloading document: {str(e)}")
         return jsonify({'success': False, 'message': f'Error downloading document: {str(e)}'})
 
+@app.route('/examinations')
+def examinations():
+    if 'user_id' not in session or session['role'] != 'new':
+        flash('Please login to access this page', 'error')
+        return redirect(url_for('home'))
+        
+    conn = get_db_connection()
+    can_take_exam = False
+    
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Check if user has an application with 'for exam' status
+            cursor.execute("""
+                SELECT status FROM applicants 
+                WHERE user_id = %s 
+                ORDER BY submission_date DESC 
+                LIMIT 1
+            """, (session['user_id'],))
+            result = cursor.fetchone()
+            
+            if result and result['status'] == 'for exam':
+                can_take_exam = True
+                
+        except Exception as e:
+            print(f"Error checking exam status: {e}")
+            flash('Error checking exam status', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+            
+    if not can_take_exam:
+        flash('You are not authorized to take the exam', 'error')
+        return redirect(url_for('new_applicants_dashboard'))
+        
+    return render_template('new/examinations.html', username=session['username'])
+
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
     app.run(debug=True)
