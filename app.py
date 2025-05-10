@@ -319,11 +319,32 @@ def post_announcement():
         if conn:
             try:
                 cursor = conn.cursor()
+                # Insert the announcement
                 cursor.execute("""
                     INSERT INTO announcements 
                     (title, description, target_audience, announcement_type, announcement_date, posted_by)
                     VALUES (%s, %s, %s, %s, CURDATE(), %s)
                 """, (title, description, target_audience, announcement_type, session['user_id']))
+                
+                # If it's a notification type announcement, create notifications for target users
+                if announcement_type == 'notification':
+                    # Get target users based on audience
+                    if target_audience == 'all':
+                        cursor.execute("SELECT id FROM users WHERE role IN ('new', 'old')")
+                    elif target_audience == 'new':
+                        cursor.execute("SELECT id FROM users WHERE role = 'new'")
+                    else:  # old
+                        cursor.execute("SELECT id FROM users WHERE role = 'old'")
+                    
+                    target_users = cursor.fetchall()
+                    
+                    # Create notifications for each target user
+                    for user in target_users:
+                        cursor.execute("""
+                            INSERT INTO notifications (user_id, title, message, type)
+                            VALUES (%s, %s, %s, 'general')
+                        """, (user[0], title, description))
+                
                 conn.commit()
                 return jsonify({'success': True, 'message': 'Announcement posted successfully'})
             except Exception as e:
