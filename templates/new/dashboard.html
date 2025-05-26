@@ -105,9 +105,48 @@
       #cfa-text {
         font-size: 1.9rem;
       }
+      .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+      }
+      .custom-toast {
+        background-color: white;
+        border-left: 4px solid #006edc;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+      .custom-toast .toast-header {
+        background-color: #f8f9fa;
+        color: #006edc;
+      }
+      .custom-toast .toast-header i {
+        margin-right: 8px;
+      }
+      .custom-toast.success {
+        border-left-color: #198754;
+      }
+      .custom-toast.success .toast-header {
+        color: #198754;
+      }
+      .custom-toast.error {
+        border-left-color: #dc3545;
+      }
+      .custom-toast.error .toast-header {
+        color: #dc3545;
+      }
+      .custom-toast.warning {
+        border-left-color: #ffc107;
+      }
+      .custom-toast.warning .toast-header {
+        color: #ffc107;
+      }
     </style>
   </head>
   <body>
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
     <!-- sidebar boostrap 5-->
 
     <div class="container-fluid overflow-hidden">
@@ -148,6 +187,15 @@
                   ><span class="ms-3 d-none d-sm-inline" id="sidebar-active"
                     >Dashboard</span
                   >
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('new_applicants_forms') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark-text"></i
+                  ><span class="ms-3 d-none d-sm-inline">Forms</span>
                 </a>
               </li>
               <li>
@@ -253,9 +301,10 @@
                       </div>
                       <div>
                         <p class="card-text text-white" id="cfa-text">
-                          {% if latest_announcement %} {{
+                          {% if latest_announcement %}
+                          <!-- {{
                           latest_announcement.title }}
-                          <br />
+                          <br /> -->
                           <small>{{ latest_announcement.description }}</small>
                           {% else %} Special Program for Employment of Students
                           (SPES) 2025
@@ -558,6 +607,66 @@
             });
         }
       }
+
+      // Function to show toast notifications
+      function showToast(message, type = 'info') {
+        const toastContainer = document.querySelector('.toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast custom-toast ${type}`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+
+        // Set icon based on type
+        let icon = 'bi-info-circle-fill';
+        if (type === 'success') icon = 'bi-check-circle-fill';
+        if (type === 'error') icon = 'bi-exclamation-circle-fill';
+        if (type === 'warning') icon = 'bi-exclamation-triangle-fill';
+
+        toast.innerHTML = `
+          <div class="toast-header">
+            <i class="bi ${icon}"></i>
+            <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <div class="toast-body">
+            ${message}
+          </div>
+        `;
+
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast, {
+          autohide: true,
+          delay: 5000
+        });
+        bsToast.show();
+
+        // Remove toast from DOM after it's hidden
+        toast.addEventListener('hidden.bs.toast', () => {
+          toast.remove();
+        });
+      }
+
+      // Check for flash messages from Flask
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            showToast("{{ message }}", "{{ category }}");
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      // Example usage for other notifications
+      document.addEventListener('DOMContentLoaded', function() {
+        // Show welcome message
+        // showToast("Welcome back, {{ username }}!", "success");
+
+        // Example of how to show other notifications
+        // showToast("New message received", "info");
+        // showToast("Your exam has been submitted", "success");
+        // showToast("Please complete your profile", "warning");
+        // showToast("Error loading data", "error");
+      });
     </script>
   </body>
 </html>
