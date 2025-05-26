@@ -123,7 +123,10 @@
                 </a>
               </li>
               <li>
-                <a href="#" class="nav-link px-sm-0 px-2">
+                <a
+                  href="{{ url_for('admin_exams') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
                   <i class="fs-5 bi-pencil"></i
                   ><span class="ms-3 d-none d-sm-inline">Manage Exam</span>
                 </a>
@@ -377,6 +380,19 @@
                           </table>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <h5 class="card-title">Exams</h5>
+                      <p class="card-text">Total Exams: {{ exam_count }}</p>
+                      <a
+                        href="{{ url_for('admin_exams') }}"
+                        class="btn btn-primary"
+                        >Manage Exams</a
+                      >
                     </div>
                   </div>
                 </div>
