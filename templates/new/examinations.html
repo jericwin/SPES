@@ -4,53 +4,156 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
-    <title>DigiSPES - Examination</title>
+    <title>Examination - DigiSPES</title>
     <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
     />
     <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css"
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
     />
     <style>
-      body {
+      .exam-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .exam-header {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .exam-timer {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545;
+      }
+      .question-card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .question-text {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+      }
+      .option-list {
+        list-style: none;
+        padding: 0;
+      }
+      .option-item {
+        padding: 10px;
+        margin: 5px 0;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .option-item:hover {
         background-color: #f8f9fa;
       }
-      .exam-container {
-        max-width: 1200px;
-        margin: 2rem auto;
-        padding: 0 1rem;
+      .option-item.selected {
+        background-color: #e9ecef;
+        border-color: #0d6efd;
       }
-      .back-button {
-        margin-bottom: 1rem;
+      .navigation-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
       }
-      .exam-frame {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        padding: 1rem;
+      .progress-container {
+        margin: 20px 0;
       }
-      iframe {
+      .page-indicator {
+        text-align: center;
+        margin: 10px 0;
+        color: #6c757d;
+      }
+      .identification-input {
         width: 100%;
-        height: 800px;
-        border: none;
+        padding: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-top: 10px;
       }
-      .warning-icon {
-        font-size: 3rem;
-        color: #dc3545;
+      .exam-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
       }
-      .warning-text {
-        color: #dc3545;
-        font-weight: bold;
+      .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+      .warning-badge {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #dc3545;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 8px;
+        display: none;
+        z-index: 1000;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .warning-badge i {
+        font-size: 1.2rem;
+      }
+      .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+      }
+      .custom-toast {
+        background-color: white;
+        border-left: 4px solid #dc3545;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+      .custom-toast .toast-header {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+      .custom-toast .toast-header i {
+        margin-right: 8px;
+      }
+      .fullscreen-modal .modal-content {
+        border-left: 4px solid #dc3545;
+      }
+      .fullscreen-modal .modal-header {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+      .fullscreen-modal .modal-header i {
+        margin-right: 8px;
+      }
+      .final-warning-modal .modal-content {
+        border-left: 4px solid #dc3545;
+      }
+      .final-warning-modal .modal-header {
+        background-color: #dc3545;
+        color: white;
+      }
+      .final-warning-modal .modal-header i {
+        margin-right: 8px;
       }
     </style>
   </head>
-  <body>
-    <!-- Warning Modal -->
+  <body class="bg-light">
+    <!-- Start Exam Modal -->
     <div
       class="modal fade"
-      id="examWarningModal"
+      id="startExamModal"
       data-bs-backdrop="static"
       data-bs-keyboard="false"
       tabindex="-1"
@@ -58,40 +161,22 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Important: Examination Guidelines</h5>
+            <h5 class="modal-title">Exam Instructions</h5>
           </div>
-          <div class="modal-body text-center">
-            <i class="bi bi-exclamation-triangle-fill warning-icon mb-3"></i>
-            <p class="warning-text">
-              Please read the following guidelines carefully:
-            </p>
-            <ul class="text-start">
+          <div class="modal-body">
+            <p>Before starting the exam, please note the following:</p>
+            <ul>
+              <li>You will be monitored for any suspicious behavior</li>
+              <li>The exam will be in fullscreen mode</li>
+              <li>Do not switch tabs or leave the exam window</li>
+              <li>You will receive warnings for any violations</li>
               <li>
-                The examination will start immediately after you click "Start
-                Exam"
-              </li>
-              <li>
-                The page will enter fullscreen mode - do not exit fullscreen
-              </li>
-              <li>Do not switch tabs or windows during the exam</li>
-              <li>Do not leave the exam page idle for more than 30 seconds</li>
-              <li>Any suspicious activity will be detected and reported</li>
-              <li>
-                The form will be submitted automatically if any violations are
-                detected
+                After 3 warnings, your exam will be automatically submitted
               </li>
             </ul>
-            <p class="text-muted">
-              By clicking "Start Exam", you agree to these terms.
-            </p>
           </div>
           <div class="modal-footer">
-            <a
-              href="{{ url_for('new_applicants_dashboard') }}"
-              class="btn btn-secondary me-2"
-              >Go Back</a
-            >
-            <button type="button" class="btn btn-primary" id="startExamBtn">
+            <button type="button" class="btn btn-primary" onclick="startExam()">
               Start Exam
             </button>
           </div>
@@ -99,33 +184,45 @@
       </div>
     </div>
 
-    <!-- Violation Warning Modal -->
+    <!-- Warning Badge -->
+    <div id="warningBadge" class="warning-badge">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>Warnings: <span id="warningCount">0</span>/3</span>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <!-- Fullscreen Warning Modal -->
     <div
-      class="modal fade"
-      id="violationWarningModal"
+      class="modal fade fullscreen-modal"
+      id="fullscreenWarningModal"
       data-bs-backdrop="static"
-      data-bs-keyboard="false"
       tabindex="-1"
     >
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-          <div class="modal-header bg-warning">
-            <h5 class="modal-title">Warning</h5>
+          <div class="modal-header">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <h5 class="modal-title">Fullscreen Required</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
           </div>
-          <div class="modal-body text-center">
-            <i class="bi bi-exclamation-triangle-fill warning-icon mb-3"></i>
-            <p id="violationMessage" class="warning-text"></p>
-            <p class="text-muted">
-              Warning <span id="warningCount">1</span>/<span id="maxWarnings"
-                >2</span
-              >
+          <div class="modal-body">
+            <p>
+              The exam must be taken in fullscreen mode. Please click "I
+              Understand" to return to fullscreen.
             </p>
           </div>
           <div class="modal-footer">
             <button
               type="button"
               class="btn btn-primary"
-              id="acknowledgeWarning"
+              onclick="handleFullscreenModalConfirm()"
             >
               I Understand
             </button>
@@ -134,290 +231,520 @@
       </div>
     </div>
 
-    <!-- Exam Termination Modal -->
+    <!-- Final Warning Modal -->
     <div
-      class="modal fade"
-      id="examTerminationModal"
+      class="modal fade final-warning-modal"
+      id="finalWarningModal"
       data-bs-backdrop="static"
       data-bs-keyboard="false"
       tabindex="-1"
     >
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-          <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title">Exam Terminated</h5>
+          <div class="modal-header">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <h5 class="modal-title">Final Warning</h5>
           </div>
-          <div class="modal-body text-center">
-            <i
-              class="bi bi-x-circle-fill text-danger"
-              style="font-size: 3rem"
-            ></i>
-            <p class="mt-3">
-              Your <strong>exam has been terminated</strong> due to multiple
-              violations.
+          <div class="modal-body">
+            <p>
+              You have received 3 warnings. Your exam will be submitted
+              automatically.
             </p>
-            <p class="text-muted">You will be redirected to your dashboard.</p>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-primary"
-              id="proceedToDashboard"
-            >
-              Confirm
-            </button>
+            <p class="text-muted">
+              Please wait while we process your submission...
+            </p>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="exam-container" id="examContent" style="display: none">
-      <div class="back-button">
-        <a
-          href="{{ url_for('new_applicants_dashboard') }}"
-          class="btn btn-outline-primary"
-          id="backButton"
-        >
-          <i class="bi bi-arrow-left"></i> Back to Dashboard
-        </a>
+    <div class="exam-container">
+      <div class="exam-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 id="examTitle">Loading Exam...</h2>
+          <div class="exam-timer" id="examTimer">Time Remaining: --:--</div>
+        </div>
+        <div class="progress-container">
+          <div class="progress">
+            <div
+              class="progress-bar"
+              role="progressbar"
+              style="width: 0%"
+            ></div>
+          </div>
+          <div class="page-indicator">
+            Page <span id="currentPage">1</span> of
+            <span id="totalPages">1</span>
+          </div>
+        </div>
       </div>
 
-      <div class="exam-frame">
-        <h2 class="mb-4">SPES Examination</h2>
-        <iframe
-          src="https://docs.google.com/forms/d/e/1FAIpQLScE0ZtwhvmYbta9Q1m-gp2pI3gctUD4fBaqKMd6l_vtWcxBKw/viewform?pli=1?embedded=true"
-          frameborder="0"
-          marginheight="0"
-          marginwidth="0"
-          id="examFrame"
+      <div class="exam-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        Please ensure you have a stable internet connection. Do not refresh the
+        page or navigate away during the exam.
+      </div>
+
+      <div id="questionContainer">
+        <!-- Questions will be loaded here -->
+      </div>
+
+      <div class="navigation-buttons">
+        <button
+          class="btn btn-secondary"
+          id="prevButton"
+          onclick="previousPage()"
+          disabled
         >
-          Loading...
-        </iframe>
+          <i class="bi bi-arrow-left"></i> Previous Page
+        </button>
+        <button class="btn btn-primary" id="nextButton" onclick="nextPage()">
+          Next Page <i class="bi bi-arrow-right"></i>
+        </button>
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      // Initialize modals
-      const warningModal = new bootstrap.Modal(
-        document.getElementById("examWarningModal")
-      );
-      const violationModal = new bootstrap.Modal(
-        document.getElementById("violationWarningModal")
-      );
-      const terminationModal = new bootstrap.Modal(
-        document.getElementById("examTerminationModal")
-      );
-      warningModal.show();
-
-      // Variables for security checks
-      let lastActivity = Date.now();
-      const IDLE_TIMEOUT = 30000; // 30 seconds
-      let isFullscreen = false;
+      let currentExam = null;
+      let currentPageIndex = 0;
+      let answers = {};
+      let timeRemaining = 0;
+      let timerInterval = null;
       let warningCount = 0;
-      const MAX_WARNINGS = 2;
-      let securityActive = false;
-      let fullscreenAttempts = 0;
-      const MAX_FULLSCREEN_ATTEMPTS = 5;
+      let lastActivity = Date.now();
+      let activityInterval = null;
+      let isFullscreen = false;
+      let fullscreenWarningModal = null;
+      let finalWarningModal = null;
 
-      // Function to enter fullscreen
-      async function enterFullscreen() {
-        const element = document.documentElement;
-        try {
-          if (element.requestFullscreen) {
-            await element.requestFullscreen();
-          } else if (element.webkitRequestFullscreen) {
-            await element.webkitRequestFullscreen();
-          } else if (element.mozRequestFullScreen) {
-            await element.mozRequestFullScreen();
-          } else if (element.msRequestFullscreen) {
-            await element.msRequestFullscreen();
-          }
-          return true;
-        } catch (err) {
-          console.error("Error entering fullscreen:", err);
-          return false;
-        }
-      }
-
-      // Function to check if in fullscreen
-      function isInFullscreen() {
-        return !!(
-          document.fullscreenElement ||
-          document.webkitFullscreenElement ||
-          document.mozFullScreenElement ||
-          document.msFullscreenElement
+      // Load exam when page loads
+      document.addEventListener("DOMContentLoaded", () => {
+        const startModal = new bootstrap.Modal(
+          document.getElementById("startExamModal")
         );
+        startModal.show();
+      });
+
+      function startExam() {
+        // Close the modal
+        bootstrap.Modal.getInstance(
+          document.getElementById("startExamModal")
+        ).hide();
+
+        // Initialize modals
+        fullscreenWarningModal = new bootstrap.Modal(
+          document.getElementById("fullscreenWarningModal")
+        );
+        finalWarningModal = new bootstrap.Modal(
+          document.getElementById("finalWarningModal")
+        );
+
+        // Enter fullscreen
+        enterFullscreen();
+
+        // Start monitoring
+        startMonitoring();
+
+        // Load the exam
+        loadExam();
       }
 
-      // Function to show violation warning
-      function showViolationWarning(message) {
-        document.getElementById("violationMessage").textContent = message;
-        document.getElementById("warningCount").textContent = warningCount;
-        document.getElementById("maxWarnings").textContent = MAX_WARNINGS;
-        violationModal.show();
+      function enterFullscreen() {
+        const element = document.documentElement;
+        if (element.requestFullscreen) {
+          element.requestFullscreen();
+        } else if (element.webkitRequestFullscreen) {
+          element.webkitRequestFullscreen();
+        } else if (element.msRequestFullscreen) {
+          element.msRequestFullscreen();
+        }
+        isFullscreen = true;
       }
 
-      // Function to handle violations
-      async function handleViolation(reason) {
-        if (!securityActive) return;
-
-        warningCount++;
-        if (warningCount >= MAX_WARNINGS) {
-          showViolationWarning(`Exam terminated: ${reason}`);
-          // Give user time to read the warning message
-          setTimeout(() => {
-            violationModal.hide();
-            // Show termination modal
-            terminationModal.show();
-          }, 2000);
-        } else {
-          showViolationWarning(`Warning: ${reason}`);
-
-          // If it's a fullscreen violation, try to re-enter fullscreen
-          if (reason.includes("Fullscreen")) {
-            fullscreenAttempts = 0;
-            await attemptReFullscreen();
-          }
+      function exitFullscreen() {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
         }
+        isFullscreen = false;
       }
 
-      // Function to attempt re-entering fullscreen
-      async function attemptReFullscreen() {
-        if (fullscreenAttempts >= MAX_FULLSCREEN_ATTEMPTS) {
-          handleViolation("Failed to maintain fullscreen mode");
-          return;
-        }
+      function startMonitoring() {
+        // Monitor fullscreen changes
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+        document.addEventListener(
+          "webkitfullscreenchange",
+          handleFullscreenChange
+        );
+        document.addEventListener(
+          "mozfullscreenchange",
+          handleFullscreenChange
+        );
+        document.addEventListener("MSFullscreenChange", handleFullscreenChange);
 
-        fullscreenAttempts++;
-        const success = await enterFullscreen();
+        // Monitor visibility changes (tab switching)
+        document.addEventListener("visibilitychange", handleVisibilityChange);
 
-        if (!success) {
-          setTimeout(attemptReFullscreen, 1000);
-        }
+        // Monitor user activity
+        document.addEventListener("mousemove", updateLastActivity);
+        document.addEventListener("keydown", updateLastActivity);
+        document.addEventListener("click", updateLastActivity);
+
+        // Start activity monitoring interval
+        activityInterval = setInterval(checkActivity, 1000);
       }
 
-      // Event Listeners
-      document
-        .getElementById("startExamBtn")
-        .addEventListener("click", async () => {
-          warningModal.hide();
-          document.getElementById("examContent").style.display = "block";
-          const success = await enterFullscreen();
-          if (success) {
-            isFullscreen = true;
-            securityActive = true;
-          } else {
-            handleViolation("Failed to enter fullscreen mode");
-          }
-        });
-
-      document
-        .getElementById("acknowledgeWarning")
-        .addEventListener("click", async () => {
-          violationModal.hide();
-          if (!isInFullscreen() && securityActive) {
-            await attemptReFullscreen();
-          }
-        });
-
-      // Fullscreen change detection
-      document.addEventListener("fullscreenchange", () => {
-        if (!isInFullscreen() && isFullscreen && securityActive) {
-          handleViolation("Fullscreen mode was exited");
-        }
-      });
-
-      document.addEventListener("webkitfullscreenchange", () => {
-        if (!isInFullscreen() && isFullscreen && securityActive) {
-          handleViolation("Fullscreen mode was exited");
-        }
-      });
-
-      document.addEventListener("mozfullscreenchange", () => {
-        if (!isInFullscreen() && isFullscreen && securityActive) {
-          handleViolation("Fullscreen mode was exited");
-        }
-      });
-
-      document.addEventListener("MSFullscreenChange", () => {
-        if (!isInFullscreen() && isFullscreen && securityActive) {
-          handleViolation("Fullscreen mode was exited");
-        }
-      });
-
-      // Visibility change detection (tab switching)
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden && securityActive) {
-          handleViolation("Tab switching detected");
-        }
-      });
-
-      // Activity tracking
-      ["mousedown", "mousemove", "keypress", "scroll", "touchstart"].forEach(
-        (event) => {
-          document.addEventListener(event, () => {
-            if (securityActive) {
-              lastActivity = Date.now();
-            }
-          });
-        }
-      );
-
-      // Idle detection
-      setInterval(() => {
-        if (securityActive && Date.now() - lastActivity > IDLE_TIMEOUT) {
-          handleViolation("Idle time exceeded");
-        }
-      }, 1000);
-
-      // Prevent back button during exam
-      document.getElementById("backButton").addEventListener("click", (e) => {
-        e.preventDefault();
+      function handleFullscreenChange() {
         if (
-          confirm(
-            "Are you sure you want to exit the exam? This will submit your current answers."
-          )
+          !document.fullscreenElement &&
+          !document.webkitFullscreenElement &&
+          !document.mozFullScreenElement &&
+          !document.msFullscreenElement
         ) {
-          submitAndRedirect();
+          addWarning("Fullscreen mode is required for the exam");
+          // Show fullscreen warning modal
+          fullscreenWarningModal.show();
         }
-      });
+      }
+
+      function handleVisibilityChange() {
+        if (document.hidden) {
+          addWarning("Do not switch tabs during the exam");
+        }
+      }
+
+      function updateLastActivity() {
+        lastActivity = Date.now();
+      }
+
+      function checkActivity() {
+        const idleTime = (Date.now() - lastActivity) / 1000;
+        if (idleTime >= 20) {
+          addWarning("You have been idle for too long");
+          updateLastActivity();
+        }
+      }
+
+      function showToast(message, type = "warning") {
+        const toastContainer = document.querySelector(".toast-container");
+        const toast = document.createElement("div");
+        toast.className = "toast custom-toast";
+        toast.setAttribute("role", "alert");
+        toast.setAttribute("aria-live", "assertive");
+        toast.setAttribute("aria-atomic", "true");
+
+        toast.innerHTML = `
+          <div class="toast-header">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <strong class="me-auto">Warning</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <div class="toast-body">
+            ${message}
+          </div>
+        `;
+
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast, {
+          autohide: true,
+          delay: 5000,
+        });
+        bsToast.show();
+
+        // Remove toast from DOM after it's hidden
+        toast.addEventListener("hidden.bs.toast", () => {
+          toast.remove();
+        });
+      }
+
+      function addWarning(reason) {
+        warningCount++;
+        document.getElementById("warningCount").textContent = warningCount;
+        document.getElementById("warningBadge").style.display = "flex";
+
+        showToast(`Warning ${warningCount}/3: ${reason}`);
+
+        if (warningCount >= 3) {
+          // Stop all monitoring
+          stopMonitoring();
+
+          // Show final warning modal
+          finalWarningModal.show();
+
+          // Submit after a delay
+          setTimeout(() => {
+            submitExam();
+          }, 2000);
+        }
+      }
+
+      function loadExam() {
+        fetch("/get-current-exam")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              currentExam = data.exam;
+              timeRemaining = currentExam.time_limit * 60; // Convert to seconds
+              document.getElementById("examTitle").textContent =
+                currentExam.title;
+              document.getElementById("totalPages").textContent =
+                currentExam.pages.length;
+              startTimer();
+              loadPage(0);
+            } else {
+              alert("Error loading exam: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error loading exam");
+          });
+      }
+
+      function startTimer() {
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+          timeRemaining--;
+          updateTimerDisplay();
+          if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            submitExam();
+          }
+        }, 1000);
+      }
+
+      function updateTimerDisplay() {
+        const minutes = Math.floor(timeRemaining / 60);
+        const seconds = timeRemaining % 60;
+        document.getElementById(
+          "examTimer"
+        ).textContent = `Time Remaining: ${minutes
+          .toString()
+          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+      }
+
+      function loadPage(pageIndex) {
+        const page = currentExam.pages[pageIndex];
+        const container = document.getElementById("questionContainer");
+        container.innerHTML = "";
+
+        // Update navigation buttons
+        document.getElementById("prevButton").disabled = pageIndex === 0;
+        document.getElementById("nextButton").textContent =
+          pageIndex === currentExam.pages.length - 1
+            ? "Submit Exam"
+            : "Next Page";
+        document.getElementById("nextButton").onclick =
+          pageIndex === currentExam.pages.length - 1 ? submitExam : nextPage;
+
+        // Update progress
+        const progress = ((pageIndex + 1) / currentExam.pages.length) * 100;
+        document.querySelector(".progress-bar").style.width = `${progress}%`;
+        document.getElementById("currentPage").textContent = pageIndex + 1;
+
+        // Load questions
+        page.questions.forEach((question, index) => {
+          const questionCard = createQuestionCard(question, index);
+          container.appendChild(questionCard);
+        });
+      }
+
+      function createQuestionCard(question, index) {
+        const card = document.createElement("div");
+        card.className = "question-card";
+        card.innerHTML = `
+          <div class="question-text">
+            <strong>Question ${index + 1}:</strong> ${question.question_text}
+            <span class="badge bg-secondary float-end">${
+              question.points
+            } points</span>
+          </div>
+          ${
+            question.question_type === "multiple_choice"
+              ? createMultipleChoiceOptions(question, index)
+              : createIdentificationInput(question, index)
+          }
+        `;
+        return card;
+      }
+
+      function createMultipleChoiceOptions(question, questionIndex) {
+        return `
+          <ul class="option-list">
+            ${question.options
+              .map(
+                (option, optionIndex) => `
+              <li class="option-item ${
+                answers[question.id] === option.option_text ? "selected" : ""
+              }"
+                onclick="selectOption(${question.id}, '${option.option_text}')">
+                ${option.option_text}
+              </li>
+            `
+              )
+              .join("")}
+          </ul>
+        `;
+      }
+
+      function createIdentificationInput(question, questionIndex) {
+        return `
+          <input type="text" 
+                 class="identification-input" 
+                 placeholder="Enter your answer"
+                 value="${answers[question.id] || ""}"
+                 onchange="updateAnswer(${question.id}, this.value)">
+        `;
+      }
+
+      function selectOption(questionId, optionText) {
+        answers[questionId] = optionText;
+        // Update UI to show selected option
+        const options = document.querySelectorAll(`[onclick*="${questionId}"]`);
+        options.forEach((option) => {
+          option.classList.toggle(
+            "selected",
+            option.textContent.trim() === optionText
+          );
+        });
+      }
+
+      function updateAnswer(questionId, value) {
+        answers[questionId] = value;
+      }
+
+      function previousPage() {
+        if (currentPageIndex > 0) {
+          currentPageIndex--;
+          loadPage(currentPageIndex);
+        }
+      }
+
+      function nextPage() {
+        if (currentPageIndex < currentExam.pages.length - 1) {
+          currentPageIndex++;
+          loadPage(currentPageIndex);
+        }
+      }
+
+      function handleFullscreenModalConfirm() {
+        fullscreenWarningModal.hide();
+        enterFullscreen();
+      }
+
+      function stopMonitoring() {
+        // Remove all event listeners
+        document.removeEventListener(
+          "fullscreenchange",
+          handleFullscreenChange
+        );
+        document.removeEventListener(
+          "webkitfullscreenchange",
+          handleFullscreenChange
+        );
+        document.removeEventListener(
+          "mozfullscreenchange",
+          handleFullscreenChange
+        );
+        document.removeEventListener(
+          "MSFullscreenChange",
+          handleFullscreenChange
+        );
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
+        document.removeEventListener("mousemove", updateLastActivity);
+        document.removeEventListener("keydown", updateLastActivity);
+        document.removeEventListener("click", updateLastActivity);
+
+        // Clear intervals
+        clearInterval(activityInterval);
+        clearInterval(timerInterval);
+      }
+
+      function submitExam() {
+        // Stop all monitoring
+        stopMonitoring();
+
+        // Exit fullscreen
+        if (isFullscreen) {
+          exitFullscreen();
+        }
+
+        // Get all questions from all pages
+        const allQuestions = currentExam.pages.reduce((acc, page) => {
+          return acc.concat(page.questions);
+        }, []);
+
+        // Ensure all questions have answers
+        const completeAnswers = {};
+        allQuestions.forEach((question) => {
+          // If no answer exists for this question, set a default based on question type
+          if (!answers[question.id]) {
+            if (question.question_type === "multiple_choice") {
+              // For multiple choice, set first option as default
+              completeAnswers[question.id] =
+                question.options[0]?.option_text || "";
+            } else {
+              // For identification, set empty string
+              completeAnswers[question.id] = "";
+            }
+          } else {
+            // Keep existing answer
+            completeAnswers[question.id] = answers[question.id];
+          }
+        });
+
+        // Prepare submission data
+        const submissionData = {
+          exam_id: currentExam.id,
+          answers: completeAnswers, // Use the complete answers object
+          status: "completed",
+          score: 0,
+          time_taken: currentExam.time_limit * 60 - timeRemaining,
+          warning_count: warningCount,
+          questions: allQuestions.map((q) => ({
+            id: q.id,
+            question_text: q.question_text,
+            question_type: q.question_type,
+            points: q.points,
+            options: q.options || [],
+          })),
+        };
+
+        fetch("/submit-exam", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(submissionData),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              showToast("Exam submitted successfully!", "success");
+              setTimeout(() => {
+                window.location.href = "/new-applicants/dashboard";
+              }, 2000);
+            } else {
+              showToast("Error submitting exam: " + data.message, "error");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showToast("Error submitting exam", "error");
+          });
+      }
 
       // Prevent accidental navigation
-      window.addEventListener("beforeunload", (e) => {
-        if (securityActive) {
-          e.preventDefault();
-          e.returnValue = "";
-        }
-      });
-
-      // Add event listener for the proceed button
-      document
-        .getElementById("proceedToDashboard")
-        .addEventListener("click", () => {
-          terminationModal.hide();
-          // Submit the form if it exists
-          const iframe = document.getElementById("examFrame");
-          if (iframe && iframe.contentWindow) {
-            try {
-              const form = iframe.contentWindow.document.querySelector("form");
-              if (form) form.submit();
-            } catch (e) {
-              console.error("Error submitting form:", e);
-            }
-          }
-          // Redirect to dashboard
-          window.location.href = "{{ url_for('new_applicants_dashboard') }}";
-        });
-
-      // Function to submit form and redirect
-      function submitAndRedirect() {
-        const iframe = document.getElementById("examFrame");
-        if (iframe && iframe.contentWindow) {
-          iframe.contentWindow.document.querySelector("form").submit();
-        }
-        window.location.href = "{{ url_for('new_applicants_dashboard') }}";
-      }
+      window.onbeforeunload = function () {
+        return "Are you sure you want to leave? Your progress will be lost.";
+      };
     </script>
   </body>
 </html>
