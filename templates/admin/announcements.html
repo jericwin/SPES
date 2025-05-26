@@ -272,16 +272,10 @@
                               <td>{{ announcement.admin_name }}</td>
                               <td>
                                 <button
-                                  class="btn btn-sm btn-info me-1"
-                                  onclick="viewAnnouncement({{ announcement.id }})"
+                                  class="btn btn-sm btn-primary"
+                                  onclick="editAnnouncement({{ announcement.id }})"
                                 >
-                                  <i class="bi bi-eye"></i>
-                                </button>
-                                <button
-                                  class="btn btn-sm btn-danger"
-                                  onclick="deleteAnnouncement({{ announcement.id }})"
-                                >
-                                  <i class="bi bi-trash"></i>
+                                  <i class="bi bi-pencil-square"></i>
                                 </button>
                               </td>
                             </tr>
@@ -398,19 +392,19 @@
         </div>
       </div>
     </div>
-    <!-- View Announcement Modal -->
+    <!-- Edit Announcement Modal -->
     <div
       class="modal fade"
-      id="viewAnnouncementModal"
+      id="editAnnouncementModal"
       tabindex="-1"
-      aria-labelledby="viewAnnouncementModalLabel"
+      aria-labelledby="editAnnouncementModalLabel"
       aria-hidden="true"
     >
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="viewAnnouncementModalLabel">
-              Announcement Details
+            <h5 class="modal-title" id="editAnnouncementModalLabel">
+              Edit Announcement
             </h5>
             <button
               type="button"
@@ -420,25 +414,86 @@
             ></button>
           </div>
           <div class="modal-body">
-            <h4 id="viewTitle"></h4>
-            <p class="text-muted">
-              <small>
-                Posted by: <span id="viewPostedBy"></span><br />
-                Date: <span id="viewDate"></span><br />
-                Type: <span id="viewType"></span><br />
-                Target: <span id="viewTarget"></span>
-              </small>
-            </p>
-            <hr />
-            <div id="viewDescription"></div>
+            <form id="editAnnouncementForm">
+              <input type="hidden" id="editAnnouncementId" />
+              <div class="mb-3">
+                <label for="editTitle" class="form-label">Title</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="editTitle"
+                  name="title"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="editDescription" class="form-label"
+                  >Description</label
+                >
+                <textarea
+                  class="form-control"
+                  id="editDescription"
+                  name="description"
+                  rows="4"
+                  required
+                ></textarea>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="editTargetAudience" class="form-label"
+                    >Target Audience</label
+                  >
+                  <select
+                    class="form-select"
+                    id="editTargetAudience"
+                    name="targetAudience"
+                    required
+                  >
+                    <option value="">Select Target Audience</option>
+                    <option value="new">New Applicants</option>
+                    <option value="old">Old Applicants</option>
+                    <option value="all">All Applicants</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="editAnnouncementType" class="form-label"
+                    >Announcement Type</label
+                  >
+                  <select
+                    class="form-select"
+                    id="editAnnouncementType"
+                    name="announcementType"
+                    required
+                  >
+                    <option value="">Select Type</option>
+                    <option value="main">Main Announcement</option>
+                    <option value="notification">Notification</option>
+                  </select>
+                </div>
+              </div>
+            </form>
           </div>
           <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-danger me-auto"
+              onclick="deleteAnnouncement()"
+            >
+              Delete Announcement
+            </button>
             <button
               type="button"
               class="btn btn-secondary"
               data-bs-dismiss="modal"
             >
-              Close
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="updateAnnouncement()"
+            >
+              Save Changes
             </button>
           </div>
         </div>
@@ -450,6 +505,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+      let currentAnnouncementId = null;
+
       function submitAnnouncement() {
         const form = document.getElementById("announcementForm");
         const formData = new FormData(form);
@@ -473,42 +530,113 @@
           });
       }
 
-      function viewAnnouncement(id) {
-        // Fetch announcement details and show in modal
-        fetch(`/get-announcement/${id}`)
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.success) {
-              const announcement = data.announcement;
-              document.getElementById("viewTitle").textContent =
-                announcement.title;
-              document.getElementById("viewPostedBy").textContent =
-                announcement.admin_name;
-              document.getElementById("viewDate").textContent =
-                announcement.announcement_date;
-              document.getElementById("viewType").textContent =
-                announcement.announcement_type;
-              document.getElementById("viewTarget").textContent =
-                announcement.target_audience;
-              document.getElementById("viewDescription").textContent =
-                announcement.description;
+      function editAnnouncement(id) {
+        currentAnnouncementId = id;
+        console.log("Fetching announcement with ID:", id);
 
-              new bootstrap.Modal(
-                document.getElementById("viewAnnouncementModal")
-              ).show();
+        const modal = document.getElementById("editAnnouncementModal");
+        const modalBody = modal.querySelector(".modal-body");
+        const form = document.getElementById("editAnnouncementForm");
+
+        // Show loading state while preserving form structure
+        form.style.display = "none";
+        const loadingDiv = document.createElement("div");
+        loadingDiv.className = "text-center";
+        loadingDiv.innerHTML =
+          '<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>';
+        modalBody.insertBefore(loadingDiv, form);
+
+        // Show the modal first
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+
+        // Fetch announcement details
+        fetch(`/get-announcement/${id}`)
+          .then((response) => {
+            console.log("Response status:", response.status);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Received data:", data);
+            // Remove loading spinner
+            loadingDiv.remove();
+            form.style.display = "block";
+
+            if (data.success && data.announcement) {
+              const announcement = data.announcement;
+              document.getElementById("editAnnouncementId").value =
+                announcement.id;
+              document.getElementById("editTitle").value = announcement.title;
+              document.getElementById("editDescription").value =
+                announcement.description;
+              document.getElementById("editTargetAudience").value =
+                announcement.target_audience;
+              document.getElementById("editAnnouncementType").value =
+                announcement.announcement_type;
             } else {
-              alert(data.message);
+              form.style.display = "none";
+              const errorDiv = document.createElement("div");
+              errorDiv.className = "alert alert-danger";
+              errorDiv.setAttribute("role", "alert");
+              errorDiv.textContent =
+                data.message || "Failed to load announcement details";
+              modalBody.insertBefore(errorDiv, form);
             }
           })
           .catch((error) => {
             console.error("Error:", error);
-            alert("An error occurred while fetching announcement details");
+            // Remove loading spinner
+            loadingDiv.remove();
+            form.style.display = "none";
+
+            const errorDiv = document.createElement("div");
+            errorDiv.className = "alert alert-danger";
+            errorDiv.setAttribute("role", "alert");
+            errorDiv.innerHTML = `An error occurred while fetching announcement details. Please try again.<br><small>Error details: ${error.message}</small>`;
+            modalBody.insertBefore(errorDiv, form);
           });
       }
 
-      function deleteAnnouncement(id) {
+      function updateAnnouncement() {
+        if (!currentAnnouncementId) {
+          alert("No announcement selected");
+          return;
+        }
+
+        const form = document.getElementById("editAnnouncementForm");
+        const formData = new FormData(form);
+        formData.append("id", currentAnnouncementId);
+
+        fetch("/update-announcement", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              alert(data.message);
+              location.reload();
+            } else {
+              alert(data.message || "Failed to update announcement");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("An error occurred while updating the announcement");
+          });
+      }
+
+      function deleteAnnouncement() {
+        if (!currentAnnouncementId) {
+          alert("No announcement selected");
+          return;
+        }
+
         if (confirm("Are you sure you want to delete this announcement?")) {
-          fetch(`/delete-announcement/${id}`, {
+          fetch(`/delete-announcement/${currentAnnouncementId}`, {
             method: "POST",
           })
             .then((response) => response.json())
@@ -517,7 +645,7 @@
                 alert(data.message);
                 location.reload();
               } else {
-                alert(data.message);
+                alert(data.message || "Failed to delete announcement");
               }
             })
             .catch((error) => {
