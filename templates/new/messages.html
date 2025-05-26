@@ -63,6 +63,159 @@
         transition: background-color 0.3s ease, color 0.3s ease;
         padding: 0.5rem 1rem;
       }
+      .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background-color: #f8f9fa;
+      }
+
+      .bot-message {
+        background-color: #f0f2f5;
+        border-radius: 15px 15px 15px 0;
+      }
+
+      .bot-message .faq-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+
+      .bot-message .faq-btn {
+        white-space: normal;
+        text-align: left;
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border: 1px solid #006edc;
+        background-color: white;
+        color: #006edc;
+        transition: all 0.3s ease;
+      }
+
+      .bot-message .faq-btn:hover {
+        background-color: #006edc;
+        color: white;
+      }
+
+      .bot-message .faq-btn:last-child {
+        margin-top: 0.5rem;
+        background-color: #28a745;
+        border-color: #28a745;
+        color: white;
+      }
+
+      .bot-message .faq-btn:last-child:hover {
+        background-color: #218838;
+        border-color: #218838;
+      }
+
+      .user-message {
+        background-color: #006edc;
+        color: white;
+        border-radius: 15px 15px 0 15px;
+        margin-left: auto;
+      }
+
+      .message-input {
+        position: sticky;
+        bottom: 0;
+        background-color: white;
+        padding: 1rem 2rem;
+        border-top: 1px solid #dee2e6;
+        z-index: 1000;
+      }
+
+      /* Add these new styles */
+      .message-animation {
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .typing-bubble {
+        padding: 0.5rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        background: #006edc;
+        border-radius: 50%;
+        animation: bounce 1.4s infinite ease-in-out;
+      }
+
+      .dot:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .dot:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+
+      @keyframes bounce {
+        0%,
+        80%,
+        100% {
+          transform: scale(0);
+        }
+        40% {
+          transform: scale(1);
+        }
+      }
+
+      .bot-message .faq-btn {
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bot-message .faq-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .bot-message .faq-btn:active {
+        transform: translateY(0);
+      }
+
+      .agent-btn {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+        color: white !important;
+      }
+
+      .agent-btn:hover {
+        background-color: #218838 !important;
+        border-color: #218838 !important;
+      }
+
+      #messageInput:focus {
+        box-shadow: 0 0 0 0.2rem rgba(0, 110, 220, 0.25);
+        border-color: #006edc;
+      }
+
+      .messages-wrapper {
+        flex: 1;
+        padding: 1rem;
+        overflow-y: auto;
+      }
+
+      .typing-indicator {
+        position: relative;
+        margin-top: 1rem;
+      }
     </style>
   </head>
   <body>
@@ -103,6 +256,15 @@
                 >
                   <i class="fs-5 bi-speedometer2"></i
                   ><span class="ms-3 d-none d-sm-inline">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('new_applicants_forms') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark-text"></i
+                  ><span class="ms-3 d-none d-sm-inline">Forms</span>
                 </a>
               </li>
               <li>
@@ -187,14 +349,331 @@
 
               <hr />
               <div class="main-container">
-                <h3>Welcome, Honeylyn!</h3>
-                <!-- bootstrap card -->
+                <div class="chat-container">
+                  <!-- Messages container -->
+                  <div
+                    class="messages-wrapper"
+                    style="height: calc(100vh - 200px); overflow-y: auto"
+                  >
+                    <!-- Bot's initial message -->
+                    <div class="d-flex mb-3 message-animation">
+                      <div class="bot-avatar me-2">
+                        <img
+                          src="/static/images/spes-logo.png"
+                          alt="Bot"
+                          class="rounded-circle"
+                          style="width: 40px; height: 40px"
+                        />
+                      </div>
+                      <div
+                        class="bot-message p-3 rounded"
+                        style="max-width: 80%"
+                      >
+                        <p class="mb-2">Hi, how may I help you?</p>
+                        <div class="faq-options">
+                          <button
+                            class="btn btn-sm btn-outline-primary m-1 faq-btn"
+                            onclick="handleCategoryClick('documents')"
+                          >
+                            📄 A. Documents Submission
+                          </button>
+                          <button
+                            class="btn btn-sm btn-outline-primary m-1 faq-btn"
+                            onclick="handleCategoryClick('forms')"
+                          >
+                            🧾 B. Documents Form
+                          </button>
+                          <button
+                            class="btn btn-sm btn-outline-primary m-1 faq-btn"
+                            onclick="handleCategoryClick('deadlines')"
+                          >
+                            🗓️ C. Deadlines and Schedule
+                          </button>
+                          <button
+                            class="btn btn-sm btn-outline-primary m-1 faq-btn"
+                            onclick="handleCategoryClick('exam')"
+                          >
+                            📝 D. Exam and Results
+                          </button>
+                          <button
+                            class="btn btn-sm btn-outline-primary m-1 faq-btn"
+                            onclick="handleCategoryClick('interview')"
+                          >
+                            👥 E. Interview
+                          </button>
+
+                          <button
+                            class="btn btn-sm btn-outline-primary m-1 faq-btn agent-btn mt-3"
+                            onclick="handleAgentClick()"
+                          >
+                            <i class="bi bi-person-circle me-1"></i>Chat with a
+                            real agent
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Messages will be added here -->
+                    <div id="messagesContainer"></div>
+
+                    <!-- Typing indicator (hidden by default) -->
+                    <div class="typing-indicator d-none">
+                      <div class="d-flex mb-3">
+                        <div class="bot-avatar me-2">
+                          <img
+                            src="/static/images/spes-logo.png"
+                            alt="Bot"
+                            class="rounded-circle"
+                            style="width: 40px; height: 40px"
+                          />
+                        </div>
+                        <div
+                          class="bot-message bg-light p-3 rounded typing-bubble"
+                        >
+                          <span class="dot"></span>
+                          <span class="dot"></span>
+                          <span class="dot"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Message input area -->
+                  <div class="message-input">
+                    <div class="input-group">
+                      <input
+                        type="text"
+                        class="form-control"
+                        placeholder="Type your message here..."
+                        id="messageInput"
+                        onkeypress="handleKeyPress(event)"
+                      />
+                      <button class="btn btn-primary" onclick="sendMessage()">
+                        <i class="bi bi-send"></i> Send
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              <script>
+                // Function to scroll chat to bottom with a small delay to ensure DOM updates
+                function scrollToBottom() {
+                  setTimeout(() => {
+                    const mainElement = document.querySelector("main");
+                    mainElement.scrollTop = mainElement.scrollHeight;
+                  }, 100);
+                }
+
+                // Function to show typing indicator
+                function showTypingIndicator() {
+                  const typingIndicator =
+                    document.querySelector(".typing-indicator");
+                  typingIndicator.classList.remove("d-none");
+                  scrollToBottom();
+                }
+
+                // Function to hide typing indicator
+                function hideTypingIndicator() {
+                  const typingIndicator =
+                    document.querySelector(".typing-indicator");
+                  typingIndicator.classList.add("d-none");
+                }
+
+                // Function to add a message to the chat
+                function addMessage(content, isUser = false) {
+                  const messagesContainer =
+                    document.getElementById("messagesContainer");
+                  const messageDiv = document.createElement("div");
+                  messageDiv.className = "d-flex mb-3 message-animation";
+
+                  if (isUser) {
+                    messageDiv.innerHTML = `
+                      <div class="user-message bg-primary text-white p-3 rounded ms-auto" style="max-width: 80%;">
+                        <p class="mb-0">${content}</p>
+                      </div>
+                    `;
+                  } else {
+                    messageDiv.innerHTML = `
+                      <div class="bot-avatar me-2">
+                        <img src="/static/images/spes-logo.png" alt="Bot" class="rounded-circle" style="width: 40px; height: 40px;">
+                      </div>
+                      <div class="bot-message p-3 rounded" style="max-width: 80%;">
+                        <p class="mb-0">${content}</p>
+                      </div>
+                    `;
+                  }
+
+                  messagesContainer.appendChild(messageDiv);
+                  // Force a reflow to ensure the new message is rendered
+                  messageDiv.offsetHeight;
+                  scrollToBottom();
+                }
+
+                function handleFAQClick(button) {
+                  const question = button.textContent
+                    .replace(/\s+/g, " ")
+                    .trim();
+                  addMessage(question, true);
+                  showTypingIndicator();
+
+                  // FAQ responses
+                  const faqResponses = {
+                    "Ilan po ang kailangang isubmit na set ng documents?":
+                      "Apat (4) na sets ng documents. Bawat set ay kailangang naka-staple nang magkakahiwalay.",
+                    "Ano po ang laman ng bawat set?":
+                      "✔ Set 1 – SPES Forms + Original at Certified True Copy ng ibang requirements<br/>✔ Set 2 – SPES Forms + Photocopy ng ibang requirements<br/>✔ Set 3 – SPES Forms + Photocopy ng ibang requirements<br/>✔ Set 4 – SPES Forms + Photocopy ng ibang requirements",
+                    "Saan po ilalagay ang mga sets?":
+                      "Ilagay ang lahat ng sets sa isang Long Folder at Long Plastic Envelope.",
+                    "Kailangan po ba ng ID photo? Ilan po?":
+                      "Oo, kailangan ng isang (1) extra Passport Size ID photo na may blue background.<br/>✍ Sa likod ng ID photo, isulat ang iyong pangalan gamit ang format: LAST NAME, FIRST NAME, MIDDLE INITIAL.",
+                    "Ano po ang minimum grade requirement para makapag-apply?":
+                      "Wala dapat subject na mas mababa sa 80 o 2.75.",
+                    "Kailangan po ba na computerized ang SPES Forms?":
+                      "Oo, lahat ng ipi-fill out sa SPES forms ay dapat computerized, maliban sa signature na kailangang pirmahan gamit ang ballpen. Bawal ang e-signature.",
+                    "Ano po ang dapat isulat sa upper right corner ng Application Form?":
+                      "Ilagay ang pangalan ng iyong magulang o guardian na GSIS beneficiary para sa GSIS Insurance.",
+                    "Kailangan po bang isulat ang special skills sa form?":
+                      "Oo, dapat mong isulat ang iyong mga espesyal na kasanayan sa application form.",
+                    "Kailan po ipapasa ang mga requirements?":
+                      "Itabi muna ang mga requirements. Ipasa lamang ang mga ito kung nakapasa ka na sa exam.",
+                    "Kailan po ang deadline ng final submission ng requirements?":
+                      "Ang petsa ng submission ng final requirements ay malalaman isang (1) linggo matapos ang exam.",
+                    "Kailan po ang deadline ng pagsusumite ng physical copies ng requirements?":
+                      "Ang deadline ay sa mismong araw ng interview, na malalaman isang (1) linggo matapos ang exam.",
+                    "Saan po ipapasa ang mga physical copies ng requirements?":
+                      "Ipapasa ang mga ito sa PESO Office – Paete Municipal, na matatagpuan sa may stage.",
+                    "May second chance po ba o retake kung magkaproblema sa exam?":
+                      "❌ Wala pong retake sa SPES exam.<br/>📌 Kaya siguraduhing maayos ang inyong device at internet connection, at basahin nang mabuti ang mga instructions at warnings bago magsimula.",
+                    "Kailan po malalaman ang schedule ng exam?":
+                      "🕒 Malalaman ang schedule ng exam sa loob ng isang (1) linggo matapos makapagsumite ng initial documents.",
+                    "Kailan po lalabas ang resulta ng exam?":
+                      "📝 Lalabas ang resulta ng exam isang (1) linggo pagkatapos ito ay maisagawa.",
+                    "Kailan po ang schedule ng interview at pagsusumite ng physical copies ng requirements?":
+                      "📋 Malalaman ang iskedyul ng interview at pagpapasa ng physical copies ng requirements isang (1) linggo matapos ang exam.",
+                  };
+
+                  setTimeout(() => {
+                    hideTypingIndicator();
+                    const response = faqResponses[question];
+                    if (response) {
+                      addMessage(response);
+                    } else {
+                      console.log("Question not found:", question); // Debug log
+                      addMessage(
+                        "I apologize, but I don't have an answer for that question yet."
+                      );
+                    }
+                  }, 1500);
+                }
+
+                function handleAgentClick() {
+                  addMessage("I would like to chat with a real agent", true);
+                  showTypingIndicator();
+
+                  setTimeout(() => {
+                    hideTypingIndicator();
+                    addMessage(
+                      "Hello! I'm a real agent. How can I assist you today?"
+                    );
+                  }, 1500);
+                }
+
+                function handleKeyPress(event) {
+                  if (event.key === "Enter") {
+                    sendMessage();
+                  }
+                }
+
+                function sendMessage() {
+                  const input = document.getElementById("messageInput");
+                  const message = input.value.trim();
+
+                  if (message) {
+                    addMessage(message, true);
+                    input.value = "";
+                    showTypingIndicator();
+
+                    setTimeout(() => {
+                      hideTypingIndicator();
+                      addMessage(
+                        "I understand your message. How else can I help you?"
+                      );
+                    }, 1500);
+                  }
+                }
+
+                // Add this new function after the existing JavaScript functions
+                function handleCategoryClick(category) {
+                  const categoryName = document
+                    .querySelector(
+                      `[onclick="handleCategoryClick('${category}')"]`
+                    )
+                    .textContent.trim();
+                  addMessage(categoryName, true);
+                  showTypingIndicator();
+
+                  const categoryFAQs = {
+                    documents: [
+                      "Ilan po ang kailangang isubmit na set ng documents?",
+                      "Ano po ang laman ng bawat set?",
+                      "Saan po ilalagay ang mga sets?",
+                      "Kailangan po ba ng ID photo? Ilan po?",
+                    ],
+                    forms: [
+                      "Ano po ang minimum grade requirement para makapag-apply?",
+                      "Kailangan po ba na computerized ang SPES Forms?",
+                      "Ano po ang dapat isulat sa upper right corner ng Application Form?",
+                      "Kailangan po bang isulat ang special skills sa form?",
+                    ],
+                    deadlines: [
+                      "Kailan po ipapasa ang mga requirements?",
+                      "Kailan po ang deadline ng final submission ng requirements?",
+                      "Kailan po ang deadline ng pagsusumite ng physical copies ng requirements?",
+                      "Saan po ipapasa ang mga physical copies ng requirements?",
+                    ],
+                    exam: [
+                      "May second chance po ba o retake kung magkaproblema sa exam?",
+                      "Kailan po malalaman ang schedule ng exam?",
+                      "Kailan po lalabas ang resulta ng exam?",
+                    ],
+                    interview: [
+                      "Kailan po ang schedule ng interview at pagsusumite ng physical copies ng requirements?",
+                    ],
+                  };
+
+                  setTimeout(() => {
+                    hideTypingIndicator();
+                    const faqs = categoryFAQs[category];
+                    let response = `<div class="faq-options">`;
+                    faqs.forEach((faq) => {
+                      response += `<button class="btn btn-sm btn-outline-primary m-1 faq-btn" onclick="handleFAQClick(this)">${faq}</button>`;
+                    });
+                    response += `<button class="btn btn-sm btn-outline-primary m-1 faq-btn agent-btn mt-3" onclick="handleAgentClick()">
+                      <i class="bi bi-person-circle me-1"></i>Chat with a real agent
+                    </button>`;
+                    response += `</div>`;
+                    addMessage(response);
+                  }, 1500);
+                }
+
+                // Initial scroll to bottom when page loads
+                window.addEventListener("load", () => {
+                  // Add a small delay to ensure all content is loaded
+                  setTimeout(scrollToBottom, 500);
+                });
+
+                // Add scroll event listener to handle manual scrolling
+                const mainElement = document.querySelector("main");
+                mainElement.addEventListener("scroll", () => {
+                  // You can add additional scroll handling logic here if needed
+                });
+              </script>
             </div>
           </main>
-          <footer class="row bg-light py-4 mt-auto">
+          <!-- <footer class="row bg-light py-4 mt-auto">
             <div class="col">&copy SPES 2025 | All rights reserved.</div>
-          </footer>
+          </footer> -->
         </div>
       </div>
     </div>
