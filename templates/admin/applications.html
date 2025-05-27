@@ -123,9 +123,12 @@
                 </a>
               </li>
               <li>
-                <a href="#" class="nav-link px-sm-0 px-2">
+                <a
+                  href="{{ url_for('admin_exams') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
                   <i class="fs-5 bi-pencil"></i
-                  ><span class="ms-3 d-none d-sm-inline">Manage Exam</span>
+                  ><span class="ms-3 d-none d-sm-inline">Exams</span>
                 </a>
               </li>
               <li>
@@ -188,7 +191,7 @@
                   height="28"
                   class="rounded-circle"
                 />
-                <span class="d-none d-sm-inline mx-1">Honeylyn</span>
+                <span class="d-none d-sm-inline mx-1">Admin</span>
               </a>
               <ul
                 class="dropdown-menu dropdown-menu-dark text-small shadow"
