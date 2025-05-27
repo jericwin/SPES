@@ -99,7 +99,10 @@ def new_applicants_dashboard():
 
 @app.route('/new-applicants/messages')
 def new_applicants_messages():
-    return render_template('new/messages.html')
+    if 'user_id' not in session or session['role'] != 'new':
+        flash('Please login to access this page', 'error')
+        return redirect(url_for('home'))
+    return render_template('new/messages.html', username=session['username'])
 
 @app.route('/new-applicants/notifications')
 def new_applicants_notifications():
@@ -1673,7 +1676,10 @@ def submit_exam():
     
 @app.route('/new-applicants/forms')
 def new_applicants_forms():
-    return render_template('new/spes-form.html')
+    if 'user_id' not in session or session['role'] != 'new':
+        flash('Please login to access this page', 'error')
+        return redirect(url_for('home'))
+    return render_template('new/spes-form.html', username=session['username'])
 
 @app.route('/preview-document/<document_type>')
 def preview_document(document_type):
