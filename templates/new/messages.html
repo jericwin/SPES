@@ -326,7 +326,7 @@
                   height="28"
                   class="rounded-circle"
                 />
-                <span class="d-none d-sm-inline mx-1">Honeylyn</span>
+                <span class="d-none d-sm-inline mx-1">{{ username }}</span>
               </a>
               <ul
                 class="dropdown-menu dropdown-menu-dark text-small shadow"
@@ -337,7 +337,11 @@
                 <li>
                   <hr class="dropdown-divider" />
                 </li>
-                <li><a class="dropdown-item" href="#">Sign out</a></li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
               </ul>
             </div>
           </div>
