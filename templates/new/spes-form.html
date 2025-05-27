@@ -444,7 +444,10 @@
                 </a>
               </li>
               <li>
-                <a href="#" class="nav-link px-sm-0 px-2">
+                <a
+                  href="{{ url_for('new_applicants_messages') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
                   <i class="fs-5 bi-envelope"></i
                   ><span class="ms-3 d-none d-sm-inline">Messages</span>
                 </a>
@@ -491,7 +494,7 @@
                   height="28"
                   class="rounded-circle"
                 />
-                <span class="d-none d-sm-inline mx-1">Honeylyn</span>
+                <span class="d-none d-sm-inline mx-1">{{ username }}</span>
               </a>
               <ul
                 class="dropdown-menu dropdown-menu-dark text-small shadow"
@@ -502,7 +505,11 @@
                 <li>
                   <hr class="dropdown-divider" />
                 </li>
-                <li><a class="dropdown-item" href="#">Sign out</a></li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
               </ul>
             </div>
           </div>
