@@ -52,9 +52,10 @@ CREATE TABLE IF NOT EXISTS exams (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     time_limit INT,
-    passing_score INT,
+    passing_score INT DEFAULT 70,
+    available_slots INT DEFAULT 200,
     created_by INT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
