@@ -152,7 +152,11 @@
                   <li>
                     <hr class="dropdown-divider" />
                   </li>
-                  <li><a class="dropdown-item" href="#">Sign out</a></li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
                 </ul>
               </li>
             </ul>
@@ -166,13 +170,7 @@
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <img
-                  src="https://github.com/mdo.png"
-                  alt="hugenerd"
-                  width="28"
-                  height="28"
-                  class="rounded-circle"
-                />
+                <i class="bi bi-person-circle fs-4"></i>
                 <span class="d-none d-sm-inline mx-1">{{ username }}</span>
               </a>
               <ul
@@ -290,6 +288,74 @@
       </div>
     </div>
 
+    <!-- Exam Results Modal -->
+    <div
+      class="modal fade"
+      id="examResultsModal"
+      tabindex="-1"
+      aria-labelledby="examResultsModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="examResultsModalLabel">Exam Results</h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="card-title">Total Applicants</h6>
+                    <h3 class="mb-0" id="totalApplicants">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="card-title">Available Slots</h6>
+                    <h3 class="mb-0" id="availableSlots">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="card-title">Selected Applicants</h6>
+                    <h3 class="mb-0" id="selectedCount">-</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="table-responsive" style="max-height: 400px">
+              <table class="table table-hover">
+                <thead class="sticky-top bg-white">
+                  <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th>Submission Date</th>
+                  </tr>
+                </thead>
+                <tbody id="resultsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       function deleteNotification(notificationId) {
@@ -385,6 +451,80 @@
             });
         }
       }
+
+      function viewExamResults(examId) {
+        fetch(`/get-exam-results/${examId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Update statistics
+              document.getElementById("totalApplicants").textContent =
+                data.total_attempts;
+              document.getElementById("availableSlots").textContent =
+                data.exam.available_slots;
+              document.getElementById("selectedCount").textContent =
+                data.selected_count;
+
+              // Update table
+              const tbody = document.getElementById("resultsTableBody");
+              tbody.innerHTML = "";
+
+              data.results.forEach((result, index) => {
+                const row = document.createElement("tr");
+                row.className =
+                  result.selection_status === "Selected"
+                    ? "selected-row"
+                    : "not-selected-row";
+
+                const score = (
+                  (result.score / result.total_points) *
+                  100
+                ).toFixed(1);
+
+                row.innerHTML = `
+                  <td>${index + 1}</td>
+                  <td>${result.name}</td>
+                  <td>${score}%</td>
+                  <td>
+                    <span class="badge ${
+                      result.selection_status === "Selected"
+                        ? "bg-success"
+                        : "bg-danger"
+                    }">
+                      ${result.selection_status}
+                    </span>
+                  </td>
+                  <td>${new Date(result.submitted_at).toLocaleString()}</td>
+                `;
+
+                tbody.appendChild(row);
+              });
+
+              // Show modal
+              const modal = new bootstrap.Modal(
+                document.getElementById("examResultsModal")
+              );
+              modal.show();
+            } else {
+              alert("Error loading exam results: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("An error occurred while loading exam results");
+          });
+      }
+
+      // Modify notification action links to use the modal
+      document
+        .querySelectorAll('.list-group-item a[href^="/view-exam-results/"]')
+        .forEach((link) => {
+          link.addEventListener("click", function (e) {
+            e.preventDefault();
+            const examId = this.href.split("/").pop();
+            viewExamResults(examId);
+          });
+        });
     </script>
   </body>
 </html>
