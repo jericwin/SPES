@@ -10,6 +10,18 @@ from functools import wraps
 from docx2pdf import convert
 import tempfile
 import pythoncom
+import pytesseract
+from PIL import Image, ImageEnhance, ImageFilter
+import numpy as np
+import base64
+import cv2
+import mysql.connector
+
+# Configure Tesseract path
+if os.name == 'nt':  # Windows
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+elif os.name == 'posix':  # Linux/Mac
+    pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flash messages and sessions
@@ -551,13 +563,10 @@ def admin_applications():
                     u.name as applicant_name,
                     ui.first_name,
                     ui.middle_name,
-                    ui.last_name,
-                    ur.gwa_decimal,
-                    ur.gwa_percent
+                    ui.last_name
                 FROM applicants a
                 JOIN users u ON a.user_id = u.id
                 LEFT JOIN user_info ui ON u.id = ui.user_id
-                LEFT JOIN user_resources ur ON u.id = ur.user_id
                 ORDER BY a.submission_date DESC
             """)
             applications = cursor.fetchall()
@@ -607,6 +616,26 @@ def update_application_status():
 
                 # Create notification and assign exam only if status is 'for exam'
                 if new_status == 'for exam':
+                    # Get the most recent exam
+                    cursor.execute("""
+                        SELECT id FROM exams 
+                        ORDER BY created_at DESC 
+                        LIMIT 1
+                    """)
+                    exam = cursor.fetchone()
+
+                    if not exam:
+                        return jsonify({'success': False, 'message': 'No exam available. Please create an exam first.'})
+
+                    exam_id = exam['id']
+
+                    # Update exam_id in applicants table
+                    cursor.execute("""
+                        UPDATE applicants 
+                        SET exam_id = %s 
+                        WHERE id = %s
+                    """, (exam_id, application_id))
+
                     # Insert notification
                     cursor.execute("""
                         INSERT INTO notifications (user_id, title, message, type, action_url)
@@ -619,21 +648,20 @@ def update_application_status():
                         '/examinations'
                     ))
 
-                    # Only assign exam if user doesn't already have one
+                    # Check if user already has an active exam assignment
                     cursor.execute("""
-                        SELECT id FROM exam_assignments WHERE user_id = %s
+                        SELECT id FROM exam_assignments 
+                        WHERE user_id = %s 
+                        AND status IN ('assigned', 'in_progress')
                     """, (user_id,))
                     existing_assignment = cursor.fetchone()
 
                     if not existing_assignment:
-                        cursor.execute("SELECT id FROM exams ORDER BY id DESC LIMIT 1")
-                        exam = cursor.fetchone()
-                        if exam:
-                            exam_id = exam['id']
-                            cursor.execute("""
-                                INSERT INTO exam_assignments (user_id, exam_id, status)
-                                VALUES (%s, %s, %s)
-                            """, (user_id, exam_id, 'assigned'))
+                        # Create new exam assignment
+                        cursor.execute("""
+                            INSERT INTO exam_assignments (user_id, exam_id, status)
+                            VALUES (%s, %s, %s)
+                        """, (user_id, exam_id, 'assigned'))
 
                 elif new_status == 'approved':
                     cursor.execute("""
@@ -762,11 +790,58 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
+def process_file(file, filename):
+    if not file:
+        return None, None
+    
+    try:
+        # Read file content
+        file_content = file.read()
+        file.seek(0)  # Reset file pointer
+        
+        # If it's an image, compress and convert to PDF
+        if file.content_type.startswith('image/'):
+            try:
+                # Open and compress image
+                image = Image.open(io.BytesIO(file_content))
+                
+                # Calculate new dimensions while maintaining aspect ratio
+                max_size = (1024, 1024)  # Maximum dimensions
+                image.thumbnail(max_size, Image.Resampling.LANCZOS)
+                
+                # Convert to RGB if necessary (for PNG with transparency)
+                if image.mode in ('RGBA', 'LA'):
+                    background = Image.new('RGB', image.size, (255, 255, 255))
+                    background.paste(image, mask=image.split()[-1])
+                    image = background
+                elif image.mode != 'RGB':
+                    image = image.convert('RGB')
+                
+                # Save as compressed PDF
+                pdf_buffer = io.BytesIO()
+                image.save(pdf_buffer, format='PDF', quality=85, optimize=True)
+                file_content = pdf_buffer.getvalue()
+                filename = os.path.splitext(filename)[0] + '.pdf'
+                
+                # If PDF is still too large, compress it further
+                if len(file_content) > 4 * 1024 * 1024:  # If larger than 4MB
+                    # Reduce quality and size further
+                    image.thumbnail((800, 800), Image.Resampling.LANCZOS)
+                    pdf_buffer = io.BytesIO()
+                    image.save(pdf_buffer, format='PDF', quality=70, optimize=True)
+                    file_content = pdf_buffer.getvalue()
+                
+            except Exception as e:
+                print(f"Error converting image to PDF: {str(e)}")
+                return None, None
+        
+        return file_content, filename
+    except Exception as e:
+        print(f"Error processing file: {str(e)}")
+        return None, None
+
 @app.route('/submit-application', methods=['POST'])
 def submit_application():
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'Please log in first'})
-
     try:
         # Get form data
         first_name = request.form.get('firstName')
@@ -775,102 +850,98 @@ def submit_application():
         address = request.form.get('address')
         contact_number = request.form.get('contactNumber')
         birth_date = request.form.get('birthDate')
-        gwa = request.form.get('gwa')
 
-        # Get file data
-        cor_file = request.files.get('corUpload')
-        cog_file = request.files.get('cogUpload')
+        # Get files
+        cor_1st_sem = request.files.get('cor1stSemUpload')
+        cor_2nd_sem = request.files.get('cor2ndSemUpload')
+        cog = request.files.get('cogUpload')
 
-        # Validate files
-        if not cor_file or not cog_file:
-            return jsonify({'success': False, 'message': 'Please upload both required files'})
+        # Validate required fields
+        if not all([first_name, last_name, address, contact_number, birth_date, cor_1st_sem, cor_2nd_sem, cog]):
+            return jsonify({'success': False, 'message': 'Please fill in all required fields'})
 
-        if not cor_file.filename.endswith('.pdf') or not cog_file.filename.endswith('.pdf'):
-            return jsonify({'success': False, 'message': 'Only PDF files are allowed'})
+        # Get user ID from session
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'message': 'Please log in to submit an application'})
 
-        # Read file data
-        cor_data = cor_file.read()
-        cog_data = cog_file.read()
+        # Process COR files
+        cor_1st_sem_content, cor_1st_sem_filename = process_file(cor_1st_sem, cor_1st_sem.filename)
+        cor_2nd_sem_content, cor_2nd_sem_filename = process_file(cor_2nd_sem, cor_2nd_sem.filename)
+        cog_content, cog_filename = process_file(cog, cog.filename)
 
-        # Get database connection
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        if not all([cor_1st_sem_content, cor_2nd_sem_content, cog_content]):
+            return jsonify({'success': False, 'message': 'Error processing uploaded files'})
 
+        # Save to database
+        conn = None
+        cursor = None
         try:
-            # Check for existing application
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Insert into user_info table
             cursor.execute("""
-                SELECT id FROM applicants 
-                WHERE user_id = %s 
-                ORDER BY submission_date DESC 
-                LIMIT 1
-            """, (session['user_id'],))
-            existing_app = cursor.fetchone()
-
-            if existing_app:
-                # Update existing application status to 'pending'
-                cursor.execute("""
-                    UPDATE applicants 
-                    SET status = 'pending', 
-                        submission_date = CURDATE() 
-                    WHERE id = %s
-                """, (existing_app[0],))
-            else:
-                # Insert new application
-                cursor.execute("""
-                    INSERT INTO applicants (user_id, status, submission_date)
-                    VALUES (%s, 'pending', CURDATE())
-                """, (session['user_id'],))
-
-            # Insert or update user_info
-            cursor.execute("""
-                INSERT INTO user_info (user_id, first_name, middle_name, last_name, address, contact_number, birth_date)
+                INSERT INTO user_info 
+                (user_id, first_name, middle_name, last_name, address, contact_number, birth_date)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                first_name = VALUES(first_name),
-                middle_name = VALUES(middle_name),
-                last_name = VALUES(last_name),
-                address = VALUES(address),
-                contact_number = VALUES(contact_number),
-                birth_date = VALUES(birth_date)
-            """, (session['user_id'], first_name, middle_name, last_name, address, contact_number, birth_date))
-
-            # Insert or update user_resources
-            cursor.execute("""
-                INSERT INTO user_resources (user_id, cor_file, cor_filename, cog_file, cog_filename, gwa_decimal, gwa_percent)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                cor_file = VALUES(cor_file),
-                cor_filename = VALUES(cor_filename),
-                cog_file = VALUES(cog_file),
-                cog_filename = VALUES(cog_filename),
-                gwa_decimal = VALUES(gwa_decimal),
-                gwa_percent = VALUES(gwa_percent),
-                upload_date = NOW()
             """, (
-                session['user_id'],
-                cor_data,
-                cor_file.filename,
-                cog_data,
-                cog_file.filename,
-                float(gwa) if float(gwa) <= 5.0 else None,
-                int(float(gwa)) if float(gwa) > 5.0 else None
+                user_id,
+                first_name,
+                middle_name,
+                last_name,
+                address,
+                contact_number,
+                birth_date
             ))
+
+            # Insert into user_resources table
+            cursor.execute("""
+                INSERT INTO user_resources 
+                (user_id, cor_file, cor_filename, cog_file, cog_filename)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                user_id,
+                cor_1st_sem_content,
+                cor_1st_sem_filename,
+                cog_content,
+                cog_filename
+            ))
+
+            # Insert into applicants table
+            cursor.execute("""
+                INSERT INTO applicants
+                (user_id, status, submission_date)
+                VALUES (%s, 'pending', CURDATE())
+            """, (user_id,))
 
             conn.commit()
             return jsonify({'success': True, 'message': 'Application submitted successfully'})
 
-        except Exception as db_error:
-            conn.rollback()
-            print(f"Database error: {str(db_error)}")
-            return jsonify({'success': False, 'message': f'Database error: {str(db_error)}'})
+        except mysql.connector.Error as err:
+            if conn:
+                conn.rollback()
+            error_msg = f"Database error: {err}"
+            print(error_msg)
+            return jsonify({'success': False, 'message': 'Error saving application to database. Please try again.'})
+
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            error_msg = f"Unexpected error: {str(e)}"
+            print(error_msg)
+            return jsonify({'success': False, 'message': 'An unexpected error occurred. Please try again.'})
 
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     except Exception as e:
-        print(f"Application error: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error processing application: {str(e)}'})
+        error_msg = f"Error in submit_application: {str(e)}"
+        print(error_msg)
+        return jsonify({'success': False, 'message': 'An error occurred while submitting the application'})
 
 # Add a route to serve files from database
 @app.route('/get-file/<int:user_id>/<file_type>')
@@ -979,8 +1050,6 @@ def get_application_details(application_id):
                 ui.first_name,
                 ui.middle_name,
                 ui.last_name,
-                ur.gwa_decimal,
-                ur.gwa_percent,
                 ur.cor_filename,
                 ur.cog_filename,
                 ur.upload_date
@@ -1226,6 +1295,7 @@ def add_exam():
         description = request.form.get('description')
         time_limit = request.form.get('timeLimit')
         passing_score = request.form.get('passingScore')
+        available_slots = request.form.get('availableSlots')
         
         if not title:
             return jsonify({'success': False, 'message': 'Title is required'})
@@ -1235,9 +1305,9 @@ def add_exam():
         
         # Insert new exam
         cursor.execute('''
-            INSERT INTO exams (title, description, time_limit, passing_score, created_by, created_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-        ''', (title, description, time_limit, passing_score, session['user_id']))
+            INSERT INTO exams (title, description, time_limit, passing_score, available_slots, created_by, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        ''', (title, description, time_limit, passing_score, available_slots, session['user_id']))
         
         conn.commit()
         cursor.close()
@@ -1283,7 +1353,7 @@ def get_exam(exam_id):
         # Get questions for each page
         for page in pages:
             cursor.execute('''
-                SELECT id, question_text, question_type, points, correct_answer, is_case_sensitive
+                SELECT id, question_text, question_type, points
                 FROM exam_questions 
                 WHERE page_id = %s 
                 ORDER BY id
@@ -1294,7 +1364,7 @@ def get_exam(exam_id):
             for question in questions:
                 if question['question_type'] == 'multiple_choice':
                     cursor.execute('''
-                        SELECT id, option_text, is_correct 
+                        SELECT option_text 
                         FROM question_options 
                         WHERE question_id = %s 
                         ORDER BY id
@@ -1604,9 +1674,16 @@ def submit_exam():
         # Calculate percentage
         score_percentage = (earned_points / total_points * 100) if total_points > 0 else 0
         
-        # Get passing score
-        cursor.execute("SELECT passing_score FROM exams WHERE id = %s", (exam_id,))
-        passing_score = cursor.fetchone()[0]
+        # Get exam details including available slots
+        cursor.execute("""
+            SELECT e.passing_score, e.available_slots, 
+                   (SELECT COUNT(*) FROM exam_attempts WHERE exam_id = e.id) as total_attempts
+            FROM exams e WHERE e.id = %s
+        """, (exam_id,))
+        exam_info = cursor.fetchone()
+        passing_score = exam_info[0]
+        available_slots = exam_info[1]
+        total_attempts = exam_info[2]
         
         # Record exam attempt
         cursor.execute("""
@@ -1622,8 +1699,22 @@ def submit_exam():
             WHERE user_id = %s AND exam_id = %s
         """, (session['user_id'], exam_id))
         
-        # Update application status if passed
-        if score_percentage >= passing_score:
+        # Get user's rank among all attempts (including the current one)
+        cursor.execute("""
+            SELECT COUNT(*) + 1 as rank
+            FROM exam_attempts
+            WHERE exam_id = %s AND score > %s
+        """, (exam_id, earned_points))
+        user_rank = cursor.fetchone()[0]
+        
+        # Get total number of attempts (including the current one)
+        total_attempts = total_attempts + 1
+        
+        # Determine if user is within available slots
+        is_within_slots = user_rank <= available_slots
+        
+        # Update application status based on ranking
+        if is_within_slots:
             cursor.execute("""
                 UPDATE applicants 
                 SET status = 'for interview', exam_id = %s
@@ -1632,14 +1723,16 @@ def submit_exam():
                 LIMIT 1
             """, (exam_id, session['user_id']))
             
-            # Create notification
+            # Create notification for successful ranking
             cursor.execute("""
-                INSERT INTO notifications (user_id, title, message, type)
-                VALUES (%s, %s, %s, 'exam_result')
+                INSERT INTO notifications (user_id, title, message, type, action_url)
+                VALUES (%s, %s, %s, %s, %s)
             """, (
                 session['user_id'],
                 'Exam Completed',
-                f'Congratulations! You have passed the exam with a score of {score_percentage:.1f}%. Please wait for interview scheduling.',
+                f'Your exam score: {score_percentage:.1f}% | Rank: {user_rank}/{total_attempts} | Selected for interview',
+                'exam_result',
+                f'/view-exam-results/{exam_id}'
             ))
         else:
             cursor.execute("""
@@ -1650,14 +1743,16 @@ def submit_exam():
                 LIMIT 1
             """, (exam_id, session['user_id']))
             
-            # Create notification
+            # Create notification for unsuccessful ranking
             cursor.execute("""
-                INSERT INTO notifications (user_id, title, message, type)
-                VALUES (%s, %s, %s, 'exam_result')
+                INSERT INTO notifications (user_id, title, message, type, action_url)
+                VALUES (%s, %s, %s, %s, %s)
             """, (
                 session['user_id'],
-                'Exam Completed',
-                f'You have completed the exam with a score of {score_percentage:.1f}%. Unfortunately, you did not meet the passing score.',
+                'Exam Results Available',
+                f'Your exam score: {score_percentage:.1f}% | Rank: {user_rank}/{total_attempts} | Not selected for interview',
+                'exam_result',
+                f'/view-exam-results/{exam_id}'
             ))
         
         conn.commit()
@@ -1668,12 +1763,71 @@ def submit_exam():
             'success': True, 
             'message': 'Exam submitted successfully',
             'score': score_percentage,
-            'passed': score_percentage >= passing_score
+            'rank': user_rank,
+            'total_attempts': total_attempts,
+            'available_slots': available_slots,
+            'is_within_slots': is_within_slots
         })
     except Exception as e:
         print(f"Error submitting exam: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/view-exam-results/<int:exam_id>')
+def view_exam_results(exam_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'})
     
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get exam details
+        cursor.execute("""
+            SELECT e.title, e.available_slots
+            FROM exams e
+            WHERE e.id = %s
+        """, (exam_id,))
+        exam = cursor.fetchone()
+        
+        if not exam:
+            flash('Exam not found', 'error')
+            return redirect(url_for('new_applicants_dashboard'))
+        
+        # Get all exam attempts with user details, ordered by score
+        cursor.execute("""
+            SELECT 
+                ea.score,
+                ea.total_points,
+                ea.submitted_at,
+                u.name,
+                CASE 
+                    WHEN ROW_NUMBER() OVER (ORDER BY ea.score DESC) <= %s THEN 'Selected'
+                    ELSE 'Not Selected'
+                END as selection_status
+            FROM exam_attempts ea
+            JOIN users u ON ea.user_id = u.id
+            WHERE ea.exam_id = %s
+            ORDER BY ea.score DESC
+        """, (exam['available_slots'], exam_id))
+        results = cursor.fetchall()
+        
+        # Calculate statistics
+        total_attempts = len(results)
+        selected_count = sum(1 for r in results if r['selection_status'] == 'Selected')
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('new/exam_results.html',
+                             exam=exam,
+                             results=results,
+                             total_attempts=total_attempts,
+                             selected_count=selected_count)
+    except Exception as e:
+        print(f"Error fetching exam results: {str(e)}")
+        flash('Error loading exam results', 'error')
+        return redirect(url_for('new_applicants_dashboard'))
+
 @app.route('/new-applicants/forms')
 def new_applicants_forms():
     if 'user_id' not in session or session['role'] != 'new':
@@ -1727,6 +1881,203 @@ def preview_document(document_type):
             pythoncom.CoUninitialize()  # Clean up COM
         except:
             pass
+
+# Define keywords for document validation
+COR_KEYWORDS = [
+    'certificate of registration',
+    'registration',
+    'certificate of enrollment',
+    'student',
+    'student number',
+    'student id',
+    'student\'s information',
+    'student\'s name',
+    'enrollment',
+    'enrolled',
+    'registration',
+    'registered',
+    'bona fide',
+    'bonafide',
+    'good moral',
+    'moral',
+    'schedule',
+]
+
+COG_KEYWORDS = [
+    'copy of grades',
+    'transcript of records',
+    'academic record',
+    '1.00',
+    '1.25',
+    '1.50',
+    '1.75',
+    '2.00',
+    '2.25',
+    '2.50',
+    '2.75',
+    '80 to 100',
+]
+
+def preprocess_image(image):
+    # Convert to grayscale
+    image = image.convert('L')
+    
+    # Enhance contrast
+    enhancer = ImageEnhance.Contrast(image)
+    image = enhancer.enhance(2.0)
+    
+    # Enhance sharpness
+    enhancer = ImageEnhance.Sharpness(image)
+    image = enhancer.enhance(2.0)
+    
+    # Apply threshold
+    image = image.point(lambda x: 0 if x < 128 else 255, '1')
+    
+    return image
+
+@app.route('/validate-document-content', methods=['POST'])
+def validate_document_content():
+    try:
+        data = request.get_json()
+        base64_image = data.get('imageData')
+        document_type = data.get('documentType')
+
+        if not all([base64_image, document_type]):
+            return jsonify({
+                'valid': False, 
+                'message': 'Missing required data. Please try again.'
+            }), 400
+
+        # Convert base64 to PIL Image
+        try:
+            # Remove the data URL prefix if present
+            if ',' in base64_image:
+                base64_image = base64_image.split(',')[1]
+            
+            # Decode base64 image
+            image_data = base64.b64decode(base64_image)
+            image = Image.open(io.BytesIO(image_data))
+            
+            # Convert to RGB if necessary
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+                
+            # Preprocess image
+            processed_image = preprocess_image(image)
+                
+        except Exception as e:
+            return jsonify({
+                'valid': False,
+                'message': f'Error processing image: {str(e)}'
+            }), 400
+
+        # Perform OCR with custom configuration
+        try:
+            custom_config = r'--oem 3 --psm 6 -c preserve_interword_spaces=1'
+            text = pytesseract.image_to_string(processed_image, config=custom_config).lower()
+            
+            if not text.strip():
+                return jsonify({
+                    'valid': False,
+                    'message': 'No text could be extracted from the image. Please ensure the image is clear and contains readable text.'
+                })
+        except Exception as e:
+            return jsonify({
+                'valid': False,
+                'message': f'Error performing OCR: {str(e)}'
+            }), 500
+
+        # Validate content based on document type
+        keywords = COR_KEYWORDS if document_type == 'cor' else COG_KEYWORDS
+        matches = [keyword for keyword in keywords if keyword in text]
+
+        # Prepare detailed response
+        if len(matches) >= 1:
+            return jsonify({
+                'valid': True,
+                'message': f'Document content validated successfully.',
+                'debug_info': {
+                    'extracted_text': text,  # Show full text
+                    'matched_keywords': matches,
+                    'total_keywords_found': len(matches),
+                    'text_length': len(text),
+                    'all_keywords': keywords
+                }
+            })
+        else:
+            return jsonify({
+                'valid': False,
+                'message': f'Invalid document content. Expected {document_type.upper()} document.',
+                'debug_info': {
+                    'extracted_text': text,  # Show full text
+                    'matched_keywords': matches,
+                    'expected_keywords': keywords,
+                    'text_length': len(text),
+                    'all_keywords': keywords
+                }
+            })
+
+    except Exception as e:
+        return jsonify({
+            'valid': False,
+            'message': f'Error processing document: {str(e)}'
+        }), 500
+
+@app.route('/get-exam-results/<int:exam_id>')
+def get_exam_results(exam_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get exam details
+        cursor.execute("""
+            SELECT e.title, e.available_slots
+            FROM exams e
+            WHERE e.id = %s
+        """, (exam_id,))
+        exam = cursor.fetchone()
+        
+        if not exam:
+            return jsonify({'success': False, 'message': 'Exam not found'})
+        
+        # Get all exam attempts with user details, ordered by score
+        cursor.execute("""
+            SELECT 
+                ea.score,
+                ea.total_points,
+                ea.submitted_at,
+                u.name,
+                CASE 
+                    WHEN ROW_NUMBER() OVER (ORDER BY ea.score DESC) <= %s THEN 'Selected'
+                    ELSE 'Not Selected'
+                END as selection_status
+            FROM exam_attempts ea
+            JOIN users u ON ea.user_id = u.id
+            WHERE ea.exam_id = %s
+            ORDER BY ea.score DESC
+        """, (exam['available_slots'], exam_id))
+        results = cursor.fetchall()
+        
+        # Calculate statistics
+        total_attempts = len(results)
+        selected_count = sum(1 for r in results if r['selection_status'] == 'Selected')
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'exam': exam,
+            'results': results,
+            'total_attempts': total_attempts,
+            'selected_count': selected_count
+        })
+    except Exception as e:
+        print(f"Error fetching exam results: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
 
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
