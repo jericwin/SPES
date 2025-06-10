@@ -252,13 +252,7 @@
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <img
-                  src="https://github.com/mdo.png"
-                  alt="hugenerd"
-                  width="28"
-                  height="28"
-                  class="rounded-circle"
-                />
+                <i class="bi bi-person-circle fs-4"></i>
                 <span class="d-none d-sm-inline mx-1">{{ username }}</span>
               </a>
               <ul
@@ -332,6 +326,7 @@
                           >
                             Application Submitted
                           </a>
+                          {% if application_status == 'pending' %}
                           <button
                             onclick="revokeApplication()"
                             class="card-link"
@@ -339,6 +334,7 @@
                           >
                             Revoke
                           </button>
+                          {% endif %}
                         </div>
                         {% else %}
                         <a
@@ -361,7 +357,7 @@
                         >
                           <div class="modal-dialog modal-lg">
                             <div class="modal-content">
-                              <div class="modal-header">
+                              <div class="modal-header bg-light">
                                 <h5
                                   class="modal-title"
                                   id="spesApplicationModalLabel"
@@ -380,148 +376,251 @@
                                 onsubmit="submitApplication(event)"
                               >
                                 <div class="modal-body">
-                                  <div class="row">
-                                    <!-- Left Section -->
-                                    <div class="col-md-6">
-                                      <div class="form-floating mb-3">
-                                        <input
-                                          type="text"
-                                          class="form-control"
-                                          id="firstName"
-                                          name="firstName"
-                                          placeholder="First Name"
-                                          required
-                                        />
-                                        <label for="firstName"
-                                          >First Name</label
-                                        >
+                                  <!-- Progress Bar -->
+                                  <div
+                                    class="progress mb-4"
+                                    style="height: 4px"
+                                  >
+                                    <div
+                                      class="progress-bar"
+                                      role="progressbar"
+                                      style="width: 50%"
+                                      id="formProgress"
+                                    ></div>
+                                  </div>
+
+                                  <!-- Phase 1: Personal Information -->
+                                  <div id="phase1" class="phase">
+                                    <h6 class="border-bottom pb-2 mb-3">
+                                      Personal Information
+                                    </h6>
+                                    <div class="row g-3">
+                                      <div class="col-md-4">
+                                        <div class="form-floating">
+                                          <input
+                                            type="text"
+                                            class="form-control"
+                                            id="firstName"
+                                            name="firstName"
+                                            placeholder="First Name"
+                                            required
+                                          />
+                                          <label for="firstName"
+                                            >First Name</label
+                                          >
+                                        </div>
                                       </div>
-                                      <div class="form-floating mb-3">
-                                        <input
-                                          type="text"
-                                          class="form-control"
-                                          id="middleName"
-                                          name="middleName"
-                                          placeholder="Middle Name"
-                                        />
-                                        <label for="middleName"
-                                          >Middle Name</label
-                                        >
+                                      <div class="col-md-4">
+                                        <div class="form-floating">
+                                          <input
+                                            type="text"
+                                            class="form-control"
+                                            id="middleName"
+                                            name="middleName"
+                                            placeholder="Middle Name"
+                                          />
+                                          <label for="middleName"
+                                            >Middle Name</label
+                                          >
+                                        </div>
                                       </div>
-                                      <div class="form-floating mb-3">
-                                        <input
-                                          type="text"
-                                          class="form-control"
-                                          id="lastName"
-                                          name="lastName"
-                                          placeholder="Last Name"
-                                          required
-                                        />
-                                        <label for="lastName">Last Name</label>
+                                      <div class="col-md-4">
+                                        <div class="form-floating">
+                                          <input
+                                            type="text"
+                                            class="form-control"
+                                            id="lastName"
+                                            name="lastName"
+                                            placeholder="Last Name"
+                                            required
+                                          />
+                                          <label for="lastName"
+                                            >Last Name</label
+                                          >
+                                        </div>
                                       </div>
-                                      <div class="form-floating mb-3">
-                                        <input
-                                          type="text"
-                                          class="form-control"
-                                          id="address"
-                                          name="address"
-                                          placeholder="Address"
-                                          required
-                                        />
-                                        <label for="address">Address</label>
+                                      <div class="col-12">
+                                        <div class="form-floating">
+                                          <input
+                                            type="text"
+                                            class="form-control"
+                                            id="address"
+                                            name="address"
+                                            placeholder="Address"
+                                            required
+                                          />
+                                          <label for="address">Address</label>
+                                        </div>
                                       </div>
-                                      <div class="form-floating mb-3">
-                                        <input
-                                          type="number"
-                                          class="form-control"
-                                          id="contactNumber"
-                                          name="contactNumber"
-                                          placeholder="Contact Number"
-                                          oninput="if(this.value.length > 11) this.value = this.value.slice(0, 11);"
-                                          pattern="\d{11}"
-                                          title="Please enter an 11-digit contact number."
-                                          required
-                                        />
-                                        <label for="contactNumber"
-                                          >Contact Number</label
-                                        >
+                                      <div class="col-md-6">
+                                        <div class="form-floating">
+                                          <input
+                                            type="number"
+                                            class="form-control"
+                                            id="contactNumber"
+                                            name="contactNumber"
+                                            placeholder="Contact Number"
+                                            oninput="if(this.value.length > 11) this.value = this.value.slice(0, 11);"
+                                            pattern="\d{11}"
+                                            title="Please enter an 11-digit contact number."
+                                            required
+                                          />
+                                          <label for="contactNumber"
+                                            >Contact Number</label
+                                          >
+                                        </div>
                                       </div>
-                                      <div class="form-floating mb-3">
-                                        <input
-                                          type="date"
-                                          class="form-control"
-                                          id="birthDate"
-                                          name="birthDate"
-                                          placeholder="Birth Date"
-                                          required
-                                        />
-                                        <label for="birthDate"
-                                          >Birth Date</label
-                                        >
+                                      <div class="col-md-6">
+                                        <div class="form-floating">
+                                          <input
+                                            type="date"
+                                            class="form-control"
+                                            id="birthDate"
+                                            name="birthDate"
+                                            placeholder="Birth Date"
+                                            required
+                                          />
+                                          <label for="birthDate"
+                                            >Birth Date</label
+                                          >
+                                        </div>
                                       </div>
                                     </div>
-                                    <!-- Right Section -->
-                                    <div class="col-md-6">
-                                      <div class="mb-3">
-                                        <label
-                                          for="corUpload"
-                                          class="form-label"
-                                          >Certificate of Registration (PDF
-                                          only)</label
-                                        >
-                                        <input
-                                          type="file"
-                                          class="form-control"
-                                          id="corUpload"
-                                          name="corUpload"
-                                          accept="application/pdf"
-                                          required
-                                          onchange="validateFileType(this)"
-                                        />
-                                        <div class="invalid-feedback">
-                                          Please upload a valid PDF file.
-                                        </div>
-                                      </div>
-                                      <div class="mb-3">
-                                        <label
-                                          for="cogUpload"
-                                          class="form-label"
-                                          >Copy of Grades (PDF only)
-                                        </label>
-                                        <input
-                                          type="file"
-                                          class="form-control"
-                                          id="cogUpload"
-                                          name="cogUpload"
-                                          accept="application/pdf"
-                                          required
-                                          onchange="validateFileType(this)"
-                                        />
-                                        <div class="invalid-feedback">
-                                          Please upload a valid PDF file.
-                                        </div>
-                                      </div>
+                                  </div>
 
-                                      <div class="form-floating mb-3">
-                                        <input
-                                          type="number"
-                                          class="form-control"
-                                          id="gwa"
-                                          name="gwa"
-                                          placeholder="General Weighted Average"
-                                          step="0.01"
-                                          required
-                                        />
-                                        <label for="gwa"
-                                          >GWA (e.g., 1.25 or 96)</label
-                                        >
+                                  <!-- Phase 2: Document Upload -->
+                                  <div
+                                    id="phase2"
+                                    class="phase"
+                                    style="display: none"
+                                  >
+                                    <h6 class="border-bottom pb-2 mb-3">
+                                      Required Documents
+                                    </h6>
+                                    <div class="row g-3">
+                                      <div class="col-12">
+                                        <div class="card">
+                                          <div class="card-body">
+                                            <h6 class="card-title">
+                                              Certificate of Registration - 1st
+                                              Semester
+                                            </h6>
+                                            <p
+                                              class="card-text text-muted small mb-2"
+                                            >
+                                              Upload your 1st semester COR in
+                                              PDF or image format
+                                            </p>
+                                            <input
+                                              type="file"
+                                              class="form-control"
+                                              id="cor1stSemUpload"
+                                              name="cor1stSemUpload"
+                                              accept="image/*,application/pdf"
+                                              required
+                                              onchange="validateFileType(this, 'cor')"
+                                            />
+                                            <div
+                                              class="feedback-message d-flex align-items-center"
+                                              style="display: none"
+                                            >
+                                              <i class="bi me-2"></i>
+                                              <span></span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div class="col-12">
+                                        <div class="card">
+                                          <div class="card-body">
+                                            <h6 class="card-title">
+                                              Certificate of Registration - 2nd
+                                              Semester
+                                            </h6>
+                                            <p
+                                              class="card-text text-muted small mb-2"
+                                            >
+                                              Upload your 2nd semester COR in
+                                              PDF or image format
+                                            </p>
+                                            <input
+                                              type="file"
+                                              class="form-control"
+                                              id="cor2ndSemUpload"
+                                              name="cor2ndSemUpload"
+                                              accept="image/*,application/pdf"
+                                              required
+                                              onchange="validateFileType(this, 'cor')"
+                                            />
+                                            <div
+                                              class="feedback-message d-flex align-items-center"
+                                              style="display: none"
+                                            >
+                                              <i class="bi me-2"></i>
+                                              <span></span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div class="col-12">
+                                        <div class="card">
+                                          <div class="card-body">
+                                            <h6 class="card-title">
+                                              Copy of Grades
+                                            </h6>
+                                            <p
+                                              class="card-text text-muted small mb-2"
+                                            >
+                                              Upload your grades in PDF or image
+                                              format
+                                            </p>
+                                            <input
+                                              type="file"
+                                              class="form-control"
+                                              id="cogUpload"
+                                              name="cogUpload"
+                                              accept="image/*,application/pdf"
+                                              required
+                                              onchange="validateFileType(this, 'cog')"
+                                            />
+                                            <div
+                                              class="feedback-message d-flex align-items-center"
+                                              style="display: none"
+                                            >
+                                              <i class="bi me-2"></i>
+                                              <span></span>
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
                                 </div>
-                                <div class="modal-footer">
-                                  <button type="submit" class="btn btn-primary">
-                                    Submit
+                                <div class="modal-footer bg-light">
+                                  <button
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    id="prevBtn"
+                                    style="display: none"
+                                    onclick="prevPhase()"
+                                  >
+                                    Previous
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    id="nextBtn"
+                                    onclick="nextPhase()"
+                                  >
+                                    Next
+                                  </button>
+                                  <button
+                                    type="submit"
+                                    class="btn btn-success"
+                                    id="submitBtn"
+                                    style="display: none"
+                                  >
+                                    Submit Application
                                   </button>
                                 </div>
                               </form>
@@ -545,13 +644,141 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      function validateFileType(input) {
+      function validateFileType(input, documentType) {
         const file = input.files[0];
-        if (file && !file.name.toLowerCase().endsWith(".pdf")) {
+        const feedback = input.nextElementSibling;
+
+        // Reset state
+        input.classList.remove("is-invalid", "is-valid");
+        feedback.style.display = "none";
+        feedback.classList.remove("text-danger", "text-success");
+
+        if (!file) {
+          return;
+        }
+
+        // Check if file is PDF or image
+        if (file.type !== "application/pdf" && !file.type.startsWith("image/")) {
           input.value = "";
           input.classList.add("is-invalid");
+          feedback.classList.add("text-danger");
+          feedback.querySelector("i").className = "bi bi-x-circle-fill me-2";
+          feedback.querySelector("span").textContent = "Please upload a valid image or PDF file.";
+          feedback.style.display = "flex";
+          return;
+        }
+
+        // For images, validate content using OCR
+        if (file.type.startsWith("image/")) {
+          feedback.classList.add("text-primary");
+          feedback.querySelector("i").className = "bi bi-hourglass-split me-2";
+          feedback.querySelector("span").textContent = "Processing image...";
+          feedback.style.display = "flex";
+
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            feedback.querySelector("span").textContent = "Loading image...";
+
+            const img = new Image();
+            img.onload = function() {
+              feedback.querySelector("span").textContent = "Preparing image for OCR...";
+
+              // Create canvas to process image
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+
+              // Calculate new dimensions while maintaining aspect ratio
+              let width = img.width;
+              let height = img.height;
+              const MAX_SIZE = 1024; // Maximum dimension
+
+              if (width > height && width > MAX_SIZE) {
+                height = Math.round((height * MAX_SIZE) / width);
+                width = MAX_SIZE;
+              } else if (height > MAX_SIZE) {
+                width = Math.round((width * MAX_SIZE) / height);
+                height = MAX_SIZE;
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              ctx.drawImage(img, 0, 0, width, height);
+
+              feedback.querySelector("span").textContent = "Performing OCR analysis...";
+
+              // Convert canvas to base64
+              const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+
+              // Send to backend for OCR validation
+              fetch('/validate-document-content', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  imageData: base64Image,
+                  documentType: documentType
+                })
+              })
+              .then(response => response.json())
+              .then(data => {
+                if (data.valid) {
+                  input.classList.add("is-valid");
+                  feedback.classList.remove("text-danger", "text-primary");
+                  feedback.classList.add("text-success");
+                  feedback.querySelector("i").className = "bi bi-check-circle-fill me-2";
+                  feedback.querySelector("span").textContent = "Document validated successfully";
+                  showToast(data.message || "Document content validated successfully", "success");
+                } else {
+                  input.value = "";
+                  input.classList.add("is-invalid");
+                  feedback.classList.remove("text-success", "text-primary");
+                  feedback.classList.add("text-danger");
+                  feedback.querySelector("i").className = "bi bi-x-circle-fill me-2";
+                  feedback.querySelector("span").textContent = data.message || `Invalid document content. Please upload a valid ${documentType.toUpperCase()} document.`;
+                  showToast(data.message || "Invalid document content", "error");
+                }
+              })
+              .catch(error => {
+                console.error('Error:', error);
+                input.value = "";
+                input.classList.add("is-invalid");
+                feedback.classList.remove("text-success", "text-primary");
+                feedback.classList.add("text-danger");
+                feedback.querySelector("i").className = "bi bi-x-circle-fill me-2";
+                feedback.querySelector("span").textContent = `Error validating document content: ${error.message}`;
+                showToast("Error validating document: " + error.message, "error");
+              });
+            };
+            img.onerror = function() {
+              input.value = "";
+              input.classList.add("is-invalid");
+              feedback.classList.remove("text-success", "text-primary");
+              feedback.classList.add("text-danger");
+              feedback.querySelector("i").className = "bi bi-x-circle-fill me-2";
+              feedback.querySelector("span").textContent = "Error loading image. Please try again.";
+              showToast("Error loading image", "error");
+            };
+            img.src = e.target.result;
+          };
+          reader.onerror = function() {
+            input.value = "";
+            input.classList.add("is-invalid");
+            feedback.classList.remove("text-success", "text-primary");
+            feedback.classList.add("text-danger");
+            feedback.querySelector("i").className = "bi bi-x-circle-fill me-2";
+            feedback.querySelector("span").textContent = "Error reading file. Please try again.";
+            showToast("Error reading file", "error");
+          };
+          reader.readAsDataURL(file);
         } else {
-          input.classList.remove("is-invalid");
+          // For PDFs, just validate file type
+          input.classList.add("is-valid");
+          feedback.classList.remove("text-danger", "text-primary");
+          feedback.classList.add("text-success");
+          feedback.querySelector("i").className = "bi bi-check-circle-fill me-2";
+          feedback.querySelector("span").textContent = "Document validated successfully";
+          feedback.style.display = "flex";
         }
       }
 
@@ -666,6 +893,65 @@
         // showToast("Your exam has been submitted", "success");
         // showToast("Please complete your profile", "warning");
         // showToast("Error loading data", "error");
+      });
+
+      let currentPhase = 1;
+
+      function nextPhase() {
+        if (currentPhase === 1) {
+          // Validate phase 1
+          const requiredFields = ['firstName', 'lastName', 'address', 'contactNumber', 'birthDate'];
+          let isValid = true;
+
+          requiredFields.forEach(field => {
+            const input = document.getElementById(field);
+            if (!input.value) {
+              input.classList.add('is-invalid');
+              isValid = false;
+            } else {
+              input.classList.remove('is-invalid');
+            }
+          });
+
+          if (!isValid) {
+            showToast('Please fill in all required fields', 'warning');
+            return;
+          }
+
+          // Move to phase 2
+          document.getElementById('phase1').style.display = 'none';
+          document.getElementById('phase2').style.display = 'block';
+          document.getElementById('prevBtn').style.display = 'inline-block';
+          document.getElementById('nextBtn').style.display = 'none';
+          document.getElementById('submitBtn').style.display = 'inline-block';
+          document.getElementById('formProgress').style.width = '100%';
+          currentPhase = 2;
+        }
+      }
+
+      function prevPhase() {
+        if (currentPhase === 2) {
+          // Move back to phase 1
+          document.getElementById('phase2').style.display = 'none';
+          document.getElementById('phase1').style.display = 'block';
+          document.getElementById('prevBtn').style.display = 'none';
+          document.getElementById('nextBtn').style.display = 'inline-block';
+          document.getElementById('submitBtn').style.display = 'none';
+          document.getElementById('formProgress').style.width = '50%';
+          currentPhase = 1;
+        }
+      }
+
+      // Reset form when modal is closed
+      document.getElementById('spesApplicationModal').addEventListener('hidden.bs.modal', function () {
+        currentPhase = 1;
+        document.getElementById('phase1').style.display = 'block';
+        document.getElementById('phase2').style.display = 'none';
+        document.getElementById('prevBtn').style.display = 'none';
+        document.getElementById('nextBtn').style.display = 'inline-block';
+        document.getElementById('submitBtn').style.display = 'none';
+        document.getElementById('formProgress').style.width = '50%';
+        document.getElementById('applicationForm').reset();
       });
     </script>
   </body>
