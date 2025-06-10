@@ -187,7 +187,11 @@
                   <li>
                     <hr class="dropdown-divider" />
                   </li>
-                  <li><a class="dropdown-item" href="#">Sign out</a></li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
                 </ul>
               </li>
             </ul>
@@ -201,13 +205,7 @@
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <img
-                  src="https://github.com/mdo.png"
-                  alt="hugenerd"
-                  width="28"
-                  height="28"
-                  class="rounded-circle"
-                />
+                <i class="bi bi-person-circle fs-4"></i>
                 <span class="d-none d-sm-inline mx-1">Admin</span>
               </a>
               <ul
@@ -325,6 +323,20 @@
                   max="100"
                   value="70"
                 />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Available Slots</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="availableSlots"
+                  min="1"
+                  value="200"
+                />
+                <small class="text-muted"
+                  >Number of applicants that will be selected for
+                  interviews</small
+                >
               </div>
             </form>
           </div>
