@@ -170,7 +170,11 @@
                   <li>
                     <hr class="dropdown-divider" />
                   </li>
-                  <li><a class="dropdown-item" href="#">Sign out</a></li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
                 </ul>
               </li>
             </ul>
@@ -184,13 +188,7 @@
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <img
-                  src="https://github.com/mdo.png"
-                  alt="hugenerd"
-                  width="28"
-                  height="28"
-                  class="rounded-circle"
-                />
+              <i class="bi bi-person-circle fs-4"></i>
                 <span class="d-none d-sm-inline mx-1">Admin</span>
               </a>
               <ul
@@ -202,7 +200,11 @@
                 <li>
                   <hr class="dropdown-divider" />
                 </li>
-                <li><a class="dropdown-item" href="#">Sign out</a></li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
               </ul>
             </div>
           </div>
@@ -221,7 +223,8 @@
                     class="d-flex flex-wrap justify-content-between align-items-center mb-3"
                   >
                     <div class="btn-group flex-wrap" role="group">
-                      <button class="btn btn-primary mb-2" onclick="filterApplications('pending')">Pending</button>
+                      <button class="btn btn-primary mb-2" onclick="filterApplications('all')">All</button>
+                      <button class="btn btn-outline-primary mb-2" onclick="filterApplications('pending')">Pending</button>
                       <button class="btn btn-outline-primary mb-2" onclick="filterApplications('approved')">
                         Approved
                       </button>
@@ -248,7 +251,6 @@
                           <tr>
                             <th>NAME</th>
                             <th>SUBMISSION DATE</th>
-                            <th>GWA</th>
                             <th>STATUS</th>
                             <th>ACTIONS</th>
                           </tr>
@@ -266,15 +268,6 @@
                               </strong>
                             </td>
                             <td>{{ app.submission_date.strftime('%B %d, %Y') if app.submission_date else 'N/A' }}</td>
-                            <td>
-                              {% if app.gwa_decimal %}
-                                {{ "%.2f"|format(app.gwa_decimal) }}
-                              {% elif app.gwa_percent %}
-                                {{ app.gwa_percent }}%
-                              {% else %}
-                                N/A
-                              {% endif %}
-                            </td>
                             <td>
                               <span class="badge {% if app.status == 'pending' %}bg-warning text-dark
                                               {% elif app.status == 'approved' %}bg-success
@@ -295,21 +288,21 @@
                               <button
                                 class="btn btn-sm btn-success shadow-sm me-1"
                                 onclick="updateStatus({{ app.application_id }}, 'approved')"
-                                {% if app.status == 'approved' %}disabled{% endif %}
+                                {% if app.status == 'approved' or app.status == 'for interview' %}disabled{% endif %}
                               >
                                 Approve
                               </button>
                               <button
                                 class="btn btn-sm btn-danger shadow-sm me-1"
                                 onclick="updateStatus({{ app.application_id }}, 'rejected')"
-                                {% if app.status == 'rejected' %}disabled{% endif %}
+                                {% if app.status == 'rejected' or app.status == 'for interview' %}disabled{% endif %}
                               >
                                 Reject
                               </button>
                               <button
                                 class="btn btn-sm btn-outline-primary shadow-sm"
                                 onclick="updateStatus({{ app.application_id }}, 'for exam')"
-                                {% if app.status == 'for exam' %}disabled{% endif %}
+                                {% if app.status == 'for exam' or app.status == 'for interview' %}disabled{% endif %}
                               >
                                 {% if app.status == 'for exam' %}
                                   Exam Sent
@@ -337,51 +330,66 @@
 
     <!-- Application Details Modal -->
     <div class="modal fade" id="applicationDetailsModal" tabindex="-1" aria-labelledby="applicationDetailsModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-lg">
         <div class="modal-content">
-          <div class="modal-header">
+          <div class="modal-header bg-light">
             <h5 class="modal-title" id="applicationDetailsModalLabel">Application Details</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <div class="row">
-              <div class="col-12">
-                <table class="table table-sm">
-                  <tr>
-                    <th>Full Name:</th>
-                    <td id="modal-full-name"></td>
-                  </tr>
-                  <tr>
-                    <th>GWA:</th>
-                    <td id="modal-gwa"></td>
-                  </tr>
-                  <tr>
-                    <th>Submission Date:</th>
-                    <td id="modal-submission-date"></td>
-                  </tr>
-                  <tr>
-                    <th>Certificate of Registration:</th>
-                    <td>
-                      <span id="modal-cor"></span>
-                      <button class="btn btn-sm btn-primary ms-2" onclick="downloadDocument('cor')" id="download-cor">
-                        <i class="bi bi-download"></i> Download
-                      </button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Copy of Grades:</th>
-                    <td>
-                      <span id="modal-cog"></span>
-                      <button class="btn btn-sm btn-primary ms-2" onclick="downloadDocument('cog')" id="download-cog">
-                        <i class="bi bi-download"></i> Download
-                      </button>
-                    </td>
-                  </tr>
-                </table>
+            <div class="container-fluid">
+              <!-- Personal Information Section -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <h6 class="border-bottom pb-2 mb-3">Personal Information</h6>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <p class="mb-2"><strong>Full Name:</strong></p>
+                      <p class="text-muted" id="modal-full-name"></p>
+                    </div>
+                    <div class="col-md-6">
+                      <p class="mb-2"><strong>Submission Date:</strong></p>
+                      <p class="text-muted" id="modal-submission-date"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Documents Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="border-bottom pb-2 mb-3">Submitted Documents</h6>
+                  <div class="row g-3">
+                    <!-- COR -->
+                    <div class="col-md-6">
+                      <div class="card h-100">
+                        <div class="card-body">
+                          <h6 class="card-title">Certificate of Registration</h6>
+                          <p class="card-text text-muted mb-2" id="modal-cor">Not uploaded</p>
+                          <button class="btn btn-sm btn-outline-primary" onclick="downloadDocument('cor')" id="download-cor" style="display: none;">
+                            <i class="bi bi-download me-1"></i>Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- COG -->
+                    <div class="col-md-6">
+                      <div class="card h-100">
+                        <div class="card-body">
+                          <h6 class="card-title">Copy of Grades</h6>
+                          <p class="card-text text-muted mb-2" id="modal-cog">Not uploaded</p>
+                          <button class="btn btn-sm btn-outline-primary" onclick="downloadDocument('cog')" id="download-cog" style="display: none;">
+                            <i class="bi bi-download me-1"></i>Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer bg-light">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           </div>
         </div>
@@ -393,6 +401,11 @@
       // Initialize Bootstrap modal
       const applicationDetailsModal = new bootstrap.Modal(document.getElementById('applicationDetailsModal'));
       let currentApplicationId = null;
+
+      // Call filterApplications('all') when page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        filterApplications('all');
+      });
 
       function filterApplications(status) {
         const rows = document.querySelectorAll('.application-row');
@@ -459,10 +472,6 @@
                   ? `${app.first_name} ${app.middle_name || ''} ${app.last_name}`
                   : app.applicant_name;
               
-              document.getElementById('modal-gwa').textContent = 
-                app.gwa_decimal ? app.gwa_decimal.toFixed(2) : 
-                app.gwa_percent ? `${app.gwa_percent}%` : 'N/A';
-              
               document.getElementById('modal-submission-date').textContent = app.submission_date || 'N/A';
               
               // Update document information and download buttons
@@ -502,7 +511,17 @@
       function downloadDocument(documentType) {
         if (!currentApplicationId) return;
         
-        window.location.href = `/download-document/${currentApplicationId}/${documentType}`;
+        let endpoint = '';
+        switch(documentType) {
+          case 'cor':
+            endpoint = 'cor';
+            break;
+          case 'cog':
+            endpoint = 'cog';
+            break;
+        }
+        
+        window.location.href = `/download-document/${currentApplicationId}/${endpoint}`;
       }
     </script>
   </body>
