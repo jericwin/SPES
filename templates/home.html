@@ -156,6 +156,62 @@
         font-weight: 700;
         color: #2a7bbd;
       }
+      /* Custom styles for the modal */
+      .modal-content {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+      .modal-header {
+        background: linear-gradient(135deg, #f7fbff 0%, #a9d2f9 100%);
+        border-radius: 15px 15px 0 0;
+        padding: 2rem 1rem;
+      }
+      .nav-pills .nav-link {
+        color: #6c757d;
+        border-radius: 30px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+      }
+      .nav-pills .nav-link.active {
+        background-color: #3a5ea8;
+        color: white;
+      }
+      .form-control,
+      .form-select {
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+        padding: 1rem 0.75rem;
+      }
+      .form-control:focus,
+      .form-select:focus {
+        border-color: #3a5ea8;
+        box-shadow: 0 0 0 0.2rem rgba(58, 94, 168, 0.25);
+      }
+      .form-floating > label {
+        padding: 1rem 0.75rem;
+      }
+      .btn-primary {
+        border-radius: 10px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+      }
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(58, 94, 168, 0.2);
+      }
+      /* Animation for tab switching */
+      .tab-pane {
+        transition: all 0.3s ease;
+      }
+      .tab-pane.fade:not(.show) {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      .tab-pane.fade.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
     </style>
   </head>
   <body>
@@ -201,19 +257,35 @@
           aria-labelledby="accountModalLabel"
           aria-hidden="true"
         >
-          <div class="modal-dialog">
+          <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="accountModalLabel">Account</h5>
+              <div class="modal-header border-0 pb-0">
+                <div class="w-100 text-center">
+                  <img
+                    src="/static/images/spes-logo.png"
+                    alt="SPES Logo"
+                    class="mb-3"
+                    style="width: 80px"
+                  />
+                  <h4 class="modal-title" id="accountModalLabel">
+                    Welcome to DigiSPES
+                  </h4>
+                  <p class="text-muted">Your gateway to SPES opportunities</p>
+                </div>
                 <button
                   type="button"
-                  class="btn-close"
+                  class="btn-close position-absolute"
+                  style="right: 1rem; top: 1rem"
                   data-bs-dismiss="modal"
                   aria-label="Close"
                 ></button>
               </div>
-              <div class="modal-body">
-                <ul class="nav nav-tabs" id="accountTab" role="tablist">
+              <div class="modal-body px-4">
+                <ul
+                  class="nav nav-pills nav-justified mb-4"
+                  id="accountTab"
+                  role="tablist"
+                >
                   <li class="nav-item" role="presentation">
                     <button
                       class="nav-link active"
@@ -225,7 +297,7 @@
                       aria-controls="login"
                       aria-selected="true"
                     >
-                      Login
+                      <i class="fas fa-sign-in-alt me-2"></i>Login
                     </button>
                   </li>
                   <li class="nav-item" role="presentation">
@@ -239,11 +311,11 @@
                       aria-controls="register"
                       aria-selected="false"
                     >
-                      Register
+                      <i class="fas fa-user-plus me-2"></i>Register
                     </button>
                   </li>
                 </ul>
-                <div class="tab-content mt-3" id="accountTabContent">
+                <div class="tab-content" id="accountTabContent">
                   <!-- Login Tab -->
                   <div
                     class="tab-pane fade show active"
@@ -261,9 +333,11 @@
                           placeholder="Enter your username"
                           required
                         />
-                        <label for="username">Username</label>
+                        <label for="username"
+                          ><i class="fas fa-user me-2"></i>Username</label
+                        >
                       </div>
-                      <div class="form-floating mb-3 position-relative">
+                      <div class="form-floating mb-4 position-relative">
                         <input
                           type="password"
                           class="form-control"
@@ -272,20 +346,27 @@
                           placeholder="Enter your password"
                           required
                         />
-                        <label for="password">Password</label>
+                        <label for="password"
+                          ><i class="fas fa-lock me-2"></i>Password</label
+                        >
                         <i
                           class="fas fa-eye position-absolute"
                           style="
                             top: 50%;
-                            right: 10px;
+                            right: 15px;
                             transform: translateY(-50%);
                             cursor: pointer;
+                            color: #6c757d;
                           "
                           onclick="togglePasswordVisibility('password', this)"
                         ></i>
                       </div>
-                      <button type="submit" class="btn btn-primary w-100">
-                        Login
+                      <button
+                        type="submit"
+                        class="btn btn-primary w-100 py-2 mb-3"
+                        style="background-color: #3a5ea8; border: none"
+                      >
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
                       </button>
                     </form>
                   </div>
@@ -309,7 +390,10 @@
                           <option value="new">New Applicant</option>
                           <option value="old">Old Applicant</option>
                         </select>
-                        <label for="applicantType">Applicant Type</label>
+                        <label for="applicantType"
+                          ><i class="fas fa-user-tag me-2"></i>Applicant
+                          Type</label
+                        >
                       </div>
                       <div class="form-floating mb-3">
                         <input
@@ -320,7 +404,9 @@
                           placeholder="Enter your username"
                           required
                         />
-                        <label for="username">Username</label>
+                        <label for="username"
+                          ><i class="fas fa-user me-2"></i>Username</label
+                        >
                       </div>
                       <div class="form-floating mb-3">
                         <input
@@ -331,7 +417,9 @@
                           placeholder="Enter your email"
                           required
                         />
-                        <label for="email">Email</label>
+                        <label for="email"
+                          ><i class="fas fa-envelope me-2"></i>Email</label
+                        >
                       </div>
                       <div class="form-floating mb-3 position-relative">
                         <input
@@ -342,19 +430,22 @@
                           placeholder="Enter your password"
                           required
                         />
-                        <label for="passwordRegister">Password</label>
+                        <label for="passwordRegister"
+                          ><i class="fas fa-lock me-2"></i>Password</label
+                        >
                         <i
                           class="fas fa-eye position-absolute"
                           style="
                             top: 50%;
-                            right: 10px;
+                            right: 15px;
                             transform: translateY(-50%);
                             cursor: pointer;
+                            color: #6c757d;
                           "
                           onclick="togglePasswordVisibility('passwordRegister', this)"
                         ></i>
                       </div>
-                      <div class="form-floating mb-3 position-relative">
+                      <div class="form-floating mb-4 position-relative">
                         <input
                           type="password"
                           class="form-control"
@@ -363,20 +454,28 @@
                           placeholder="Confirm your password"
                           required
                         />
-                        <label for="confirmPassword">Confirm Password</label>
+                        <label for="confirmPassword"
+                          ><i class="fas fa-lock me-2"></i>Confirm
+                          Password</label
+                        >
                         <i
                           class="fas fa-eye position-absolute"
                           style="
                             top: 50%;
-                            right: 10px;
+                            right: 15px;
                             transform: translateY(-50%);
                             cursor: pointer;
+                            color: #6c757d;
                           "
                           onclick="togglePasswordVisibility('confirmPassword', this)"
                         ></i>
                       </div>
-                      <button type="submit" class="btn btn-primary w-100">
-                        Register
+                      <button
+                        type="submit"
+                        class="btn btn-primary w-100 py-2"
+                        style="background-color: #3a5ea8; border: none"
+                      >
+                        <i class="fas fa-user-plus me-2"></i>Register
                       </button>
                     </form>
                   </div>
