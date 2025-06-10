@@ -305,7 +305,11 @@
                   <li>
                     <hr class="dropdown-divider" />
                   </li>
-                  <li><a class="dropdown-item" href="#">Sign out</a></li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
                 </ul>
               </li>
             </ul>
@@ -319,13 +323,7 @@
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <img
-                  src="https://github.com/mdo.png"
-                  alt="hugenerd"
-                  width="28"
-                  height="28"
-                  class="rounded-circle"
-                />
+                <i class="bi bi-person-circle fs-4"></i>
                 <span class="d-none d-sm-inline mx-1">{{ username }}</span>
               </a>
               <ul
@@ -578,9 +576,16 @@
                   setTimeout(() => {
                     hideTypingIndicator();
                     addMessage(
-                      "Hello! I'm a real agent. How can I assist you today?"
+                      "Connecting to a real agent. Please wait for a moment..."
                     );
+                    showTypingIndicator();
                   }, 1500);
+                  setTimeout(() => {
+                    hideTypingIndicator();
+                    addMessage(
+                      "Hello! I'm a SPES Agent Jeric. How can I assist you today?"
+                    );
+                  }, 6500);
                 }
 
                 function handleKeyPress(event) {
