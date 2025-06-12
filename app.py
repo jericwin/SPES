@@ -12,9 +12,9 @@ import tempfile
 import pythoncom
 import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
-import numpy as np
+# import numpy as np
 import base64
-import cv2
+# import cv2
 import mysql.connector
 
 # Configure Tesseract path
