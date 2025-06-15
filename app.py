@@ -3,7 +3,7 @@ from config import get_db_connection
 import hashlib
 import re
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import io
 from functools import wraps
@@ -16,6 +16,9 @@ from PIL import Image, ImageEnhance, ImageFilter
 import base64
 # import cv2
 import mysql.connector
+import threading
+import time
+import pytz
 
 # Configure Tesseract path
 if os.name == 'nt':  # Windows
@@ -121,10 +124,9 @@ def new_applicants_notifications():
     if 'user_id' not in session or session['role'] != 'new':
         flash('Please login to access this page', 'error')
         return redirect(url_for('home'))
-        
+    
     conn = get_db_connection()
     notifications = []
-    
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
@@ -135,19 +137,29 @@ def new_applicants_notifications():
                 ORDER BY created_at DESC
             """, (session['user_id'],))
             notifications = cursor.fetchall()
-            
             # Format dates for display
             for notification in notifications:
                 if notification['created_at']:
                     notification['created_at'] = notification['created_at'].strftime('%B %d, %Y %I:%M %p')
-                    
+                # If exam_link, check assignment status and exam status
+                if notification['type'] == 'exam_link' and notification['action_url'] == '/examinations':
+                    # Get the most recent exam assignment for this user
+                    cursor.execute("""
+                        SELECT ea.status, e.status as exam_status 
+                        FROM exam_assignments ea
+                        JOIN exams e ON ea.exam_id = e.id
+                        WHERE ea.user_id = %s 
+                        ORDER BY ea.assigned_at DESC LIMIT 1
+                    """, (session['user_id'],))
+                    assignment = cursor.fetchone()
+                    notification['assignment_status'] = assignment['status'] if assignment else None
+                    notification['exam_status'] = assignment['exam_status'] if assignment else None
         except Exception as e:
             print(f"Error fetching notifications: {e}")
             flash('Error loading notifications', 'error')
         finally:
             cursor.close()
             conn.close()
-            
     return render_template('new/notifications.html', 
                          username=session['username'],
                          notifications=notifications)
@@ -673,6 +685,15 @@ def update_application_status():
                         'Your application has been approved! Please wait for further instructions regarding the examination.',
                         'application_approved'
                     ))
+                    # Insert into examinees if not already present
+                    cursor.execute("""
+                        SELECT id FROM examinees WHERE user_id = %s
+                    """, (user_id,))
+                    if not cursor.fetchone():
+                        cursor.execute("""
+                            INSERT INTO examinees (user_id, status)
+                            VALUES (%s, 'for exam')
+                        """, (user_id,))
 
                 conn.commit()
                 return jsonify({'success': True, 'message': 'Status updated successfully'})
@@ -912,8 +933,29 @@ def submit_application():
             cursor.execute("""
                 INSERT INTO applicants
                 (user_id, status, submission_date)
-                VALUES (%s, 'pending', CURDATE())
+                VALUES (%s, 'approved', CURDATE())
             """, (user_id,))
+
+            # Insert into examinees if not already present
+            cursor.execute("""
+                SELECT id FROM examinees WHERE user_id = %s
+            """, (user_id,))
+            if not cursor.fetchone():
+                cursor.execute("""
+                    INSERT INTO examinees (user_id, status)
+                    VALUES (%s, 'for exam')
+                """, (user_id,))
+
+            # Insert notification for auto-approval
+            cursor.execute("""
+                INSERT INTO notifications (user_id, title, message, type)
+                VALUES (%s, %s, %s, %s)
+            """, (
+                user_id,
+                'Application Approved',
+                'Your application has been automatically approved! Please wait for further instructions regarding the examination.',
+                'application_approved'
+            ))
 
             conn.commit()
             return jsonify({'success': True, 'message': 'Application submitted successfully'})
@@ -1263,7 +1305,7 @@ def get_exams():
         
         # Get all exams with creator name
         cursor.execute('''
-            SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at,
+            SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at, e.status, e.start_date, e.end_date,
                    u.name as created_by
             FROM exams e
             LEFT JOIN users u ON e.created_by = u.id
@@ -1275,6 +1317,10 @@ def get_exams():
         for exam in exams:
             if exam['created_at']:
                 exam['created_at'] = exam['created_at'].strftime('%B %d, %Y')
+            if exam.get('start_date') and isinstance(exam['start_date'], (datetime,)):
+                exam['start_date'] = exam['start_date'].strftime('%B %d, %Y at %I%p').replace('AM', 'AM').replace('PM', 'PM')
+            if exam.get('end_date') and isinstance(exam['end_date'], (datetime,)):
+                exam['end_date'] = exam['end_date'].strftime('%B %d, %Y at %I%p').replace('AM', 'AM').replace('PM', 'PM')
         
         cursor.close()
         conn.close()
@@ -1296,18 +1342,28 @@ def add_exam():
         time_limit = request.form.get('timeLimit')
         passing_score = request.form.get('passingScore')
         available_slots = request.form.get('availableSlots')
-        
-        if not title:
-            return jsonify({'success': False, 'message': 'Title is required'})
-        
+        start_date = request.form.get('startDate')
+        status = 'closed'  # Default status
+        end_date = None
+        if start_date and time_limit:
+            try:
+                start_dt = datetime.strptime(start_date, '%Y-%m-%dT%H:%M')
+                end_dt = start_dt + timedelta(minutes=int(time_limit))
+                end_date = end_dt.strftime('%Y-%m-%d %H:%M:%S')
+                start_date = start_dt.strftime('%Y-%m-%d %H:%M:%S')
+            except Exception as e:
+                print(f"Error parsing dates: {e}")
+                start_date = None
+                end_date = None
+
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Insert new exam
         cursor.execute('''
-            INSERT INTO exams (title, description, time_limit, passing_score, available_slots, created_by, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, NOW())
-        ''', (title, description, time_limit, passing_score, available_slots, session['user_id']))
+            INSERT INTO exams (title, description, time_limit, passing_score, available_slots, created_by, created_at, start_date, status, end_date)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s, %s, %s)
+        ''', (title, description, time_limit, passing_score, available_slots, session['user_id'], start_date, status, end_date))
         
         conn.commit()
         cursor.close()
@@ -1330,7 +1386,7 @@ def get_exam(exam_id):
         
         # Get exam details
         cursor.execute('''
-            SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at,
+            SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at, e.status, e.start_date, e.end_date,
                    u.name as created_by
             FROM exams e
             LEFT JOIN users u ON e.created_by = u.id
@@ -1353,7 +1409,7 @@ def get_exam(exam_id):
         # Get questions for each page
         for page in pages:
             cursor.execute('''
-                SELECT id, question_text, question_type, points
+                SELECT id, question_text, question_type, points, correct_answer, is_required, demographic_input_type
                 FROM exam_questions 
                 WHERE page_id = %s 
                 ORDER BY id
@@ -1371,6 +1427,11 @@ def get_exam(exam_id):
                     ''', (question['id'],))
                     question['options'] = cursor.fetchall()
             
+            # For demographic, add input_type field
+            for q in questions:
+                if q['question_type'] == 'demographic':
+                    q['input_type'] = q['demographic_input_type']
+            
             page['questions'] = questions
         
         exam['pages'] = pages
@@ -1378,6 +1439,10 @@ def get_exam(exam_id):
         # Format dates
         if exam['created_at']:
             exam['created_at'] = exam['created_at'].strftime('%B %d, %Y')
+        if exam.get('start_date') and isinstance(exam['start_date'], (datetime,)):
+            exam['start_date'] = exam['start_date'].strftime('%B %d, %Y at %I%p').replace('AM', 'AM').replace('PM', 'PM')
+        if exam.get('end_date') and isinstance(exam['end_date'], (datetime,)):
+            exam['end_date'] = exam['end_date'].strftime('%B %d, %Y at %I%p').replace('AM', 'AM').replace('PM', 'PM')
         
         cursor.close()
         conn.close()
@@ -1432,18 +1497,28 @@ def add_question():
         question_type = request.form.get('questionType')
         question_text = request.form.get('questionText')
         points = request.form.get('points')
+        is_required = 1 if request.form.get('isRequired') == 'on' else 0
+        demographic_input_type = None
+        if question_type == 'demographic':
+            points = 0
+            demographic_input_type = request.form.get('demographicInputType')
         
-        if not all([page_id, question_type, question_text, points]):
+        if not all([page_id, question_type, question_text]) or (question_type != 'demographic' and not points):
             return jsonify({'success': False, 'message': 'Missing required fields'})
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Insert question
-        cursor.execute('''
-            INSERT INTO exam_questions (page_id, question_text, question_type, points, correct_answer, is_case_sensitive)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        ''', (page_id, question_text, question_type, points, None, False))
+        if question_type == 'demographic':
+            cursor.execute('''
+                INSERT INTO exam_questions (page_id, question_text, question_type, points, correct_answer, is_case_sensitive, is_required, demographic_input_type)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (page_id, question_text, question_type, points, None, False, is_required, demographic_input_type))
+        else:
+            cursor.execute('''
+                INSERT INTO exam_questions (page_id, question_text, question_type, points, correct_answer, is_case_sensitive, is_required)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''', (page_id, question_text, question_type, points, None, False, is_required))
         
         question_id = cursor.lastrowid
         
@@ -1474,6 +1549,7 @@ def add_question():
                 SET correct_answer = %s, is_case_sensitive = %s 
                 WHERE id = %s
             ''', (answer_text, is_case_sensitive, question_id))
+        # Essay and demographic: no correct answer, no options, nothing to do
         
         conn.commit()
         cursor.close()
@@ -1579,6 +1655,10 @@ def get_current_exam():
         
         if not exam:
             return jsonify({'success': False, 'message': 'No exam assigned'})
+            
+        # Check if exam is ended
+        if exam['status'] == 'ended':
+            return jsonify({'success': False, 'message': 'This exam has ended and is no longer available'})
         
         # Get exam pages
         cursor.execute("""
@@ -1592,7 +1672,7 @@ def get_current_exam():
         # Get questions for each page
         for page in pages:
             cursor.execute("""
-                SELECT id, question_text, question_type, points
+                SELECT id, question_text, question_type, points, correct_answer, is_required, demographic_input_type
                 FROM exam_questions 
                 WHERE page_id = %s 
                 ORDER BY id
@@ -1610,6 +1690,11 @@ def get_current_exam():
                     """, (question['id'],))
                     question['options'] = cursor.fetchall()
             
+            # For demographic, add input_type field
+            for q in questions:
+                if q['question_type'] == 'demographic':
+                    q['input_type'] = q['demographic_input_type']
+            
             page['questions'] = questions
         
         exam['pages'] = pages
@@ -1625,6 +1710,67 @@ def get_current_exam():
     except Exception as e:
         print(f"Error fetching exam: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
+
+def update_exam_attempt_score(user_id, exam_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get examinee_id for this user and exam
+        cursor.execute("""
+            SELECT id FROM examinees 
+            WHERE user_id = %s AND exam_id = %s
+        """, (user_id, exam_id))
+        examinee = cursor.fetchone()
+        
+        if examinee:
+            # Calculate total score from examinee_answers
+            cursor.execute("""
+                SELECT COALESCE(SUM(score), 0) as total_score 
+                FROM examinee_answers 
+                WHERE examinee_id = %s AND score IS NOT NULL
+            """, (examinee['id'],))
+            result = cursor.fetchone()
+            total_score = result['total_score'] if result else 0
+            
+            # Get total possible points from exam_questions
+            cursor.execute("""
+                SELECT COALESCE(SUM(points), 0) as total_points
+                FROM exam_questions q
+                JOIN exam_pages p ON q.page_id = p.id
+                WHERE p.exam_id = %s
+            """, (exam_id,))
+            result = cursor.fetchone()
+            total_points = result['total_points'] if result else 0
+            
+            # Update exam_attempts with the new calculated score
+            cursor.execute("""
+                UPDATE exam_attempts 
+                SET score = %s, 
+                    total_points = %s,
+                    passed = CASE 
+                        WHEN (%s / NULLIF(%s, 0) * 100) >= (
+                            SELECT passing_score 
+                            FROM exams 
+                            WHERE id = %s
+                        ) THEN 'passed'
+                        ELSE 'failed'
+                    END
+                WHERE user_id = %s AND exam_id = %s
+            """, (total_score, total_points, total_score, total_points, exam_id, user_id, exam_id))
+            
+            conn.commit()
+            return total_score, total_points
+    except Exception as e:
+        print(f"Error updating exam attempt score: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    return 0, 0
 
 @app.route('/submit-exam', methods=['POST'])
 def submit_exam():
@@ -1642,55 +1788,99 @@ def submit_exam():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Calculate score
-        total_points = 0
-        earned_points = 0
-        
-        # Get all questions for the exam
+        # Get all questions for the exam, including is_required
         cursor.execute("""
-            SELECT q.id, q.points, q.correct_answer, q.is_case_sensitive, q.question_type
+            SELECT q.id, q.points, q.correct_answer, q.is_case_sensitive, q.question_type, q.is_required
             FROM exam_questions q
             JOIN exam_pages p ON q.page_id = p.id
             WHERE p.exam_id = %s
         """, (exam_id,))
         questions = cursor.fetchall()
-        
+
+        # Validate required questions
+        missing_required = []
         for question in questions:
-            total_points += question[1]  # points
-            user_answer = answers.get(str(question[0]))
-            
-            if user_answer:
-                if question[4] == 'multiple_choice':  # question_type
-                    if user_answer == question[2]:  # correct_answer
-                        earned_points += question[1]
-                else:  # identification
-                    if question[3]:  # is_case_sensitive
-                        if user_answer == question[2]:
-                            earned_points += question[1]
-                    else:
-                        if user_answer.lower() == question[2].lower():
-                            earned_points += question[1]
+            qid = str(question[0])
+            is_required = question[5]
+            if is_required:
+                ans = answers.get(qid)
+                if ans is None or (isinstance(ans, str) and ans.strip() == ""):
+                    missing_required.append(qid)
+        if missing_required:
+            return jsonify({'success': False, 'message': 'Please answer all required questions before submitting.', 'missing_required': missing_required})
         
-        # Calculate percentage
-        score_percentage = (earned_points / total_points * 100) if total_points > 0 else 0
+        # Get examinee_id for this user and exam
+        cursor.execute("SELECT id FROM examinees WHERE user_id = %s AND exam_id = %s", (session['user_id'], exam_id))
+        ex_row = cursor.fetchone()
+        if ex_row:
+            examinee_id = ex_row[0]
+        else:
+            # fallback: get by user only
+            cursor.execute("SELECT id FROM examinees WHERE user_id = %s", (session['user_id'],))
+            ex_row = cursor.fetchone()
+            examinee_id = ex_row[0] if ex_row else None
+
+        # Insert answers into examinee_answers with auto-scoring for objective questions
+        question_map = {str(q[0]): q for q in questions}  # id: (id, points, correct_answer, is_case_sensitive, question_type)
+        for qid, ans in answers.items():
+            q = question_map.get(str(qid))
+            score = None
+            if q:
+                qtype = q[4]
+                if qtype in ['multiple_choice', 'identification']:
+                    correct = False
+                    if qtype == 'multiple_choice':
+                        correct = (ans == q[2])
+                    elif qtype == 'identification':
+                        if q[3]:  # is_case_sensitive
+                            correct = (ans == q[2])
+                        else:
+                            if ans is not None and q[2] is not None:
+                                correct = (str(ans).lower() == str(q[2]).lower())
+                    score = q[1] if correct else 0
+            cursor.execute("""
+                INSERT INTO examinee_answers (examinee_id, question_id, answer_text, submitted_at, status, score)
+                VALUES (%s, %s, %s, NOW(), 'pending', %s)
+            """, (examinee_id, qid, ans, score))
         
-        # Get exam details including available slots
+        # Update exam_attempts score
+        total_score, total_points = update_exam_attempt_score(session['user_id'], exam_id)
+        
+        # Get exam passing score
+        cursor.execute("SELECT passing_score FROM exams WHERE id = %s", (exam_id,))
+        exam = cursor.fetchone()
+        passing_score = exam[0] if exam else 0
+        
+        # Calculate percentage score
+        percentage_score = (total_score / total_points * 100) if total_points > 0 else 0
+        
+        # Update application and examinee status based on passing score
+        new_status = 'for interview' if percentage_score >= passing_score else 'pending'
+        
         cursor.execute("""
-            SELECT e.passing_score, e.available_slots, 
-                   (SELECT COUNT(*) FROM exam_attempts WHERE exam_id = e.id) as total_attempts
-            FROM exams e WHERE e.id = %s
-        """, (exam_id,))
-        exam_info = cursor.fetchone()
-        passing_score = exam_info[0]
-        available_slots = exam_info[1]
-        total_attempts = exam_info[2]
+            UPDATE applicants 
+            SET status = %s, exam_id = %s
+            WHERE user_id = %s 
+            ORDER BY submission_date DESC 
+            LIMIT 1
+        """, (new_status, exam_id, session['user_id']))
         
-        # Record exam attempt
         cursor.execute("""
-            INSERT INTO exam_attempts 
-            (user_id, exam_id, score, total_points, passed, submitted_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-        """, (session['user_id'], exam_id, earned_points, total_points, score_percentage >= passing_score))
+            UPDATE examinees
+            SET status = %s, exam_id = %s
+            WHERE user_id = %s
+        """, (new_status, exam_id, session['user_id']))
+        
+        # Create notification
+        cursor.execute("""
+            INSERT INTO notifications (user_id, title, message, type)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            session['user_id'],
+            'Exam Completed',
+            'You have completed the examination. Please wait for the result announcement.',
+            'exam_result'
+        ))
         
         # Update exam assignment status
         cursor.execute("""
@@ -1699,75 +1889,11 @@ def submit_exam():
             WHERE user_id = %s AND exam_id = %s
         """, (session['user_id'], exam_id))
         
-        # Get user's rank among all attempts (including the current one)
-        cursor.execute("""
-            SELECT COUNT(*) + 1 as rank
-            FROM exam_attempts
-            WHERE exam_id = %s AND score > %s
-        """, (exam_id, earned_points))
-        user_rank = cursor.fetchone()[0]
-        
-        # Get total number of attempts (including the current one)
-        total_attempts = total_attempts + 1
-        
-        # Determine if user is within available slots
-        is_within_slots = user_rank <= available_slots
-        
-        # Update application status based on ranking
-        if is_within_slots:
-            cursor.execute("""
-                UPDATE applicants 
-                SET status = 'for interview', exam_id = %s
-                WHERE user_id = %s 
-                ORDER BY submission_date DESC 
-                LIMIT 1
-            """, (exam_id, session['user_id']))
-            
-            # Create notification for successful ranking
-            cursor.execute("""
-                INSERT INTO notifications (user_id, title, message, type, action_url)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (
-                session['user_id'],
-                'Exam Completed',
-                f'Your exam score: {score_percentage:.1f}% | Rank: {user_rank}/{total_attempts} | Selected for interview',
-                'exam_result',
-                f'/view-exam-results/{exam_id}'
-            ))
-        else:
-            cursor.execute("""
-                UPDATE applicants 
-                SET status = 'rejected', exam_id = %s
-                WHERE user_id = %s 
-                ORDER BY submission_date DESC 
-                LIMIT 1
-            """, (exam_id, session['user_id']))
-            
-            # Create notification for unsuccessful ranking
-            cursor.execute("""
-                INSERT INTO notifications (user_id, title, message, type, action_url)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (
-                session['user_id'],
-                'Exam Results Available',
-                f'Your exam score: {score_percentage:.1f}% | Rank: {user_rank}/{total_attempts} | Not selected for interview',
-                'exam_result',
-                f'/view-exam-results/{exam_id}'
-            ))
-        
         conn.commit()
         cursor.close()
         conn.close()
         
-        return jsonify({
-            'success': True, 
-            'message': 'Exam submitted successfully',
-            'score': score_percentage,
-            'rank': user_rank,
-            'total_attempts': total_attempts,
-            'available_slots': available_slots,
-            'is_within_slots': is_within_slots
-        })
+        return jsonify({'success': True, 'message': 'Exam submitted successfully'})
     except Exception as e:
         print(f"Error submitting exam: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
@@ -2049,6 +2175,7 @@ def get_exam_results(exam_id):
                 ea.score,
                 ea.total_points,
                 ea.submitted_at,
+                ea.passed,
                 u.name,
                 CASE 
                     WHEN ROW_NUMBER() OVER (ORDER BY ea.score DESC) <= %s THEN 'Selected'
@@ -2078,7 +2205,315 @@ def get_exam_results(exam_id):
     except Exception as e:
         print(f"Error fetching exam results: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
+    
+@app.route('/admin/examinees')
+def admin_examinees():
+    if 'user_id' not in session or session['role'] != 'admin':
+        flash('Please login as admin to access this page', 'error')
+        return redirect(url_for('home'))
+
+    conn = get_db_connection()
+    examinees = []
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT 
+                    e.id as examinee_id,
+                    e.status,
+                    u.name as applicant_name,
+                    ui.first_name,
+                    ui.middle_name,
+                    ui.last_name
+                FROM examinees e
+                JOIN users u ON e.user_id = u.id
+                LEFT JOIN user_info ui ON u.id = ui.user_id
+                ORDER BY e.created_at DESC
+            """)
+            examinees = cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching examinees: {e}")
+            flash('Error loading examinees', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+
+    return render_template('admin/examinees.html', examinees=examinees)
+
+@app.route('/admin/trigger-exam-start')
+def trigger_exam_start():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # Find all exams that should start
+        cursor.execute("SELECT id FROM exams WHERE status = 'closed' AND start_date IS NOT NULL AND start_date <= %s", (now,))
+        exams_to_start = cursor.fetchall()
+        started_exam_ids = []
+        for exam in exams_to_start:
+            exam_id = exam['id']
+            # Set exam status to ongoing
+            cursor.execute("UPDATE exams SET status = 'ongoing' WHERE id = %s", (exam_id,))
+            # Assign all examinees (status 'for exam', exam_id IS NULL)
+            cursor.execute("UPDATE examinees SET exam_id = %s WHERE status = 'for exam' AND (exam_id IS NULL OR exam_id = '')", (exam_id,))
+            started_exam_ids.append(exam_id)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'started_exam_ids': started_exam_ids})
+    except Exception as e:
+        print(f"Error in trigger_exam_start: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+def close_exam_after_timer(exam_id, minutes):
+    time.sleep(minutes * 60)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE exams SET status = 'closed' WHERE id = %s AND status = 'ongoing'", (exam_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"Error closing exam {exam_id} after timer: {e}")
+
+def exam_auto_trigger():
+    while True:
+        with app.app_context():
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor(dictionary=True)
+                ph_tz = pytz.timezone('Asia/Manila')
+                now = datetime.now(ph_tz)
+
+                # First, let's get all exams that need to be closed
+                cursor.execute("""
+                    SELECT id, start_date, time_limit
+                    FROM exams
+                    WHERE status = 'ongoing'
+                      AND start_date IS NOT NULL
+                      AND time_limit IS NOT NULL
+                """)
+                exams_to_close = cursor.fetchall()
+                
+                # Close exams that have reached their time limit
+                for exam in exams_to_close:
+                    exam_id = exam['id']
+                    start_date = exam['start_date']
+                    time_limit = exam['time_limit']
+                    if start_date is not None and time_limit is not None:
+                        if start_date.tzinfo is None:
+                            start_date = ph_tz.localize(start_date)
+                        end_time = start_date + timedelta(minutes=int(time_limit))
+                        if now >= end_time:
+                            print(f"Closing exam {exam_id} at {now} (end time was {end_time})")
+                            # Mark exam as ended
+                            cursor.execute("""
+                                UPDATE exams 
+                                SET status = 'ended', 
+                                    end_date = %s
+                                WHERE id = %s AND status = 'ongoing'
+                            """, (end_time, exam_id))
+                            
+                            # Get all examinees for this exam
+                            cursor.execute("""
+                                SELECT user_id 
+                                FROM examinees 
+                                WHERE exam_id = %s AND status = 'for exam'
+                            """, (exam_id,))
+                            examinees = cursor.fetchall()
+                            for ex in examinees:
+                                user_id = ex['user_id']
+                                cursor.execute("""
+                                    INSERT INTO notifications (user_id, title, message, type)
+                                    VALUES (%s, 'Exam Closed', 'The examination period has ended.', 'exam_result')
+                                """, (user_id,))
+
+                # Now handle starting new exams - with more strict conditions
+                cursor.execute("""
+                    SELECT id, start_date, time_limit
+                    FROM exams
+                    WHERE status = 'closed'
+                      AND start_date IS NOT NULL
+                      AND time_limit IS NOT NULL
+                      AND end_date IS NULL
+                """)
+                exams_to_start = cursor.fetchall()
+                
+                for exam in exams_to_start:
+                    exam_id = exam['id']
+                    start_date = exam['start_date']
+                    time_limit = exam['time_limit']
+                    
+                    if start_date is not None and time_limit is not None:
+                        if start_date.tzinfo is None:
+                            start_date = ph_tz.localize(start_date)
+                        end_time = start_date + timedelta(minutes=int(time_limit))
+                        
+                        # Only start if we're within the valid time window
+                        if start_date <= now < end_time:
+                            print(f"Starting exam {exam_id} at {now} (start time: {start_date}, end time: {end_time})")
+                            
+                            # Double check the exam hasn't been ended
+                            cursor.execute("SELECT status FROM exams WHERE id = %s", (exam_id,))
+                            current_status = cursor.fetchone()
+                            if current_status and current_status['status'] == 'ended':
+                                print(f"Skipping exam {exam_id} - was marked as ended during processing")
+                                continue
+                                
+                            cursor.execute("UPDATE exams SET status = 'ongoing' WHERE id = %s AND status = 'closed'", (exam_id,))
+                            # Assign examinees who are still waiting for an exam
+                            cursor.execute("""
+                                SELECT id, user_id 
+                                FROM examinees 
+                                WHERE status = 'for exam' AND (exam_id IS NULL OR exam_id = %s)
+                            """, (exam_id,))
+                            examinees = cursor.fetchall()
+                            for ex in examinees:
+                                user_id = ex['user_id']
+                                cursor.execute("INSERT INTO exam_assignments (user_id, exam_id, status) VALUES (%s, %s, 'assigned')", (user_id, exam_id))
+                                cursor.execute("INSERT INTO notifications (user_id, title, message, type, action_url) VALUES (%s, 'Examination Started', 'Your examination is now available. Click here to take the exam.', 'exam_link', '/examinations')", (user_id,))
+                                cursor.execute("UPDATE examinees SET exam_id = %s WHERE id = %s", (exam_id, ex['id']))
+
+                conn.commit()
+            except Exception as e:
+                print(f"Error in exam_auto_trigger: {e}")
+                if conn:
+                    conn.rollback()
+            finally:
+                if cursor:
+                    cursor.close()
+                if conn:
+                    conn.close()
+        time.sleep(60)  # Check every minute
+
+@app.route('/admin/examinee-answers/<int:examinee_id>')
+@login_required
+def get_examinee_answers(examinee_id):
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT ea.id, ea.question_id, q.page_id, q.question_text, q.question_type, ea.answer_text, ea.status, ea.score, q.correct_answer, q.points, q.is_case_sensitive
+            FROM examinee_answers ea
+            JOIN exam_questions q ON ea.question_id = q.id
+            WHERE ea.examinee_id = %s
+            ORDER BY q.page_id, ea.id
+        ''', (examinee_id,))
+        answers = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'answers': answers})
+    except Exception as e:
+        print(f"Error fetching examinee answers: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/admin/update-examinee-answer', methods=['POST'])
+@login_required
+def update_examinee_answer():
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'})
+    try:
+        data = request.get_json()
+        answer_id = data.get('answer_id')
+        status = data.get('status')
+        score = data.get('score')
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get examinee_id and exam_id for this answer
+        cursor.execute("""
+            SELECT ea.examinee_id, e.exam_id, e.user_id 
+            FROM examinee_answers ea
+            JOIN examinees e ON ea.examinee_id = e.id
+            WHERE ea.id = %s
+        """, (answer_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            return jsonify({'success': False, 'message': 'Answer not found'})
+            
+        examinee_id = result['examinee_id']
+        exam_id = result['exam_id']
+        user_id = result['user_id']
+        
+        # Start transaction
+        cursor.execute("START TRANSACTION")
+        
+        try:
+            if status is not None:
+                cursor.execute('UPDATE examinee_answers SET status = %s WHERE id = %s', (status, answer_id))
+            if score is not None:
+                cursor.execute('UPDATE examinee_answers SET score = %s WHERE id = %s', (score, answer_id))
+                
+            # Calculate new total score
+            cursor.execute("""
+                SELECT COALESCE(SUM(score), 0) as total_score 
+                FROM examinee_answers 
+                WHERE examinee_id = %s AND score IS NOT NULL
+            """, (examinee_id,))
+            total_score_result = cursor.fetchone()
+            total_score = total_score_result['total_score'] if total_score_result else 0
+            
+            # Get total possible points
+            cursor.execute("""
+                SELECT COALESCE(SUM(points), 0) as total_points
+                FROM exam_questions q
+                JOIN exam_pages p ON q.page_id = p.id
+                WHERE p.exam_id = %s
+            """, (exam_id,))
+            total_points_result = cursor.fetchone()
+            total_points = total_points_result['total_points'] if total_points_result else 0
+            
+            # Get passing score
+            cursor.execute("SELECT passing_score FROM exams WHERE id = %s", (exam_id,))
+            exam = cursor.fetchone()
+            passing_score = exam['passing_score'] if exam else 0
+            
+            # Calculate percentage score
+            percentage_score = (total_score / total_points * 100) if total_points > 0 else 0
+            
+            # Update exam_attempts immediately
+            cursor.execute("""
+                UPDATE exam_attempts 
+                SET score = %s, 
+                    total_points = %s,
+                    passed = CASE 
+                        WHEN %s >= %s THEN 'passed'
+                        ELSE 'failed'
+                    END
+                WHERE user_id = %s AND exam_id = %s
+            """, (total_score, total_points, percentage_score, passing_score, user_id, exam_id))
+            
+            # Update examinee status based on passed field
+            cursor.execute("""
+                UPDATE examinees
+                SET status = CASE 
+                    WHEN (
+                        SELECT passed 
+                        FROM exam_attempts 
+                        WHERE user_id = %s AND exam_id = %s
+                    ) = 'passed' THEN 'for interview'
+                    ELSE 'pending'
+                END
+                WHERE user_id = %s AND exam_id = %s
+            """, (user_id, exam_id, user_id, exam_id))
+            
+            conn.commit()
+            return jsonify({'success': True, 'message': 'Answer updated successfully'})
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        print(f"Error updating examinee answer: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
 
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
+    threading.Thread(target=exam_auto_trigger, daemon=True).start()
     app.run(debug=True)
