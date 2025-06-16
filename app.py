@@ -124,7 +124,7 @@ def new_applicants_notifications():
     if 'user_id' not in session or session['role'] != 'new':
         flash('Please login to access this page', 'error')
         return redirect(url_for('home'))
-    
+        
     conn = get_db_connection()
     notifications = []
     if conn:
@@ -944,7 +944,7 @@ def submit_application():
                 cursor.execute("""
                     INSERT INTO examinees (user_id, status)
                     VALUES (%s, 'for exam')
-                """, (user_id,))
+            """, (user_id,))
 
             # Insert notification for auto-approval
             cursor.execute("""
@@ -1355,7 +1355,7 @@ def add_exam():
                 print(f"Error parsing dates: {e}")
                 start_date = None
                 end_date = None
-
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -1796,7 +1796,7 @@ def submit_exam():
             WHERE p.exam_id = %s
         """, (exam_id,))
         questions = cursor.fetchall()
-
+        
         # Validate required questions
         missing_required = []
         for question in questions:
@@ -1868,7 +1868,7 @@ def submit_exam():
         cursor.execute("""
             UPDATE examinees
             SET status = %s, exam_id = %s
-            WHERE user_id = %s
+            WHERE user_id = %s 
         """, (new_status, exam_id, session['user_id']))
         
         # Create notification
@@ -2329,14 +2329,13 @@ def exam_auto_trigger():
                                     VALUES (%s, 'Exam Closed', 'The examination period has ended.', 'exam_result')
                                 """, (user_id,))
 
-                # Now handle starting new exams - with more strict conditions
+                # Now handle starting new exams
                 cursor.execute("""
                     SELECT id, start_date, time_limit
                     FROM exams
                     WHERE status = 'closed'
                       AND start_date IS NOT NULL
                       AND time_limit IS NOT NULL
-                      AND end_date IS NULL
                 """)
                 exams_to_start = cursor.fetchall()
                 
@@ -2348,20 +2347,18 @@ def exam_auto_trigger():
                     if start_date is not None and time_limit is not None:
                         if start_date.tzinfo is None:
                             start_date = ph_tz.localize(start_date)
-                        end_time = start_date + timedelta(minutes=int(time_limit))
                         
-                        # Only start if we're within the valid time window
-                        if start_date <= now < end_time:
-                            print(f"Starting exam {exam_id} at {now} (start time: {start_date}, end time: {end_time})")
+                        # Start exam if current time is past or equal to start date
+                        if now >= start_date:
+                            print(f"Starting exam {exam_id} at {now} (start time: {start_date})")
                             
-                            # Double check the exam hasn't been ended
-                            cursor.execute("SELECT status FROM exams WHERE id = %s", (exam_id,))
-                            current_status = cursor.fetchone()
-                            if current_status and current_status['status'] == 'ended':
-                                print(f"Skipping exam {exam_id} - was marked as ended during processing")
-                                continue
-                                
-                            cursor.execute("UPDATE exams SET status = 'ongoing' WHERE id = %s AND status = 'closed'", (exam_id,))
+                            # Update exam status to ongoing
+                            cursor.execute("""
+                                UPDATE exams 
+                                SET status = 'ongoing' 
+                                WHERE id = %s AND status = 'closed'
+                            """, (exam_id,))
+                            
                             # Assign examinees who are still waiting for an exam
                             cursor.execute("""
                                 SELECT id, user_id 
@@ -2371,21 +2368,28 @@ def exam_auto_trigger():
                             examinees = cursor.fetchall()
                             for ex in examinees:
                                 user_id = ex['user_id']
-                                cursor.execute("INSERT INTO exam_assignments (user_id, exam_id, status) VALUES (%s, %s, 'assigned')", (user_id, exam_id))
-                                cursor.execute("INSERT INTO notifications (user_id, title, message, type, action_url) VALUES (%s, 'Examination Started', 'Your examination is now available. Click here to take the exam.', 'exam_link', '/examinations')", (user_id,))
-                                cursor.execute("UPDATE examinees SET exam_id = %s WHERE id = %s", (exam_id, ex['id']))
+                                cursor.execute("""
+                                    INSERT INTO exam_assignments (user_id, exam_id, status) 
+                                    VALUES (%s, %s, 'assigned')
+                                """, (user_id, exam_id))
+                                cursor.execute("""
+                                    INSERT INTO notifications (user_id, title, message, type, action_url) 
+                                    VALUES (%s, 'Examination Started', 'Your examination is now available. Click here to take the exam.', 'exam_link', '/examinations')
+                                """, (user_id,))
 
                 conn.commit()
+                cursor.close()
+                conn.close()
+                
             except Exception as e:
                 print(f"Error in exam_auto_trigger: {e}")
-                if conn:
-                    conn.rollback()
-            finally:
-                if cursor:
-                    cursor.close()
-                if conn:
-                    conn.close()
-        time.sleep(60)  # Check every minute
+                try:
+                    if 'conn' in locals():
+                        conn.close()
+                except:
+                    pass
+            
+            time.sleep(30)  # Check every 30 seconds
 
 @app.route('/admin/examinee-answers/<int:examinee_id>')
 @login_required
