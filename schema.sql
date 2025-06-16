@@ -56,6 +56,10 @@ CREATE TABLE IF NOT EXISTS exams (
     available_slots INT DEFAULT 200,
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    start_date DATETIME,
+    end_date DATETIME,
+    status ENUM('ongoing', 'closed', 'ended') DEFAULT 'closed',
+    permanent_close BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
@@ -139,4 +143,13 @@ CREATE TABLE IF NOT EXISTS announcements (
     announcement_date DATE NOT NULL,
     posted_by INT,
     FOREIGN KEY (posted_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Create examinees table
+CREATE TABLE IF NOT EXISTS examinees (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    status ENUM('for exam', 'pending', 'for interview', 'failed') NOT NULL DEFAULT 'for exam',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ); 
