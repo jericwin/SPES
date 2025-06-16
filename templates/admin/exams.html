@@ -137,7 +137,17 @@
                   class="nav-link px-sm-0 px-2"
                 >
                   <i class="fs-5 bi-file-earmark"></i
-                  ><span class="ms-3 d-none d-sm-inline">Application</span>
+                  ><span class="ms-3 d-none d-sm-inline">Applicants</span>
+                </a>
+              </li>
+              <!-- students who took the exam -->
+              <li>
+                <a
+                  href="{{ url_for('admin_examinees') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Examinees</span>
                 </a>
               </li>
               <li>
@@ -302,6 +312,7 @@
                   class="form-control"
                   name="description"
                   rows="3"
+                  required
                 ></textarea>
               </div>
               <div class="mb-3">
@@ -311,6 +322,7 @@
                   class="form-control"
                   name="timeLimit"
                   min="1"
+                  required
                 />
               </div>
               <div class="mb-3">
@@ -322,6 +334,7 @@
                   min="0"
                   max="100"
                   value="70"
+                  required
                 />
               </div>
               <div class="mb-3">
@@ -332,11 +345,21 @@
                   name="availableSlots"
                   min="1"
                   value="200"
+                  required
                 />
                 <small class="text-muted"
                   >Number of applicants that will be selected for
                   interviews</small
                 >
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Start Date & Time</label>
+                <input
+                  type="datetime-local"
+                  class="form-control"
+                  name="startDate"
+                  required
+                />
               </div>
             </form>
           </div>
@@ -445,6 +468,8 @@
                 >
                   <option value="multiple_choice">Multiple Choice</option>
                   <option value="identification">Identification</option>
+                  <option value="essay">Essay</option>
+                  <option value="demographic">Demographic</option>
                 </select>
               </div>
               <div class="mb-3">
@@ -466,6 +491,19 @@
                   value="1"
                   required
                 />
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    name="isRequired"
+                    id="isRequired"
+                  />
+                  <label class="form-check-label" for="isRequired">
+                    Required
+                  </label>
+                </div>
               </div>
 
               <!-- Multiple Choice Options -->
@@ -525,6 +563,20 @@
                   </div>
                 </div>
               </div>
+
+              <div
+                class="mb-3"
+                id="demographicInputTypeDiv"
+                style="display: none"
+              >
+                <label class="form-label">Input Type</label>
+                <select class="form-select" name="demographicInputType">
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                  <option value="email">Email</option>
+                </select>
+              </div>
             </form>
           </div>
           <div class="modal-footer">
@@ -541,6 +593,36 @@
               onclick="saveQuestion()"
             >
               Save Question
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for exam results -->
+    <div class="modal fade" id="examResultsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="examResultsModalLabel">Exam Results</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div id="examResultsContent" class="p-2">
+              <div class="text-center text-muted">Loading results...</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
             </button>
           </div>
         </div>
@@ -578,18 +660,32 @@
         const col = document.createElement("div");
         col.className = "col-md-4 mb-4";
 
+        // Status badge color
+        let statusColor = exam.status === "ongoing" ? "success" : "secondary";
+        let statusText = exam.status
+          ? exam.status.charAt(0).toUpperCase() + exam.status.slice(1)
+          : "Closed";
+
         col.innerHTML = `
           <div class="card h-100 exam-card">
             <div class="card-body">
-              <h5 class="card-title">${exam.title}</h5>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="card-title mb-0">${exam.title}</h5>
+                <span class="badge bg-${statusColor}">${statusText}</span>
+              </div>
               <p class="card-text">${exam.description || "No description"}</p>
               <div class="d-flex justify-content-between align-items-center">
-                <small class="text-muted">Created: ${exam.created_at}</small>
+                <small class="text-muted">${exam.created_at}</small>
                 <div class="btn-group">
                   <button class="btn btn-sm btn-outline-primary" onclick="viewExam(${
                     exam.id
                   })">
                     <i class="bi bi-eye"></i> View
+                  </button>
+                  <button class="btn btn-sm btn-outline-success" onclick="showExamResultsModal(${
+                    exam.id
+                  }, '${exam.title.replace(/'/g, "&#39;")}')">
+                    <i class="bi bi-bar-chart"></i> Results
                   </button>
                   <button class="btn btn-sm btn-outline-danger" onclick="deleteExam(${
                     exam.id
@@ -607,8 +703,33 @@
 
       function saveExam() {
         const form = document.getElementById("addExamForm");
+        // Client-side validation
+        const requiredFields = [
+          "title",
+          "description",
+          "timeLimit",
+          "passingScore",
+          "availableSlots",
+          "startDate",
+        ];
+        let valid = true;
+        requiredFields.forEach((name) => {
+          const input = form.elements[name];
+          if (
+            !input.value ||
+            (input.type === "number" && isNaN(parseFloat(input.value)))
+          ) {
+            input.classList.add("is-invalid");
+            valid = false;
+          } else {
+            input.classList.remove("is-invalid");
+          }
+        });
+        if (!valid) {
+          alert("Please fill in all required fields.");
+          return;
+        }
         const formData = new FormData(form);
-
         fetch("/admin/add-exam", {
           method: "POST",
           body: formData,
@@ -643,25 +764,55 @@
               const detailsSection =
                 document.getElementById("examDetailsSection");
 
+              // Status badge color
+              let statusColor =
+                exam.status === "ongoing" ? "success" : "secondary";
+              let statusText = exam.status
+                ? exam.status.charAt(0).toUpperCase() + exam.status.slice(1)
+                : "Closed";
+
               details.innerHTML = `
                 <div class="mb-4">
-                  <h4 class="card-title" data-exam-id="${exam.id}">${
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="card-title mb-0" data-exam-id="${exam.id}">${
                 exam.title
               }</h4>
+                    <span class="badge bg-${statusColor} fs-6">${statusText}</span>
+                  </div>
                   <p class="text-muted">Created by ${exam.created_by} on ${
                 exam.created_at
               }</p>
                   <p>${exam.description || "No description"}</p>
-                  <div class="row">
-                    <div class="col-md-6">
+                  <div class="row mb-2">
+                    <div class="col-md-4">
                       <p><strong>Time Limit:</strong> ${
                         exam.time_limit || "No limit"
                       } minutes</p>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                       <p><strong>Passing Score:</strong> ${
                         exam.passing_score
                       }%</p>
+                    </div>
+                    <div class="col-md-4">
+                      <p><strong>Available Slots:</strong> ${
+                        exam.available_slots || "-"
+                      }</p>
+                    </div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-md-4">
+                      <p><strong>Start Date:</strong> ${
+                        exam.start_date ? exam.start_date : "Not set"
+                      }</p>
+                    </div>
+                    <div class="col-md-4">
+                      <p><strong>End Date:</strong> ${
+                        exam.end_date ? exam.end_date : "Not set"
+                      }</p>
+                    </div>
+                    <div class="col-md-4">
+                      <p><strong>Status:</strong> <span class="badge bg-${statusColor}">${statusText}</span></p>
                     </div>
                   </div>
                 </div>
@@ -759,7 +910,7 @@
               detailsSection.style.display = "block";
               detailsSection.scrollIntoView({ behavior: "smooth" });
             } else {
-              alert("Error loading exam: " + data.message);
+              alert("Error loading exam details: " + data.message);
             }
           })
           .catch((error) => {
@@ -845,13 +996,32 @@
         const identificationDiv = document.getElementById(
           "identificationAnswer"
         );
-
+        const pointsDiv = document
+          .querySelector('input[name="points"]')
+          .closest(".mb-3");
+        const demographicInputTypeDiv = document.getElementById(
+          "demographicInputTypeDiv"
+        );
         if (questionType === "multiple_choice") {
           multipleChoiceDiv.style.display = "block";
           identificationDiv.style.display = "none";
-        } else {
+          pointsDiv.style.display = "block";
+          demographicInputTypeDiv.style.display = "none";
+        } else if (questionType === "identification") {
           multipleChoiceDiv.style.display = "none";
           identificationDiv.style.display = "block";
+          pointsDiv.style.display = "block";
+          demographicInputTypeDiv.style.display = "none";
+        } else if (questionType === "essay") {
+          multipleChoiceDiv.style.display = "none";
+          identificationDiv.style.display = "none";
+          pointsDiv.style.display = "block";
+          demographicInputTypeDiv.style.display = "none";
+        } else if (questionType === "demographic") {
+          multipleChoiceDiv.style.display = "none";
+          identificationDiv.style.display = "none";
+          pointsDiv.style.display = "none";
+          demographicInputTypeDiv.style.display = "block";
         }
       }
 
@@ -904,7 +1074,6 @@
         const form = document.getElementById("addQuestionForm");
         const formData = new FormData(form);
         const questionType = formData.get("questionType");
-
         // Validate based on question type
         if (questionType === "multiple_choice") {
           const options = formData.getAll("options[]");
@@ -912,7 +1081,7 @@
             alert("Please add at least 2 options for multiple choice question");
             return;
           }
-        } else {
+        } else if (questionType === "identification") {
           const answerText = formData.get("answerText");
           if (!answerText) {
             alert(
@@ -920,6 +1089,10 @@
             );
             return;
           }
+        } else if (questionType === "essay") {
+          // No validation needed for essay
+        } else if (questionType === "demographic") {
+          // No validation needed for demographic, but input type is included
         }
 
         fetch("/admin/add-question", {
@@ -993,6 +1166,120 @@
               alert("Error deleting question");
             });
         }
+      }
+
+      // Modal for exam results
+      const resultsModalHtml = `
+        <div class="modal fade" id="examResultsModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="examResultsModalLabel">Exam Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div id="examResultsContent" class="p-2">
+                  <div class="text-center text-muted">Loading results...</div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      if (!document.getElementById("examResultsModal")) {
+        document.body.insertAdjacentHTML("beforeend", resultsModalHtml);
+      }
+
+      function showExamResultsModal(examId, examTitle) {
+        const modal = new bootstrap.Modal(
+          document.getElementById("examResultsModal")
+        );
+        const modalTitle = document.getElementById("examResultsModalLabel");
+        modalTitle.textContent = `Results for: ${examTitle}`;
+        modalTitle.dataset.examId = examId;
+        const content = document.getElementById("examResultsContent");
+        content.innerHTML =
+          '<div class="text-center text-muted">Loading results...</div>';
+        fetch(`/get-exam-results/${examId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const results = data.results;
+              const exam = data.exam;
+              let tableRows = results
+                .map((result, idx) => {
+                  const score =
+                    result.score && result.total_points
+                      ? ((result.score / result.total_points) * 100).toFixed(1)
+                      : "Pending";
+                  const status =
+                    score === "Pending"
+                      ? "Pending"
+                      : result.passed === "passed"
+                      ? "For Interview"
+                      : "Failed";
+                  const statusClass =
+                    score === "Pending"
+                      ? "bg-warning"
+                      : result.passed === "passed"
+                      ? "bg-success"
+                      : "bg-danger";
+                  return `
+                  <tr class="${
+                    status === "For Interview"
+                      ? "table-success"
+                      : status === "Failed"
+                      ? "table-danger"
+                      : "table-light"
+                  }">
+                    <td>${idx + 1}</td>
+                    <td>${result.name}</td>
+                    <td>${
+                      score === "Pending"
+                        ? '<span class="text-muted">Pending</span>'
+                        : score + "%"
+                    }</td>
+                    <td><span class="badge ${statusClass}">${status}</span></td>
+                    <td>${new Date(result.submitted_at).toLocaleString()}</td>
+                  </tr>
+                `;
+                })
+                .join("");
+              content.innerHTML = `
+                <div class="mb-3">
+                  <h6 class="mb-1">Exam: <strong>${exam.title}</strong></h6>
+                  <div class="row mb-2">
+                    <div class="col-md-4"><strong>Available Slots:</strong> ${exam.available_slots}</div>
+                    <div class="col-md-4"><strong>Total Attempts:</strong> ${data.total_attempts}</div>
+                    <div class="col-md-4"><strong>Selected:</strong> ${data.selected_count}</div>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Submitted At</th>
+                      </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">${tableRows}</tbody>
+                  </table>
+                </div>
+              `;
+            } else {
+              content.innerHTML = `<div class='text-danger'>${data.message}</div>`;
+            }
+          })
+          .catch((error) => {
+            content.innerHTML = `<div class='text-danger'>Error loading results.</div>`;
+          });
+        modal.show();
       }
     </script>
   </body>
