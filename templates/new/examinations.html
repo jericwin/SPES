@@ -469,17 +469,61 @@
         showToast(`Warning ${warningCount}/3: ${reason}`);
 
         if (warningCount >= 3) {
-          // Stop all monitoring
-          stopMonitoring();
+          // Fill unanswered required fields with placeholder values before auto-submit
+          fillRequiredWithPlaceholders();
 
           // Show final warning modal
           finalWarningModal.show();
 
           // Submit after a delay
           setTimeout(() => {
-            submitExam();
+            submitExam(true);
           }, 2000);
         }
+      }
+
+      function fillRequiredWithPlaceholders() {
+        // Fill all unanswered required fields with placeholder values
+        currentExam.pages.forEach((page) => {
+          page.questions.forEach((question) => {
+            if (question.is_required) {
+              let answer = answers[question.id];
+              if (
+                answer === undefined ||
+                answer === null ||
+                (typeof answer === "string" && answer.trim() === "")
+              ) {
+                // Fill based on type
+                if (question.question_type === "demographic") {
+                  let inputType = question.input_type || "text";
+                  if (inputType === "email") {
+                    answers[question.id] = "auto_submitted@example.com";
+                  } else if (inputType === "text") {
+                    answers[question.id] = "AUTO_SUBMITTED";
+                  } else if (inputType === "number") {
+                    answers[question.id] = 0;
+                  } else if (inputType === "date") {
+                    answers[question.id] = "1970-01-01";
+                  } else {
+                    answers[question.id] = "AUTO_SUBMITTED";
+                  }
+                } else if (
+                  question.question_type === "essay" ||
+                  question.question_type === "identification"
+                ) {
+                  answers[question.id] = "AUTO_SUBMITTED";
+                } else if (question.question_type === "multiple_choice") {
+                  // Pick first option if available
+                  if (question.options && question.options.length > 0) {
+                    answers[question.id] = question.options[0].option_text;
+                  } else {
+                    answers[question.id] = "AUTO_SUBMITTED";
+                  }
+                }
+              }
+            }
+          });
+        });
       }
 
       function loadExam() {
@@ -496,12 +540,15 @@
               startTimer();
               loadPage(0);
             } else {
-              alert("Error loading exam: " + data.message);
+              // Show error message and redirect to dashboard
+              alert(data.message);
+              window.location.href = "/new-applicants/dashboard";
             }
           })
           .catch((error) => {
             console.error("Error:", error);
             alert("Error loading exam");
+            window.location.href = "/new-applicants/dashboard";
           });
       }
 
@@ -539,7 +586,9 @@
             ? "Submit Exam"
             : "Next Page";
         document.getElementById("nextButton").onclick =
-          pageIndex === currentExam.pages.length - 1 ? submitExam : nextPage;
+          pageIndex === currentExam.pages.length - 1
+            ? submitExam
+            : () => nextPageWithValidation(pageIndex);
 
         // Update progress
         const progress = ((pageIndex + 1) / currentExam.pages.length) * 100;
@@ -557,19 +606,72 @@
         const card = document.createElement("div");
         card.className = "question-card";
         card.innerHTML = `
-          <div class="question-text">
-            <strong>Question ${index + 1}:</strong> ${question.question_text}
+          <div class="question-text" style="font-weight: 600;">
+            ${question.question_text}
+            ${
+              question.is_required
+                ? '<span style="color: #dc3545; font-weight: bold; margin-left: 6px;">*</span>'
+                : ""
+            }
             <span class="badge bg-secondary float-end">${
               question.points
             } points</span>
           </div>
-          ${
-            question.question_type === "multiple_choice"
-              ? createMultipleChoiceOptions(question, index)
-              : createIdentificationInput(question, index)
-          }
+          ${renderQuestionInput(question, index)}
         `;
         return card;
+      }
+
+      function renderQuestionInput(question, questionIndex) {
+        const requiredAttr = question.is_required ? "required" : "";
+        if (question.question_type === "multiple_choice") {
+          return createMultipleChoiceOptions(question, questionIndex);
+        } else if (question.question_type === "identification") {
+          return `<input type="text" class="identification-input" placeholder="Enter your answer" value="${
+            answers[question.id] || ""
+          }" onchange="updateAnswer(${
+            question.id
+          }, this.value)" ${requiredAttr}>`;
+        } else if (question.question_type === "essay") {
+          return `<textarea class="identification-input" rows="5" placeholder="Enter your answer" onchange="updateAnswer(${
+            question.id
+          }, this.value)" ${requiredAttr}>${
+            answers[question.id] || ""
+          }</textarea>`;
+        } else if (question.question_type === "demographic") {
+          let inputType = question.input_type || "text";
+          let inputHtml = "";
+          if (inputType === "email") {
+            inputHtml = `<input type="email" class="identification-input" placeholder="Enter your email" value="${
+              answers[question.id] || ""
+            }" onchange="updateAnswer(${
+              question.id
+            }, this.value)" ${requiredAttr}>`;
+          } else if (
+            inputType === "text" ||
+            inputType === "number" ||
+            inputType === "date"
+          ) {
+            inputHtml = `<input type="${inputType}" class="identification-input" placeholder="Enter your answer" value="${
+              answers[question.id] || ""
+            }" onchange="updateAnswer(${
+              question.id
+            }, this.value)" ${requiredAttr}>`;
+          } else {
+            inputHtml = `<input type="text" class="identification-input" placeholder="Enter your answer" value="${
+              answers[question.id] || ""
+            }" onchange="updateAnswer(${
+              question.id
+            }, this.value)" ${requiredAttr}>`;
+          }
+          return inputHtml;
+        } else {
+          return `<input type="text" class="identification-input" placeholder="Enter your answer" value="${
+            answers[question.id] || ""
+          }" onchange="updateAnswer(${
+            question.id
+          }, this.value)" ${requiredAttr}>`;
+        }
       }
 
       function createMultipleChoiceOptions(question, questionIndex) {
@@ -631,6 +733,49 @@
         }
       }
 
+      function nextPageWithValidation(pageIndex) {
+        const page = currentExam.pages[pageIndex];
+        let allValid = true;
+        let firstInvalid = null;
+        page.questions.forEach((question) => {
+          if (question.is_required) {
+            let answer = answers[question.id];
+            // For number, 0 is valid, so check for undefined/null/empty string
+            let inputElem = document.querySelector(
+              `[onchange*='updateAnswer(${question.id},']`
+            );
+            if (
+              answer === undefined ||
+              answer === null ||
+              (typeof answer === "string" && answer.trim() === "")
+            ) {
+              allValid = false;
+              if (!firstInvalid) firstInvalid = question.id;
+            } else if (
+              inputElem &&
+              inputElem.type === "email" &&
+              !inputElem.checkValidity()
+            ) {
+              allValid = false;
+              if (!firstInvalid) firstInvalid = question.id;
+            }
+          }
+        });
+        if (!allValid) {
+          showToast(
+            "Please answer all required questions with valid values before proceeding.",
+            "warning"
+          );
+          // Optionally, scroll to first invalid input
+          const invalidInput = document.querySelector(
+            `[onchange*='updateAnswer(${firstInvalid},']`
+          );
+          if (invalidInput) invalidInput.focus();
+          return;
+        }
+        nextPage();
+      }
+
       function handleFullscreenModalConfirm() {
         fullscreenWarningModal.hide();
         enterFullscreen();
@@ -667,7 +812,73 @@
         clearInterval(timerInterval);
       }
 
-      function submitExam() {
+      function submitExam(isAutoSubmit = false) {
+        // Validate all required questions on ALL pages before submitting (unless auto-submit)
+        if (!isAutoSubmit) {
+          let allValid = true;
+          let firstInvalid = null;
+          let firstInvalidInput = null;
+          currentExam.pages.forEach((page) => {
+            page.questions.forEach((question) => {
+              if (question.is_required) {
+                let answer = answers[question.id];
+                let inputElem = document.querySelector(
+                  `[onchange*='updateAnswer(${question.id},']`
+                );
+                if (
+                  answer === undefined ||
+                  answer === null ||
+                  (typeof answer === "string" && answer.trim() === "")
+                ) {
+                  allValid = false;
+                  if (!firstInvalid) {
+                    firstInvalid = question.id;
+                    firstInvalidInput = inputElem;
+                  }
+                } else if (
+                  inputElem &&
+                  inputElem.type === "email" &&
+                  !inputElem.checkValidity()
+                ) {
+                  allValid = false;
+                  if (!firstInvalid) {
+                    firstInvalid = question.id;
+                    firstInvalidInput = inputElem;
+                  }
+                }
+              }
+            });
+          });
+          if (!allValid) {
+            showToast(
+              "Please answer all required questions with valid values before submitting.",
+              "warning"
+            );
+            // Try to focus the first invalid input, and if not on current page, go to that page
+            if (firstInvalid) {
+              // Find which page the invalid question is on
+              let invalidPageIndex = currentExam.pages.findIndex((page) =>
+                page.questions.some((q) => q.id === firstInvalid)
+              );
+              if (
+                invalidPageIndex !== -1 &&
+                invalidPageIndex !== currentPageIndex
+              ) {
+                currentPageIndex = invalidPageIndex;
+                loadPage(currentPageIndex);
+                setTimeout(() => {
+                  let inputElem = document.querySelector(
+                    `[onchange*='updateAnswer(${firstInvalid},']`
+                  );
+                  if (inputElem) inputElem.focus();
+                }, 100);
+              } else if (firstInvalidInput) {
+                firstInvalidInput.focus();
+              }
+            }
+            return;
+          }
+        }
         // Stop all monitoring
         stopMonitoring();
 
@@ -727,12 +938,33 @@
           .then((response) => response.json())
           .then((data) => {
             if (data.success) {
+              // Stop all monitoring
+              stopMonitoring();
+
+              // Exit fullscreen
+              if (isFullscreen) {
+                exitFullscreen();
+              }
+
               showToast("Exam submitted successfully!", "success");
               setTimeout(() => {
                 window.location.href = "/new-applicants/dashboard";
               }, 2000);
             } else {
               showToast("Error submitting exam: " + data.message, "error");
+              // Restore fullscreen and monitoring if submission failed
+              if (
+                !document.fullscreenElement &&
+                !document.webkitFullscreenElement &&
+                !document.mozFullScreenElement &&
+                !document.msFullscreenElement
+              ) {
+                enterFullscreen();
+              }
+              // Optionally, check if monitoring is not active before starting
+              if (!timerInterval || !activityInterval) {
+                startMonitoring();
+              }
             }
           })
           .catch((error) => {
