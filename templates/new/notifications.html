@@ -257,13 +257,16 @@
                               {{ notification.message }}
                             </p>
                             {% if notification.action_url %}
-                            <a
-                              href="{{ notification.action_url }}"
-                              class="btn btn-primary btn-sm"
-                            >
-                              {% if notification.type == 'exam_link' %} Take
-                              Exam {% else %} View Details {% endif %}
+                              <a href="{{ notification.action_url }}"
+                                 class="btn btn-primary btn-sm{% if notification.assignment_status == 'completed' or notification.exam_status == 'ended' %} disabled{% endif %}"
+                                 {% if notification.assignment_status == 'completed' or notification.exam_status == 'ended' %}tabindex="-1" aria-disabled="true" title="{% if notification.assignment_status == 'completed' %}Exam already completed{% else %}Exam has ended{% endif %}"{% endif %}>
+                                {% if notification.type == 'exam_link' %} Take Exam {% else %} View Details {% endif %}
                             </a>
+                              {% if notification.assignment_status == 'completed' %}
+                                <span class="text-success ms-2"><i class="bi bi-check-circle"></i> Exam completed</span>
+                              {% elif notification.exam_status == 'ended' %}
+                                <span class="text-danger ms-2"> Exam closed</span>
+                              {% endif %}
                             {% endif %}
                           </div>
                         </div>
