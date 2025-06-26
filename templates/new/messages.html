@@ -458,6 +458,7 @@
                 </div>
               </div>
 
+              <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
               <script>
                 // Function to scroll chat to bottom with a small delay to ensure DOM updates
                 function scrollToBottom() {
@@ -569,23 +570,17 @@
                   }, 1500);
                 }
 
-                function handleAgentClick() {
-                  addMessage("I would like to chat with a real agent", true);
-                  showTypingIndicator();
+                function resetChatState() {
+                  chatRoom = null;
+                  chatConnected = false;
+                  document.getElementById('messageInput').disabled = true;
+                }
 
-                  setTimeout(() => {
-                    hideTypingIndicator();
-                    addMessage(
-                      "Connecting to a real agent. Please wait for a moment..."
-                    );
-                    showTypingIndicator();
-                  }, 1500);
-                  setTimeout(() => {
-                    hideTypingIndicator();
-                    addMessage(
-                      "Hello! I'm a SPES Agent Jeric. How can I assist you today?"
-                    );
-                  }, 6500);
+                function handleAgentClick() {
+                  addMessage('I would like to chat with a real agent', true);
+                  socket.emit('chat_request', { applicant_id: userId, applicant_name: userName });
+                  addMessage('<em>Waiting for an agent to connect...</em>', false);
+                  resetChatState();
                 }
 
                 function handleKeyPress(event) {
@@ -595,21 +590,17 @@
                 }
 
                 function sendMessage() {
-                  const input = document.getElementById("messageInput");
+                  if (!chatConnected) return;
+                  const input = document.getElementById('messageInput');
                   const message = input.value.trim();
-
-                  if (message) {
-                    addMessage(message, true);
-                    input.value = "";
-                    showTypingIndicator();
-
-                    setTimeout(() => {
-                      hideTypingIndicator();
-                      addMessage(
-                        "I understand your message. How else can I help you?"
-                      );
-                    }, 1500);
-                  }
+                  if (!message) return;
+                  socket.emit('send_message', {
+                    sender_id: userId,
+                    receiver_id: adminId,
+                    content: message,
+                    room: chatRoom
+                  });
+                  input.value = '';
                 }
 
                 // Add this new function after the existing JavaScript functions
@@ -676,6 +667,92 @@
                 const mainElement = document.querySelector("main");
                 mainElement.addEventListener("scroll", () => {
                   // You can add additional scroll handling logic here if needed
+                });
+
+                // --- Real-time Messaging Integration ---
+                const socket = io();
+                const userId = {{ session['user_id']|tojson }};
+                const userName = {{ session['username']|tojson }};
+                const adminId = 4; // Change if your admin user_id is different
+                let chatRoom = null;
+                let chatConnected = false;
+
+                function joinRoom() {
+                  socket.emit('join', { room: `user_${userId}` });
+                }
+
+                function fetchMessages() {
+                  fetch(`/admin/messages/history/${userId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                      if (data.success) {
+                        renderMessages(data.messages);
+                      }
+                    });
+                }
+
+                function renderMessages(messages) {
+                  const messagesContainer = document.getElementById('messagesContainer');
+                  messagesContainer.innerHTML = '';
+                  if (!messages.length) {
+                    messagesContainer.innerHTML = '<div class="text-center text-muted mt-5">No messages yet.</div>';
+                    return;
+                  }
+                  messages.forEach(msg => {
+                    if (msg.sender_id === userId) {
+                      messagesContainer.innerHTML += `<div class='d-flex mb-3'><div class='user-message bg-primary text-white p-3 rounded ms-auto' style='max-width: 80%;'><p class='mb-0'>${msg.content}</p></div></div>`;
+                    } else {
+                      messagesContainer.innerHTML += `<div class='d-flex mb-3'><div class='bot-avatar me-2'><img src='/static/images/spes-logo.png' alt='Admin' class='rounded-circle' style='width: 40px; height: 40px;'></div><div class='bot-message p-3 rounded' style='max-width: 80%;'><p class='mb-0'>${msg.content}</p></div></div>`;
+                    }
+                  });
+                  scrollToBottom();
+                }
+
+                socket.on('chat_accept', data => {
+                  chatRoom = data.room;
+                  chatConnected = true;
+                  socket.emit('join', { room: chatRoom });
+                  appendSystemMessage(`Agent ${data.admin_name} has joined the chat. You can now chat in real time.`);
+                  document.getElementById('messageInput').disabled = false;
+                });
+
+                function appendSystemMessage(text) {
+                  const messagesContainer = document.getElementById('messagesContainer');
+                  messagesContainer.innerHTML += `<div class='d-flex mb-3'><div class='w-100 text-center text-secondary small'><em>${text}</em></div></div>`;
+                  scrollToBottom();
+                }
+
+                socket.on('receive_message', data => {
+                  if (chatRoom && data.room === chatRoom) {
+                    appendMessage(data);
+                  }
+                });
+
+                function appendMessage(msg) {
+                  const messagesContainer = document.getElementById('messagesContainer');
+                  if (msg.sender_id === userId) {
+                    // User message: right side
+                    messagesContainer.innerHTML += `<div class='d-flex mb-3'><div class='user-message bg-primary text-white p-3 rounded ms-auto' style='max-width: 80%;'><p class='mb-0'>${msg.content}</p></div></div>`;
+                  } else {
+                    // Admin message: left side
+                    messagesContainer.innerHTML += `<div class='d-flex mb-3'><div class='bot-avatar me-2'><img src='/static/images/spes-logo.png' alt='Admin' class='rounded-circle' style='width: 40px; height: 40px;'></div><div class='bot-message p-3 rounded' style='max-width: 80%;'><p class='mb-0'>${msg.content}</p></div></div>`;
+                  }
+                  scrollToBottom();
+                }
+
+                socket.on('chat_closed', data => {
+                  if (chatRoom && data.room === chatRoom) {
+                    appendSystemMessage(data.reason);
+                    document.getElementById('messageInput').disabled = true;
+                    chatConnected = false;
+                    chatRoom = null;
+                  }
+                });
+
+                window.addEventListener('load', () => {
+                  joinRoom();
+                  fetchMessages();
+                  resetChatState();
                 });
               </script>
             </div>
