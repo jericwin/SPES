@@ -98,11 +98,20 @@
             >
               <li>
                 <a
-                  href="{{ url_for('new_applicants_dashboard') }}"
+                  href="{{ url_for('old_applicants_dashboard') }}"
                   class="nav-link px-sm-0 px-2"
                 >
                   <i class="fs-5 bi-speedometer2"></i
                   ><span class="ms-3 d-none d-sm-inline">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('old_applicants_forms') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark-text"></i
+                  ><span class="ms-3 d-none d-sm-inline">Forms</span>
                 </a>
               </li>
               <li>
@@ -115,7 +124,7 @@
               </li>
               <li>
                 <a
-                  href="{{ url_for('new_applicants_messages') }}"
+                  href="{{ url_for('old_applicants_messages') }}"
                   class="nav-link px-sm-0 px-2"
                 >
                   <i class="fs-5 bi-envelope"></i
@@ -143,7 +152,11 @@
                   <li>
                     <hr class="dropdown-divider" />
                   </li>
-                  <li><a class="dropdown-item" href="#">Sign out</a></li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
                 </ul>
               </li>
             </ul>
@@ -157,14 +170,8 @@
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <img
-                  src="https://github.com/mdo.png"
-                  alt="hugenerd"
-                  width="28"
-                  height="28"
-                  class="rounded-circle"
-                />
-                <span class="d-none d-sm-inline mx-1">Honeylyn</span>
+                <i class="bi bi-person-circle fs-4"></i>
+                <span class="d-none d-sm-inline mx-1">{{ username }}</span>
               </a>
               <ul
                 class="dropdown-menu dropdown-menu-dark text-small shadow"
@@ -175,7 +182,11 @@
                 <li>
                   <hr class="dropdown-divider" />
                 </li>
-                <li><a class="dropdown-item" href="#">Sign out</a></li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
               </ul>
             </div>
           </div>
@@ -187,8 +198,89 @@
 
               <hr />
               <div class="main-container">
-                <h3>Welcome, Honeylyn!</h3>
-                <!-- bootstrap card -->
+                <div class="card">
+                  <div
+                    class="card-header d-flex justify-content-between align-items-center"
+                  >
+                    <h5 class="card-title">Your Notifications</h5>
+                    {% if notifications %}
+                    <button
+                      class="btn btn-danger btn-sm"
+                      onclick="deleteAllNotifications()"
+                    >
+                      <i class="fas fa-trash"></i> Delete All
+                    </button>
+                    {% endif %}
+                  </div>
+                  <div class="card-body">
+                    {% if notifications %}
+                    <div class="list-group">
+                      {% for notification in notifications %}
+                      <div
+                        class="list-group-item list-group-item-action mb-3 rounded shadow-sm {% if not notification.is_read %}border-start border-4 border-primary{% endif %}"
+                        style="background-color: {% if not notification.is_read %}#f8f9fa{% else %}#ffffff{% endif %};"
+                        id="notification-{{ notification.id }}"
+                      >
+                        <div class="d-flex">
+                          <div class="me-3">
+                            {% if notification.type == 'exam_link' %}
+                            <i
+                              class="bi bi-pencil-square fs-1 text-primary"
+                            ></i>
+                            {% elif notification.type == 'application_approved'
+                            %}
+                            <i class="bi bi-check-circle fs-1 text-success"></i>
+                            {% elif notification.type == 'general' %}
+                            <i class="bi bi-megaphone fs-1 text-info"></i>
+                            {% else %}
+                            <i class="bi bi-bell fs-1 text-primary"></i>
+                            {% endif %}
+                          </div>
+                          <div class="flex-grow-1">
+                            <div
+                              class="d-flex w-100 justify-content-between align-items-center"
+                            >
+                              <h5 class="mb-1">{{ notification.title }}</h5>
+                              <div class="d-flex align-items-center">
+                                <small class="text-muted me-2"
+                                  >{{ notification.created_at }}</small
+                                >
+                                <button
+                                  class="btn btn-link text-danger p-0"
+                                  onclick="deleteNotification({{ notification.id }})"
+                                >
+                                  <i class="bi bi-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                            <p class="mb-2 text-muted">
+                              {{ notification.message }}
+                            </p>
+                            {% if notification.action_url %}
+                              <a href="{{ notification.action_url }}"
+                                 class="btn btn-primary btn-sm{% if notification.assignment_status == 'completed' or notification.exam_status == 'ended' %} disabled{% endif %}"
+                                 {% if notification.assignment_status == 'completed' or notification.exam_status == 'ended' %}tabindex="-1" aria-disabled="true" title="{% if notification.assignment_status == 'completed' %}Exam already completed{% else %}Exam has ended{% endif %}"{% endif %}>
+                                {% if notification.type == 'exam_link' %} Take Exam {% else %} View Details {% endif %}
+                            </a>
+                              {% if notification.assignment_status == 'completed' %}
+                                <span class="text-success ms-2"><i class="bi bi-check-circle"></i> Exam completed</span>
+                              {% elif notification.exam_status == 'ended' %}
+                                <span class="text-danger ms-2"> Exam closed</span>
+                              {% endif %}
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                      <i class="bi bi-bell fs-1 text-muted mb-3"></i>
+                      <p class="text-muted">No notifications yet.</p>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
               </div>
             </div>
           </main>
@@ -199,6 +291,243 @@
       </div>
     </div>
 
+    <!-- Exam Results Modal -->
+    <div
+      class="modal fade"
+      id="examResultsModal"
+      tabindex="-1"
+      aria-labelledby="examResultsModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="examResultsModalLabel">Exam Results</h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="card-title">Total Applicants</h6>
+                    <h3 class="mb-0" id="totalApplicants">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="card-title">Available Slots</h6>
+                    <h3 class="mb-0" id="availableSlots">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="card-title">Selected Applicants</h6>
+                    <h3 class="mb-0" id="selectedCount">-</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="table-responsive" style="max-height: 400px">
+              <table class="table table-hover">
+                <thead class="sticky-top bg-white">
+                  <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th>Submission Date</th>
+                  </tr>
+                </thead>
+                <tbody id="resultsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function deleteNotification(notificationId) {
+        if (confirm("Are you sure you want to delete this notification?")) {
+          fetch(`/delete-notification/${notificationId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                // Remove only the specific notification element
+                const notificationElement = document.getElementById(
+                  `notification-${notificationId}`
+                );
+                if (notificationElement) {
+                  notificationElement.remove();
+                }
+
+                // Check if there are any notifications left
+                const notificationsContainer =
+                  document.querySelector(".list-group");
+                if (
+                  notificationsContainer &&
+                  !notificationsContainer.querySelector(".list-group-item")
+                ) {
+                  // If no notifications left, update the container
+                  const cardBody = document.querySelector(".card-body");
+                  cardBody.innerHTML = `
+                    <div class="text-center py-5">
+                      <i class="bi bi-bell fs-1 text-muted mb-3"></i>
+                      <p class="text-muted">No notifications yet.</p>
+                    </div>
+                  `;
+                  // Hide the delete all button
+                  const deleteAllBtn = document.querySelector(
+                    ".card-header .btn-danger"
+                  );
+                  if (deleteAllBtn) {
+                    deleteAllBtn.style.display = "none";
+                  }
+                }
+              } else {
+                alert(data.message || "Error deleting notification");
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while deleting the notification");
+            });
+        }
+      }
+
+      function deleteAllNotifications() {
+        if (
+          confirm(
+            "Are you sure you want to delete all notifications? This action cannot be undone."
+          )
+        ) {
+          fetch("/delete-all-notifications", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                // Update the container with the "no notifications" message
+                const cardBody = document.querySelector(".card-body");
+                cardBody.innerHTML = `
+                  <div class="text-center py-5">
+                    <i class="bi bi-bell fs-1 text-muted mb-3"></i>
+                    <p class="text-muted">No notifications yet.</p>
+                  </div>
+                `;
+                // Hide the delete all button
+                const deleteAllBtn = document.querySelector(
+                  ".card-header .btn-danger"
+                );
+                if (deleteAllBtn) {
+                  deleteAllBtn.style.display = "none";
+                }
+              } else {
+                alert(data.message || "Error deleting notifications");
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while deleting notifications");
+            });
+        }
+      }
+
+      function viewExamResults(examId) {
+        fetch(`/get-exam-results/${examId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Update statistics
+              document.getElementById("totalApplicants").textContent =
+                data.total_attempts;
+              document.getElementById("availableSlots").textContent =
+                data.exam.available_slots;
+              document.getElementById("selectedCount").textContent =
+                data.selected_count;
+
+              // Update table
+              const tbody = document.getElementById("resultsTableBody");
+              tbody.innerHTML = "";
+
+              data.results.forEach((result, index) => {
+                const row = document.createElement("tr");
+                row.className =
+                  result.selection_status === "Selected"
+                    ? "selected-row"
+                    : "not-selected-row";
+
+                const score = (
+                  (result.score / result.total_points) *
+                  100
+                ).toFixed(1);
+
+                row.innerHTML = `
+                  <td>${index + 1}</td>
+                  <td>${result.name}</td>
+                  <td>${score}%</td>
+                  <td>
+                    <span class="badge ${
+                      result.selection_status === "Selected"
+                        ? "bg-success"
+                        : "bg-danger"
+                    }">
+                      ${result.selection_status}
+                    </span>
+                  </td>
+                  <td>${new Date(result.submitted_at).toLocaleString()}</td>
+                `;
+
+                tbody.appendChild(row);
+              });
+
+              // Show modal
+              const modal = new bootstrap.Modal(
+                document.getElementById("examResultsModal")
+              );
+              modal.show();
+            } else {
+              alert("Error loading exam results: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("An error occurred while loading exam results");
+          });
+      }
+
+      // Modify notification action links to use the modal
+      document
+        .querySelectorAll('.list-group-item a[href^="/view-exam-results/"]')
+        .forEach((link) => {
+          link.addEventListener("click", function (e) {
+            e.preventDefault();
+            const examId = this.href.split("/").pop();
+            viewExamResults(examId);
+          });
+        });
+    </script>
   </body>
 </html>
