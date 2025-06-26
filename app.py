@@ -19,6 +19,8 @@ import mysql.connector
 import threading
 import time
 import pytz
+from flask_socketio import SocketIO, emit, join_room, leave_room
+from threading import Timer
 
 # Configure Tesseract path
 if os.name == 'nt':  # Windows
@@ -28,6 +30,26 @@ elif os.name == 'posix':  # Linux/Mac
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flash messages and sessions
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Track active chat timers and sockets
+active_chats = {}  # key: room, value: Timer
+user_sid_map = {}  # key: user_id, value: sid
+
+# Helper to close chat room
+def close_chat(room, reason):
+    socketio.emit('chat_closed', {'room': room, 'reason': reason}, room=room)
+    if room in active_chats:
+        active_chats[room].cancel()
+        del active_chats[room]
+
+# Reset inactivity timer for a chat room
+def reset_inactivity_timer(room):
+    if room in active_chats:
+        active_chats[room].cancel()
+    timer = Timer(180, lambda: close_chat(room, 'No messages for 3 minutes. Chat closed.'))
+    active_chats[room] = timer
+    timer.start()
 
 def login_required(f):
     @wraps(f)
@@ -163,6 +185,115 @@ def new_applicants_notifications():
     return render_template('new/notifications.html', 
                          username=session['username'],
                          notifications=notifications)
+
+@app.route('/old-applicants/dashboard')
+def old_applicants_dashboard():
+    if 'user_id' not in session or session['role'] != 'old':
+        flash('Please login to access this page', 'error')
+        return redirect(url_for('home'))
+    
+    # Check if user has already submitted an application (optional, can be customized for old applicants)
+    conn = get_db_connection()
+    has_submitted = False
+    application_status = None
+    latest_announcement = None
+    
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Get latest main announcement
+            cursor.execute("""
+                SELECT title, description, announcement_date
+                FROM announcements 
+                WHERE announcement_type = 'main'
+                ORDER BY announcement_date DESC 
+                LIMIT 1
+            """)
+            latest_announcement = cursor.fetchone()
+            if latest_announcement and latest_announcement['announcement_date']:
+                latest_announcement['announcement_date'] = latest_announcement['announcement_date'].strftime('%B %d, %Y')
+            # Check if there's an active application
+            cursor.execute("""
+                SELECT a.status, a.id 
+                FROM applicants a 
+                WHERE a.user_id = %s 
+                ORDER BY a.submission_date DESC 
+                LIMIT 1
+            """, (session['user_id'],))
+            result = cursor.fetchone()
+            if result:
+                has_submitted = True
+                application_status = result['status']
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    return render_template('old/dashboard.html', 
+                         username=session['username'], 
+                         has_submitted=has_submitted,
+                         application_status=application_status,
+                         latest_announcement=latest_announcement)
+
+@app.route('/old-applicants/messages')
+def old_applicants_messages():
+    if 'user_id' not in session or session['role'] != 'old':
+        flash('Please login to access this page', 'error')
+        return redirect(url_for('home'))
+    return render_template('old/messages.html', username=session['username'])
+
+@app.route('/old-applicants/notifications')
+def old_applicants_notifications():
+    if 'user_id' not in session or session['role'] != 'old':
+        flash('Please login to access this page', 'error')
+        return redirect(url_for('home'))
+    
+    conn = get_db_connection()
+    notifications = []
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Fetch notifications for the current user
+            cursor.execute("""
+                SELECT * FROM notifications 
+                WHERE user_id = %s 
+                ORDER BY created_at DESC
+            """, (session['user_id'],))
+            notifications = cursor.fetchall()
+            # Format dates for display
+            for notification in notifications:
+                if notification['created_at']:
+                    notification['created_at'] = notification['created_at'].strftime('%B %d, %Y %I:%M %p')
+        except Exception as e:
+            print(f"Error fetching notifications: {e}")
+            flash('Error loading notifications', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+    return render_template('old/notifications.html', 
+                         username=session['username'],
+                         notifications=notifications)
+
+@app.route('/old-applicants/forms')
+def old_applicants_forms():
+    if 'user_id' not in session or session['role'] != 'old':
+        flash('Please login to access this page', 'error')
+        return redirect(url_for('home'))
+    can_access_spes_form = False
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT status FROM examinees WHERE user_id = %s ORDER BY created_at DESC LIMIT 1", (session['user_id'],))
+            row = cursor.fetchone()
+            if row and row['status'] == 'for interview':
+                can_access_spes_form = True
+        except Exception as e:
+            print(f"Error checking examinee status: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    return render_template('old/spes-form.html', username=session['username'], can_access_spes_form=can_access_spes_form)
 
 # --------------------------------------------------------ADMIN---------------------------------------------------------------------#
 @app.route('/admin/dashboard')
@@ -794,6 +925,8 @@ def login():
                         return redirect(url_for('admin_dashboard'))
                     elif user['role'] == 'new':
                         return redirect(url_for('new_applicants_dashboard'))
+                    elif user['role'] == 'old':
+                        return redirect(url_for('old_applicants_dashboard'))
                     else:
                         return redirect(url_for('home'))
                 else:
@@ -933,7 +1066,7 @@ def submit_application():
             cursor.execute("""
                 INSERT INTO applicants
                 (user_id, status, submission_date)
-                VALUES (%s, 'approved', CURDATE())
+                VALUES (%s, 'for exam', CURDATE())
             """, (user_id,))
 
             # Insert into examinees if not already present
@@ -1959,7 +2092,21 @@ def new_applicants_forms():
     if 'user_id' not in session or session['role'] != 'new':
         flash('Please login to access this page', 'error')
         return redirect(url_for('home'))
-    return render_template('new/spes-form.html', username=session['username'])
+    can_access_spes_form = False
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT status FROM examinees WHERE user_id = %s ORDER BY created_at DESC LIMIT 1", (session['user_id'],))
+            row = cursor.fetchone()
+            if row and row['status'] == 'for interview':
+                can_access_spes_form = True
+        except Exception as e:
+            print(f"Error checking examinee status: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    return render_template('new/spes-form.html', username=session['username'], can_access_spes_form=can_access_spes_form)
 
 @app.route('/preview-document/<document_type>')
 def preview_document(document_type):
@@ -2041,7 +2188,10 @@ COG_KEYWORDS = [
     '2.25',
     '2.50',
     '2.75',
-    '80 to 100',
+    '80','81','82','83','84','85','86','87','88','89',
+    '90','91','92','93','94','95','96','97','98','99',
+    '100',
+    
 ]
 
 def preprocess_image(image):
@@ -2359,11 +2509,15 @@ def exam_auto_trigger():
                                 WHERE id = %s AND status = 'closed'
                             """, (exam_id,))
                             
+                            # Assign exam_id to examinees who are waiting for an exam
+                            cursor.execute("""
+                                UPDATE examinees SET exam_id = %s WHERE status = 'for exam' AND (exam_id IS NULL OR exam_id = '')
+                            """, (exam_id,))
                             # Assign examinees who are still waiting for an exam
                             cursor.execute("""
                                 SELECT id, user_id 
                                 FROM examinees 
-                                WHERE status = 'for exam' AND (exam_id IS NULL OR exam_id = %s)
+                                WHERE status = 'for exam' AND exam_id = %s
                             """, (exam_id,))
                             examinees = cursor.fetchall()
                             for ex in examinees:
@@ -2516,8 +2670,186 @@ def update_examinee_answer():
     except Exception as e:
         print(f"Error updating examinee answer: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
+    
+@app.route('/admin/messages')
+def admin_messages():
+    if 'user_id' not in session or session['role'] != 'admin':
+        flash('Please login as admin to access this page', 'error')
+        return redirect(url_for('home'))
+    return render_template('admin/messages.html', username=session['username'])
+
+# --- Admin Messaging API ---
+@app.route('/admin/messages/users')
+@login_required
+def get_message_users():
+    if not is_admin():
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    conn = get_db_connection()
+    users = []
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Get all users who have sent or received messages with admin
+            cursor.execute('''
+                SELECT DISTINCT u.id, u.name, u.role
+                FROM users u
+                JOIN messages m ON (u.id = m.sender_id OR u.id = m.receiver_id)
+                WHERE u.role != 'admin' AND (m.sender_id = %s OR m.receiver_id = %s)
+            ''', (session['user_id'], session['user_id']))
+            users = cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching message users: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    return jsonify({'success': True, 'users': users})
+
+@app.route('/admin/messages/history/<int:user_id>')
+@login_required
+def get_message_history(user_id):
+    if not is_admin():
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    conn = get_db_connection()
+    messages = []
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute('''
+                SELECT m.id, m.sender_id, m.receiver_id, m.content, m.timestamp, m.is_read,
+                       u1.name AS sender_name, u2.name AS receiver_name
+                FROM messages m
+                JOIN users u1 ON m.sender_id = u1.id
+                JOIN users u2 ON m.receiver_id = u2.id
+                WHERE (m.sender_id = %s AND m.receiver_id = %s)
+                   OR (m.sender_id = %s AND m.receiver_id = %s)
+                ORDER BY m.timestamp ASC
+            ''', (session['user_id'], user_id, user_id, session['user_id']))
+            messages = cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching message history: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    return jsonify({'success': True, 'messages': messages})
+
+@app.route('/admin/messages/send', methods=['POST'])
+@login_required
+def send_message():
+    if not is_admin():
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    data = request.get_json()
+    receiver_id = data.get('receiver_id')
+    content = data.get('content')
+    if not receiver_id or not content:
+        return jsonify({'success': False, 'message': 'Missing data'}), 400
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO messages (sender_id, receiver_id, content) VALUES (%s, %s, %s)
+            ''', (session['user_id'], receiver_id, content))
+            conn.commit()
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            return jsonify({'success': False, 'message': 'Database error'}), 500
+        finally:
+            cursor.close()
+            conn.close()
+    return jsonify({'success': True, 'message': 'Message sent'})
+
+# --- SocketIO events for real-time messaging ---
+@socketio.on('join')
+def handle_join(data):
+    # data: {room: str}
+    join_room(data['room'])
+    user_id = data.get('user_id')
+    if user_id:
+        user_sid_map[user_id] = request.sid
+    emit('status', {'msg': f"{data.get('username', 'A user')} has entered the room."}, room=data['room'])
+
+@socketio.on('leave')
+def handle_leave(data):
+    leave_room(data['room'])
+    emit('status', {'msg': f"{data.get('username', 'A user')} has left the room."}, room=data['room'])
+    close_chat(data['room'], 'A participant has left the chat.')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    # Find user_id by sid
+    user_id = None
+    for uid, sid in user_sid_map.items():
+        if sid == request.sid:
+            user_id = uid
+            break
+    if user_id:
+        # Find all rooms this user is in and close them
+        for room in list(active_chats.keys()):
+            if str(user_id) in room:
+                close_chat(room, 'A participant has disconnected.')
+        del user_sid_map[user_id]
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    # data: {sender_id, receiver_id, content}
+    # Save to DB, then emit to room
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO messages (sender_id, receiver_id, content) VALUES (%s, %s, %s)
+            ''', (data['sender_id'], data['receiver_id'], data['content']))
+            conn.commit()
+        except Exception as e:
+            print(f"Error saving socket message: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    # Emit to both sender and receiver rooms
+    emit('receive_message', data, room=f'user_{data["sender_id"]}')
+    emit('receive_message', data, room=f'user_{data["receiver_id"]}')
+    # Reset inactivity timer for chat room if provided
+    if 'room' in data:
+        reset_inactivity_timer(data['room'])
+
+@socketio.on('chat_request')
+def handle_chat_request(data):
+    # data: {applicant_id, applicant_name}
+    # Notify all admins (or a specific admin room)
+    emit('chat_request', data, room='admin_room', broadcast=True)
+
+@socketio.on('chat_accept')
+def handle_chat_accept(data):
+    # data: {applicant_id, admin_id, admin_name}
+    room = f'chat_{data["applicant_id"]}_{data["admin_id"]}'
+    emit('chat_accept', {'room': room, 'admin_name': data['admin_name']}, room=f'user_{data["applicant_id"]}')
+
+# Update send_message to use chat room if provided
+@socketio.on('send_message')
+def handle_send_message(data):
+    # data: {sender_id, receiver_id, content, room (optional)}
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO messages (sender_id, receiver_id, content) VALUES (%s, %s, %s)
+            ''', (data['sender_id'], data['receiver_id'], data['content']))
+            conn.commit()
+        except Exception as e:
+            print(f"Error saving socket message: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    # Emit to chat room if provided, else to both user rooms
+    if 'room' in data:
+        emit('receive_message', data, room=data['room'])
+    else:
+        emit('receive_message', data, room=f'user_{data["sender_id"]}')
+        emit('receive_message', data, room=f'user_{data["receiver_id"]}')
 
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
     threading.Thread(target=exam_auto_trigger, daemon=True).start()
-    app.run(debug=True)
+    socketio.run(app, debug=True)
