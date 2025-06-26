@@ -384,8 +384,6 @@
     </style>
   </head>
   <body>
-    <!-- sidebar boostrap 5-->
-
     <div class="container-fluid overflow-hidden">
       <div class="row vh-100 overflow-auto">
         <div
@@ -636,7 +634,56 @@
                 </div>
 
                 <!-- Upload Section -->
-                <div class="upload-section">
+                <div
+                  class="upload-section"
+                  {%
+                  if
+                  not
+                  can_access_spes_form
+                  %}style="position:relative;"
+                  {%
+                  endif
+                  %}
+                >
+                  {% if not can_access_spes_form %}
+                  <div
+                    id="spes-form-overlay"
+                    style="
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      width: 100%;
+                      height: 100%;
+                      background: rgba(255, 255, 255, 0.97);
+                      z-index: 1000;
+                      display: flex;
+                      flex-direction: column;
+                      align-items: center;
+                      justify-content: center;
+                    "
+                  >
+                    <div
+                      class="card shadow p-4"
+                      style="max-width: 400px; text-align: center"
+                    >
+                      <div class="mb-3">
+                        <i
+                          class="bi bi-lock-fill"
+                          style="font-size: 3rem; color: #006edc"
+                        ></i>
+                      </div>
+                      <h4 class="mb-2">Access Restricted</h4>
+                      <p class="mb-0">
+                        You can only access and submit these forms after passing
+                        the exam.<br />
+                      </p>
+                      <p class="text-muted mt-2">
+                        If you believe this is a mistake, please contact support
+                        or your administrator.
+                      </p>
+                    </div>
+                  </div>
+                  {% endif %}
                   <h4 class="mb-4">Upload Completed Forms</h4>
                   <p class="text-muted mb-4">
                     Upload your completed forms here. Make sure all required
@@ -644,15 +691,32 @@
                     accepted, with a maximum size of 5MB per file.
                   </p>
 
-                  <form id="formsUploadForm" onsubmit="submitForms(event)">
+                  <form
+                    id="formsUploadForm"
+                    onsubmit="submitForms(event)"
+                    {%
+                    if
+                    not
+                    can_access_spes_form
+                    %}style="pointer-events:none;opacity:0.5;"
+                    {%
+                    endif
+                    %}
+                  >
                     <div class="row">
-                      <div class="col-md-6">
-                        <div class="file-upload-wrapper">
-                          <label class="file-upload-label">
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
                             <i class="bi bi-cloud-upload fs-3 mb-2"></i>
-                            <div>Upload Application Form</div>
+                            <div>
+                              Application Form
+                              <span class="text-danger">*</span>
+                            </div>
                             <small class="text-muted"
-                              >Click or drag file here</small
+                              >Attach passport size photo with blue background
+                              (Long Bond Paper)</small
                             >
                             <input
                               type="file"
@@ -669,13 +733,77 @@
                           <div class="file-info" id="applicationFormInfo"></div>
                         </div>
                       </div>
-                      <div class="col-md-6">
-                        <div class="file-upload-wrapper">
-                          <label class="file-upload-label">
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
                             <i class="bi bi-cloud-upload fs-3 mb-2"></i>
-                            <div>Upload School Certification</div>
+                            <div>
+                              Employment Contract
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted">A4 size paper</small>
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="employmentContract"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div
+                            class="upload-status"
+                            id="employmentContractStatus"
+                          ></div>
+                          <div
+                            class="file-info"
+                            id="employmentContractInfo"
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Oath of Undertaking
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted">A4 size paper</small>
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="oathOfUndertaking"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div
+                            class="upload-status"
+                            id="oathOfUndertakingStatus"
+                          ></div>
+                          <div
+                            class="file-info"
+                            id="oathOfUndertakingInfo"
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              School Certification
+                              <span class="text-danger">*</span>
+                            </div>
                             <small class="text-muted"
-                              >Click or drag file here</small
+                              >With signature of School Registrar (Long Bond
+                              Paper)</small
                             >
                             <input
                               type="file"
@@ -695,55 +823,117 @@
                           ></div>
                         </div>
                       </div>
-                      <div class="col-md-6">
-                        <div class="file-upload-wrapper">
-                          <label class="file-upload-label">
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
                             <i class="bi bi-cloud-upload fs-3 mb-2"></i>
-                            <div>Upload Employment Contract</div>
+                            <div>
+                              CERTIFICATE OF REGISTRATION (COR) / CERTIFICATE OF
+                              ENROLMENT (COE) – 1ST AND 2ND SEMESTER
+                              <span class="text-danger">*</span>
+                            </div>
                             <small class="text-muted"
-                              >Click or drag file here</small
+                              >Certified True Copy from School Registrar</small
                             >
                             <input
                               type="file"
                               class="file-upload-input"
-                              name="employmentContract"
+                              name="corOrCoe"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div class="upload-status" id="corOrCoeStatus"></div>
+                          <div class="file-info" id="corOrCoeInfo"></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Copy of Grades (COG) – 1ST SEMESTER / 1ST QUARTER
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted"
+                              >Certified True Copy from School Registrar</small
+                            >
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="cog"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div class="upload-status" id="cogStatus"></div>
+                          <div class="file-info" id="cogInfo"></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Barangay Indigency
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted"
+                              >Original Copy. For students 18 y.o. and below,
+                              the certification must be in the name of your
+                              parent/guardian with the purpose: "SPES
+                              Requirement of (indicate your name)"</small
+                            >
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="barangayIndigency"
                               accept=".docx,.pdf"
                               required
                             />
                           </label>
                           <div
                             class="upload-status"
-                            id="employmentContractStatus"
+                            id="barangayIndigencyStatus"
                           ></div>
                           <div
                             class="file-info"
-                            id="employmentContractInfo"
+                            id="barangayIndigencyInfo"
                           ></div>
                         </div>
                       </div>
-                      <div class="col-md-6">
-                        <div class="file-upload-wrapper">
-                          <label class="file-upload-label">
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
                             <i class="bi bi-cloud-upload fs-3 mb-2"></i>
-                            <div>Upload Oath of Undertaking</div>
-                            <small class="text-muted"
-                              >Click or drag file here</small
-                            >
+                            <div>
+                              Copy of PSA Birth Certificate
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted">Photocopy</small>
                             <input
                               type="file"
                               class="file-upload-input"
-                              name="oathOfUndertaking"
+                              name="psaBirthCertificate"
                               accept=".docx,.pdf"
                               required
                             />
                           </label>
                           <div
                             class="upload-status"
-                            id="oathOfUndertakingStatus"
+                            id="psaBirthCertificateStatus"
                           ></div>
                           <div
                             class="file-info"
-                            id="oathOfUndertakingInfo"
+                            id="psaBirthCertificateInfo"
                           ></div>
                         </div>
                       </div>
@@ -787,7 +977,7 @@
           <div class="modal-body">
             <div class="loading-overlay" id="loadingOverlay">
               <div class="loading-spinner"></div>
-              <div>Loading document preview...</div>
+              <div id="loadingText">Loading document preview...</div>
             </div>
             <iframe id="previewFrame" src="about:blank"></iframe>
           </div>
@@ -817,9 +1007,11 @@
       function previewTemplate(formType) {
         const previewFrame = document.getElementById("previewFrame");
         const loadingOverlay = document.getElementById("loadingOverlay");
+        const loadingText = document.getElementById("loadingText");
 
         // Show loading overlay
         loadingOverlay.style.display = "flex";
+        loadingText.textContent = "Loading document preview...";
 
         // Reset iframe source
         previewFrame.src = "about:blank";
@@ -838,16 +1030,35 @@
         );
         previewModal.show();
 
-        // Load the document
-        previewFrame.onload = function () {
-          // Hide loading overlay when document is loaded
-          loadingOverlay.style.display = "none";
+        // Use XMLHttpRequest to fetch the document
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", `/preview-document/${formType}`);
+        xhr.responseType = "blob";
+
+        xhr.onprogress = function (event) {
+          loadingText.textContent = `Loading document preview...`;
         };
 
-        // Set the source after a short delay to ensure modal is shown
-        setTimeout(() => {
-          previewFrame.src = `/preview-document/${formType}`;
-        }, 100);
+        xhr.onload = function () {
+          if (xhr.status === 200) {
+            loadingText.textContent = "Document loaded!";
+            const blobUrl = URL.createObjectURL(xhr.response);
+            previewFrame.onload = function () {
+              setTimeout(() => {
+                loadingOverlay.style.display = "none";
+              }, 300);
+            };
+            previewFrame.src = blobUrl;
+          } else {
+            loadingText.textContent = "Failed to load document.";
+          }
+        };
+
+        xhr.onerror = function () {
+          loadingText.textContent = "Error loading document.";
+        };
+
+        xhr.send();
       }
 
       // Function to download template
