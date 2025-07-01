@@ -2022,6 +2022,28 @@ def submit_exam():
             WHERE user_id = %s AND exam_id = %s
         """, (session['user_id'], exam_id))
         
+        # Check if an attempt already exists
+        cursor.execute("""
+            SELECT id FROM exam_attempts WHERE user_id = %s AND exam_id = %s
+        """, (session['user_id'], exam_id))
+        attempt = cursor.fetchone()
+
+        passed = percentage_score >= passing_score
+
+        if not attempt:
+            # Insert new attempt
+            cursor.execute("""
+                INSERT INTO exam_attempts (user_id, exam_id, score, total_points, passed, submitted_at)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+            """, (session['user_id'], exam_id, total_score, total_points, passed))
+        else:
+            # Update existing attempt (optional, for idempotency)
+            cursor.execute("""
+                UPDATE exam_attempts
+                SET score = %s, total_points = %s, passed = %s, submitted_at = NOW()
+                WHERE user_id = %s AND exam_id = %s
+            """, (total_score, total_points, passed, session['user_id'], exam_id))
+        
         conn.commit()
         cursor.close()
         conn.close()
