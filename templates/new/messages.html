@@ -665,7 +665,7 @@
                 // --- Real-time Messaging Integration ---
                 const socket = io();
                 const userId = {{ session['user_id']|tojson }};
-                const adminId = 4; // Change if your admin user_id is different
+                const adminId = 4; //admin user_id, static for now
                 const chatRoom = `chat_${userId}_${adminId}`;
                 socket.emit('join', { room: chatRoom });
                 let chatConnected = false;
