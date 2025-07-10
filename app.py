@@ -2812,43 +2812,6 @@ def handle_disconnect():
 
 @socketio.on('send_message')
 def handle_send_message(data):
-    # data: {sender_id, receiver_id, content}
-    # Save to DB, then emit to room
-    conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO messages (sender_id, receiver_id, content) VALUES (%s, %s, %s)
-            ''', (data['sender_id'], data['receiver_id'], data['content']))
-            conn.commit()
-        except Exception as e:
-            print(f"Error saving socket message: {e}")
-        finally:
-            cursor.close()
-            conn.close()
-    # Emit to both sender and receiver rooms
-    emit('receive_message', data, room=f'user_{data["sender_id"]}')
-    emit('receive_message', data, room=f'user_{data["receiver_id"]}')
-    # Reset inactivity timer for chat room if provided
-    if 'room' in data:
-        reset_inactivity_timer(data['room'])
-
-@socketio.on('chat_request')
-def handle_chat_request(data):
-    # data: {applicant_id, applicant_name}
-    # Notify all admins (or a specific admin room)
-    emit('chat_request', data, room='admin_room', broadcast=True)
-
-@socketio.on('chat_accept')
-def handle_chat_accept(data):
-    # data: {applicant_id, admin_id, admin_name}
-    room = f'chat_{data["applicant_id"]}_{data["admin_id"]}'
-    emit('chat_accept', {'room': room, 'admin_name': data['admin_name']}, room=f'user_{data["applicant_id"]}')
-
-# Update send_message to use chat room if provided
-@socketio.on('send_message')
-def handle_send_message(data):
     # data: {sender_id, receiver_id, content, room (optional)}
     conn = get_db_connection()
     if conn:
@@ -2869,6 +2832,18 @@ def handle_send_message(data):
     else:
         emit('receive_message', data, room=f'user_{data["sender_id"]}')
         emit('receive_message', data, room=f'user_{data["receiver_id"]}')
+
+@socketio.on('chat_request')
+def handle_chat_request(data):
+    # data: {applicant_id, applicant_name}
+    # Notify all admins (or a specific admin room)
+    emit('chat_request', data, room='admin_room', broadcast=True)
+
+@socketio.on('chat_accept')
+def handle_chat_accept(data):
+    # data: {applicant_id, admin_id, admin_name}
+    room = f'chat_{data["applicant_id"]}_{data["admin_id"]}'
+    emit('chat_accept', {'room': room, 'admin_name': data['admin_name']}, room=f'user_{data["applicant_id"]}')
 
 @app.route('/admin/update-exam', methods=['POST'])
 @login_required
@@ -2901,6 +2876,31 @@ def update_exam():
     except Exception as e:
         print(f"Error updating exam: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/user/messages/history/<int:admin_id>')
+def get_user_message_history(admin_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    user_id = session['user_id']
+    conn = get_db_connection()
+    messages = []
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute('''
+                SELECT m.id, m.sender_id, m.receiver_id, m.content, m.timestamp
+                FROM messages m
+                WHERE (m.sender_id = %s AND m.receiver_id = %s)
+                   OR (m.sender_id = %s AND m.receiver_id = %s)
+                ORDER BY m.timestamp ASC
+            ''', (user_id, admin_id, admin_id, user_id))
+            messages = cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching user message history: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+    return jsonify({'success': True, 'messages': messages})
 
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
