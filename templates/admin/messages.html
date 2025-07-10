@@ -828,7 +828,8 @@
                   document.getElementById('chatUserStatus').textContent = user ? (user.role === 'new' || user.role === 'old' ? 'User' : user.role) : '';
                   document.querySelector('.card-header img.rounded-circle').src = user ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}` : '';
                   // Reset chat state for this user
-                  chatRoom = userChatRooms[userId] || null;
+                  chatRoom = `chat_${userId}_${adminId}`;
+                  socket.emit('join', { room: chatRoom });
                   chatConnected = userChatConnected[userId] || false;
                   fetchMessages(userId);
                 }
@@ -940,8 +941,10 @@
                   }
                 });
 
-                socket.on('receive_message', data => {
-                  if (chatRoom && data.room === chatRoom) {
+                socket.on('receive_message', function(data) {
+                  if ((chatRoom && data.room === chatRoom) ||
+                      (data.sender_id === adminId && data.receiver_id === activeUserId) ||
+                      (data.sender_id === activeUserId && data.receiver_id === adminId)) {
                     appendMessage(data);
                   }
                 });
