@@ -1512,24 +1512,28 @@ def add_exam():
 def get_exam(exam_id):
     if not is_admin():
         return jsonify({'success': False, 'message': 'Unauthorized access'})
-    
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
         # Get exam details
         cursor.execute('''
-            SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at, e.status, e.start_date, e.end_date,
+            SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at, e.status, e.start_date, e.end_date, e.available_slots,
                    u.name as created_by
             FROM exams e
             LEFT JOIN users u ON e.created_by = u.id
             WHERE e.id = %s
         ''', (exam_id,))
         exam = cursor.fetchone()
-        
         if not exam:
             return jsonify({'success': False, 'message': 'Exam not found'})
-        
+        # Save the original DB value for start_date
+        if exam.get('start_date'):
+            if isinstance(exam['start_date'], str):
+                exam['db_start_date'] = exam['start_date']
+            elif isinstance(exam['start_date'], (datetime,)):
+                exam['db_start_date'] = exam['start_date'].strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            exam['db_start_date'] = ''
         # Get exam pages
         cursor.execute('''
             SELECT id, title, description, time_limit, order_number 
@@ -1538,8 +1542,6 @@ def get_exam(exam_id):
             ORDER BY order_number
         ''', (exam_id,))
         pages = cursor.fetchall()
-        
-        # Get questions for each page
         for page in pages:
             cursor.execute('''
                 SELECT id, question_text, question_type, points, correct_answer, is_required, demographic_input_type
@@ -1548,8 +1550,6 @@ def get_exam(exam_id):
                 ORDER BY id
             ''', (page['id'],))
             questions = cursor.fetchall()
-            
-            # Get options for multiple choice questions
             for question in questions:
                 if question['question_type'] == 'multiple_choice':
                     cursor.execute('''
@@ -1559,27 +1559,26 @@ def get_exam(exam_id):
                         ORDER BY id
                     ''', (question['id'],))
                     question['options'] = cursor.fetchall()
-            
-            # For demographic, add input_type field
             for q in questions:
                 if q['question_type'] == 'demographic':
                     q['input_type'] = q['demographic_input_type']
-            
             page['questions'] = questions
-        
         exam['pages'] = pages
-        
-        # Format dates
+        # Fix available_slots to always be an integer
+        exam['available_slots'] = int(exam['available_slots']) if exam['available_slots'] is not None else 0
+        # Format start_date for input[type=datetime-local] with NO timezone conversion
+        if exam.get('start_date'):
+            if isinstance(exam['start_date'], str):
+                exam['start_date'] = exam['start_date'].replace(' ', 'T')[:16]
+            elif isinstance(exam['start_date'], (datetime,)):
+                exam['start_date'] = exam['start_date'].strftime('%Y-%m-%dT%H:%M')
+        # Format dates for display only (not used in edit modal)
         if exam['created_at']:
-            exam['created_at'] = exam['created_at'].strftime('%B %d, %Y')
-        if exam.get('start_date') and isinstance(exam['start_date'], (datetime,)):
-            exam['start_date'] = exam['start_date'].strftime('%B %d, %Y at %I%p').replace('AM', 'AM').replace('PM', 'PM')
+            exam['created_at'] = exam['created_at'].strftime('%B %d, %Y') if isinstance(exam['created_at'], (datetime,)) else exam['created_at']
         if exam.get('end_date') and isinstance(exam['end_date'], (datetime,)):
             exam['end_date'] = exam['end_date'].strftime('%B %d, %Y at %I%p').replace('AM', 'AM').replace('PM', 'PM')
-        
         cursor.close()
         conn.close()
-        
         return jsonify({'success': True, 'exam': exam})
     except Exception as e:
         print(f"Error fetching exam: {str(e)}")
@@ -2870,6 +2869,38 @@ def handle_send_message(data):
     else:
         emit('receive_message', data, room=f'user_{data["sender_id"]}')
         emit('receive_message', data, room=f'user_{data["receiver_id"]}')
+
+@app.route('/admin/update-exam', methods=['POST'])
+@login_required
+def update_exam():
+    if not is_admin():
+        return jsonify({'success': False, 'message': 'Unauthorized access'})
+    try:
+        exam_id = request.form.get('examId')
+        title = request.form.get('title')
+        description = request.form.get('description')
+        time_limit = request.form.get('timeLimit')
+        passing_score = request.form.get('passingScore')
+        available_slots = request.form.get('availableSlots')
+        start_date = request.form.get('startDate')
+        status = request.form.get('status')  # Optional, for future use
+        end_date = request.form.get('endDate')  # Optional, for future use
+
+        if not all([exam_id, title, description, time_limit, passing_score, available_slots, start_date]):
+            return jsonify({'success': False, 'message': 'Missing required fields'})
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE exams SET title=%s, description=%s, time_limit=%s, passing_score=%s, available_slots=%s, start_date=%s WHERE id=%s
+        ''', (title, description, time_limit, passing_score, available_slots, start_date, exam_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Exam updated successfully'})
+    except Exception as e:
+        print(f"Error updating exam: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
 
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
