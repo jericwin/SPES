@@ -98,7 +98,7 @@
         color: white;
       }
 
-      .bot-message .faq-btn:last-child {
+      /* .bot-message .faq-btn:last-child {
         margin-top: 0.5rem;
         background-color: #28a745;
         border-color: #28a745;
@@ -108,7 +108,7 @@
       .bot-message .faq-btn:last-child:hover {
         background-color: #218838;
         border-color: #218838;
-      }
+      } */
 
       .user-message {
         background-color: #006edc;
@@ -404,13 +404,7 @@
                             👥 E. Interview
                           </button>
 
-                          <button
-                            class="btn btn-sm btn-outline-primary m-1 faq-btn agent-btn mt-3"
-                            onclick="handleAgentClick()"
-                          >
-                            <i class="bi bi-person-circle me-1"></i>Chat with a
-                            real agent
-                          </button>
+                          <!-- Remove the Chat with a real agent button and its handler -->
                         </div>
                       </div>
                     </div>
@@ -571,17 +565,18 @@
                 }
 
                 function resetChatState() {
-                  chatRoom = null;
-                  chatConnected = false;
-                  document.getElementById('messageInput').disabled = true;
+                  // chatRoom = null; // Removed as per edit hint
+                  // chatConnected = false; // Removed as per edit hint
+                  // document.getElementById('messageInput').disabled = true; // Removed as per edit hint
                 }
 
-                function handleAgentClick() {
-                  addMessage('I would like to chat with a real agent', true);
-                  socket.emit('chat_request', { applicant_id: userId, applicant_name: userName });
-                  addMessage('<em>Waiting for an agent to connect...</em>', false);
-                  resetChatState();
-                }
+                // Remove handleAgentClick function and any references to it
+                // function handleAgentClick() {
+                //   addMessage('I would like to chat with a real agent', true);
+                //   socket.emit('chat_request', { applicant_id: userId, applicant_name: userName });
+                //   addMessage('<em>Waiting for an agent to connect...</em>', false);
+                //   resetChatState();
+                // }
 
                 function handleKeyPress(event) {
                   if (event.key === "Enter") {
@@ -590,7 +585,7 @@
                 }
 
                 function sendMessage() {
-                  if (!chatConnected) return;
+                  // if (!chatConnected) return; // Removed as per edit hint
                   const input = document.getElementById('messageInput');
                   const message = input.value.trim();
                   if (!message) return;
@@ -649,9 +644,7 @@
                     faqs.forEach((faq) => {
                       response += `<button class="btn btn-sm btn-outline-primary m-1 faq-btn" onclick="handleFAQClick(this)">${faq}</button>`;
                     });
-                    response += `<button class="btn btn-sm btn-outline-primary m-1 faq-btn agent-btn mt-3" onclick="handleAgentClick()">
-                      <i class="bi bi-person-circle me-1"></i>Chat with a real agent
-                    </button>`;
+                    // Remove the Chat with a real agent button and its handler
                     response += `</div>`;
                     addMessage(response);
                   }, 1500);
@@ -666,23 +659,19 @@
                 // Add scroll event listener to handle manual scrolling
                 const mainElement = document.querySelector("main");
                 mainElement.addEventListener("scroll", () => {
-                  // You can add additional scroll handling logic here if needed
+                  // additional scroll handling logic here if needed
                 });
 
                 // --- Real-time Messaging Integration ---
                 const socket = io();
                 const userId = {{ session['user_id']|tojson }};
-                const userName = {{ session['username']|tojson }};
                 const adminId = 4; // Change if your admin user_id is different
-                let chatRoom = null;
+                const chatRoom = `chat_${userId}_${adminId}`;
+                socket.emit('join', { room: chatRoom });
                 let chatConnected = false;
 
-                function joinRoom() {
-                  socket.emit('join', { room: `user_${userId}` });
-                }
-
                 function fetchMessages() {
-                  fetch(`/admin/messages/history/${userId}`)
+                  fetch(`/user/messages/history/${adminId}`)
                     .then(res => res.json())
                     .then(data => {
                       if (data.success) {
@@ -709,11 +698,8 @@
                 }
 
                 socket.on('chat_accept', data => {
-                  chatRoom = data.room;
                   chatConnected = true;
-                  socket.emit('join', { room: chatRoom });
-                  appendSystemMessage(`Agent ${data.admin_name} has joined the chat. You can now chat in real time.`);
-                  document.getElementById('messageInput').disabled = false;
+                  // document.getElementById('messageInput').disabled = false; // Removed as per edit hint
                 });
 
                 function appendSystemMessage(text) {
@@ -722,8 +708,10 @@
                   scrollToBottom();
                 }
 
-                socket.on('receive_message', data => {
-                  if (chatRoom && data.room === chatRoom) {
+                socket.on('receive_message', function(data) {
+                  if ((chatRoom && data.room === chatRoom) ||
+                      (data.sender_id === adminId && data.receiver_id === userId) ||
+                      (data.sender_id === userId && data.receiver_id === adminId)) {
                     appendMessage(data);
                   }
                 });
@@ -743,14 +731,13 @@
                 socket.on('chat_closed', data => {
                   if (chatRoom && data.room === chatRoom) {
                     appendSystemMessage(data.reason);
-                    document.getElementById('messageInput').disabled = true;
+                    // document.getElementById('messageInput').disabled = true; // Removed as per edit hint
                     chatConnected = false;
-                    chatRoom = null;
+                    // Do not set chatRoom = null; since it's a const
                   }
                 });
 
                 window.addEventListener('load', () => {
-                  joinRoom();
                   fetchMessages();
                   resetChatState();
                 });
