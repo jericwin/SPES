@@ -98,7 +98,7 @@
         color: white;
       }
 
-      .bot-message .faq-btn:last-child {
+      /* .bot-message .faq-btn:last-child {
         margin-top: 0.5rem;
         background-color: #28a745;
         border-color: #28a745;
@@ -108,7 +108,7 @@
       .bot-message .faq-btn:last-child:hover {
         background-color: #218838;
         border-color: #218838;
-      }
+      } */
 
       .user-message {
         background-color: #006edc;
@@ -412,14 +412,6 @@
                           >
                             👥 E. Interview
                           </button>
-
-                          <button
-                            class="btn btn-sm btn-outline-primary m-1 faq-btn agent-btn mt-3"
-                            onclick="handleAgentClick()"
-                          >
-                            <i class="bi bi-person-circle me-1"></i>Chat with a
-                            real agent
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -591,25 +583,6 @@
                   }, 1500);
                 }
 
-                function handleAgentClick() {
-                  addMessage("I would like to chat with a real agent", true);
-                  showTypingIndicator();
-
-                  setTimeout(() => {
-                    hideTypingIndicator();
-                    addMessage(
-                      "Connecting to a real agent. Please wait for a moment..."
-                    );
-                    showTypingIndicator();
-                  }, 1500);
-                  setTimeout(() => {
-                    hideTypingIndicator();
-                    addMessage(
-                      "Hello! I'm a SPES Agent Jeric. How can I assist you today?"
-                    );
-                  }, 6500);
-                }
-
                 function handleKeyPress(event) {
                   if (event.key === "Enter") {
                     sendMessage();
@@ -680,9 +653,6 @@
                     faqs.forEach((faq) => {
                       response += `<button class="btn btn-sm btn-outline-primary m-1 faq-btn" onclick="handleFAQClick(this)">${faq}</button>`;
                     });
-                    response += `<button class="btn btn-sm btn-outline-primary m-1 faq-btn agent-btn mt-3" onclick="handleAgentClick()">
-                      <i class="bi bi-person-circle me-1"></i>Chat with a real agent
-                    </button>`;
                     response += `</div>`;
                     addMessage(response);
                   }, 1500);
