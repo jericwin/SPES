@@ -632,6 +632,130 @@
       </div>
     </div>
 
+    <!-- Edit Exam Modal -->
+    <div class="modal fade" id="editExamModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Exam</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="editExamForm">
+              <input type="hidden" name="examId" id="editExamId" />
+              <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  name="title"
+                  id="editExamTitle"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea
+                  class="form-control"
+                  name="description"
+                  id="editExamDescription"
+                  rows="3"
+                  required
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Time Limit (minutes)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="timeLimit"
+                  id="editExamTimeLimit"
+                  min="1"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Passing Score (%)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="passingScore"
+                  id="editExamPassingScore"
+                  min="0"
+                  max="100"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Available Slots</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="availableSlots"
+                  id="editExamAvailableSlots"
+                  min="1"
+                  required
+                />
+                <small class="text-muted"
+                  >Number of applicants that will be selected for
+                  interviews</small
+                >
+              </div>
+              <!-- In the Edit Exam Modal, use separate date and time inputs for start date and time -->
+              <div class="mb-3">
+                <label class="form-label">Start Date & Time</label>
+                <div
+                  class="mb-1 text-muted"
+                  id="editExamStartDateDisplay"
+                ></div>
+                <div class="row g-2">
+                  <div class="col-6">
+                    <input
+                      type="date"
+                      class="form-control"
+                      name="startDateDate"
+                      id="editExamStartDateDate"
+                      required
+                    />
+                  </div>
+                  <div class="col-6">
+                    <input
+                      type="time"
+                      class="form-control"
+                      name="startDateTime"
+                      id="editExamStartDateTime"
+                      required
+                      step="1"
+                    />
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveEditExam()"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       // Load exams when page loads
@@ -689,6 +813,11 @@
                     exam.id
                   }, '${exam.title.replace(/'/g, "&#39;")}')">
                     <i class="bi bi-bar-chart"></i> Results
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="showEditExamModal(${
+                    exam.id
+                  })">
+                    <i class="bi bi-pencil"></i>
                   </button>
                   <button class="btn btn-sm btn-outline-danger" onclick="deleteExam(${
                     exam.id
@@ -1283,6 +1412,123 @@
             content.innerHTML = `<div class='text-danger'>Error loading results.</div>`;
           });
         modal.show();
+      }
+
+      function showEditExamModal(examId) {
+        fetch(`/admin/get-exam/${examId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const exam = data.exam;
+              document.getElementById("editExamId").value = exam.id;
+              document.getElementById("editExamTitle").value = exam.title;
+              document.getElementById("editExamDescription").value =
+                exam.description;
+              document.getElementById("editExamTimeLimit").value =
+                exam.time_limit;
+              document.getElementById("editExamPassingScore").value =
+                exam.passing_score;
+              document.getElementById("editExamAvailableSlots").value =
+                exam.available_slots;
+              // Show the DB value
+              let dbStartDate =
+                exam.db_start_date ||
+                (exam.start_date
+                  ? exam.start_date.replace("T", " ") + ":00"
+                  : "");
+              document.getElementById("editExamStartDateDisplay").textContent =
+                dbStartDate;
+              // Split DB value into date and time
+              if (dbStartDate && dbStartDate.length >= 16) {
+                const [datePart, timePart] = dbStartDate.split(" ");
+                document.getElementById("editExamStartDateDate").value =
+                  datePart;
+                document.getElementById("editExamStartDateTime").value = (
+                  timePart || ""
+                ).substring(0, 8); // HH:MM:SS
+              } else {
+                document.getElementById("editExamStartDateDate").value = "";
+                document.getElementById("editExamStartDateTime").value = "";
+              }
+              const modal = new bootstrap.Modal(
+                document.getElementById("editExamModal")
+              );
+              modal.show();
+            } else {
+              alert("Error loading exam details: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error loading exam details");
+          });
+      }
+
+      function saveEditExam() {
+        const form = document.getElementById("editExamForm");
+        // Client-side validation
+        const requiredFields = [
+          "title",
+          "description",
+          "timeLimit",
+          "passingScore",
+          "availableSlots",
+          "startDateDate",
+          "startDateTime",
+        ];
+        let valid = true;
+        requiredFields.forEach((name) => {
+          const input = form.elements[name];
+          if (!input.value) {
+            input.classList.add("is-invalid");
+            valid = false;
+          } else {
+            input.classList.remove("is-invalid");
+          }
+        });
+        // Validate date and time
+        const dateVal = form.elements["startDateDate"].value;
+        const timeVal = form.elements["startDateTime"].value;
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        const timeRegex = /^\d{2}:\d{2}(:\d{2})?$/;
+        if (!dateRegex.test(dateVal) || !timeRegex.test(timeVal)) {
+          form.elements["startDateDate"].classList.add("is-invalid");
+          form.elements["startDateTime"].classList.add("is-invalid");
+          alert("Start Date and Time must be valid.");
+          return;
+        }
+        // Combine into 'YYYY-MM-DD HH:MM:SS'
+        let combinedStartDate =
+          dateVal + " " + (timeVal.length === 5 ? timeVal + ":00" : timeVal);
+        // Add to FormData as 'startDate'
+        const formData = new FormData(form);
+        formData.set("startDate", combinedStartDate);
+        if (!valid) {
+          alert("Please fill in all required fields.");
+          return;
+        }
+        fetch("/admin/update-exam", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Close modal and reload exams
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("editExamModal")
+              );
+              modal.hide();
+              form.reset();
+              loadExams();
+            } else {
+              alert("Error updating exam: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error updating exam");
+          });
       }
     </script>
   </body>
