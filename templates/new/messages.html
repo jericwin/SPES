@@ -644,7 +644,7 @@
                     faqs.forEach((faq) => {
                       response += `<button class="btn btn-sm btn-outline-primary m-1 faq-btn" onclick="handleFAQClick(this)">${faq}</button>`;
                     });
-                    // Remove the Chat with a real agent button and its handler
+                    // Remove the Chat with a real agent
                     response += `</div>`;
                     addMessage(response);
                   }, 1500);
@@ -652,14 +652,14 @@
 
                 // Initial scroll to bottom when page loads
                 window.addEventListener("load", () => {
-                  // Add a small delay to ensure all content is loaded
-                  setTimeout(scrollToBottom, 500);
+                  setTimeout(scrollToBottom, 500); // small delay
                 });
 
                 // Add scroll event listener to handle manual scrolling
                 const mainElement = document.querySelector("main");
                 mainElement.addEventListener("scroll", () => {
-                  // additional scroll handling logic here if needed
+                  // scroll handling logic
+                  //
                 });
 
                 // --- Real-time Messaging Integration ---
