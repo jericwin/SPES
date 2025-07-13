@@ -3,6 +3,7 @@ from config import get_db_connection
 import hashlib
 import re
 import os
+import uuid
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import io
@@ -192,10 +193,8 @@ def old_applicants_dashboard():
         flash('Please login to access this page', 'error')
         return redirect(url_for('home'))
     
-    # Check if user has already submitted an application (optional, can be customized for old applicants)
+    # Get latest announcement for old applicants
     conn = get_db_connection()
-    has_submitted = False
-    application_status = None
     latest_announcement = None
     
     if conn:
@@ -212,18 +211,6 @@ def old_applicants_dashboard():
             latest_announcement = cursor.fetchone()
             if latest_announcement and latest_announcement['announcement_date']:
                 latest_announcement['announcement_date'] = latest_announcement['announcement_date'].strftime('%B %d, %Y')
-            # Check if there's an active application
-            cursor.execute("""
-                SELECT a.status, a.id 
-                FROM applicants a 
-                WHERE a.user_id = %s 
-                ORDER BY a.submission_date DESC 
-                LIMIT 1
-            """, (session['user_id'],))
-            result = cursor.fetchone()
-            if result:
-                has_submitted = True
-                application_status = result['status']
         except Exception as e:
             print(f"Error: {e}")
         finally:
@@ -231,8 +218,6 @@ def old_applicants_dashboard():
             conn.close()
     return render_template('old/dashboard.html', 
                          username=session['username'], 
-                         has_submitted=has_submitted,
-                         application_status=application_status,
                          latest_announcement=latest_announcement)
 
 @app.route('/old-applicants/messages')
@@ -279,21 +264,39 @@ def old_applicants_forms():
     if 'user_id' not in session or session['role'] != 'old':
         flash('Please login to access this page', 'error')
         return redirect(url_for('home'))
-    can_access_spes_form = False
+    
+    # Check if user has already uploaded documents
     conn = get_db_connection()
+    uploaded_documents = None
+    has_uploaded = False
+    
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT status FROM examinees WHERE user_id = %s ORDER BY created_at DESC LIMIT 1", (session['user_id'],))
-            row = cursor.fetchone()
-            if row and row['status'] == 'for interview':
-                can_access_spes_form = True
+            cursor.execute("""
+                SELECT * FROM user_documents 
+                WHERE user_id = %s 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+            """, (session['user_id'],))
+            uploaded_documents = cursor.fetchone()
+            
+            if uploaded_documents:
+                has_uploaded = True
+                # Format the date
+                if uploaded_documents['updated_at']:
+                    uploaded_documents['updated_at'] = uploaded_documents['updated_at'].strftime('%B %d, %Y at %I:%M %p')
+                    
         except Exception as e:
-            print(f"Error checking examinee status: {e}")
+            print(f"Error fetching uploaded documents: {e}")
         finally:
             cursor.close()
             conn.close()
-    return render_template('old/spes-form.html', username=session['username'], can_access_spes_form=can_access_spes_form)
+    
+    return render_template('old/spes-form.html', 
+                         username=session['username'],
+                         uploaded_documents=uploaded_documents,
+                         has_uploaded=has_uploaded)
 
 # --------------------------------------------------------ADMIN---------------------------------------------------------------------#
 @app.route('/admin/dashboard')
@@ -993,6 +996,336 @@ def process_file(file, filename):
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         return None, None
+
+@app.route('/update-old-applicant-forms', methods=['POST'])
+def update_old_applicant_forms():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized access'})
+    
+    try:
+        user_id = request.form.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'message': 'User ID is required'})
+        
+        # Get form data
+        application_form = request.files.get('applicationForm')
+        employment_contract = request.files.get('employmentContract')
+        oath_of_undertaking = request.files.get('oathOfUndertaking')
+        school_certification = request.files.get('schoolCertification')
+        cor_or_coe = request.files.get('corOrCoe')
+        cog = request.files.get('cog')
+        barangay_indigency = request.files.get('barangayIndigency')
+        psa_birth_certificate = request.files.get('psaBirthCertificate')
+        
+        # Create user documents directory if it doesn't exist
+        user_docs_dir = os.path.join('static', 'user_documents', str(user_id))
+        os.makedirs(user_docs_dir, exist_ok=True)
+        
+        # Save files with unique names
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        uuid_str = str(uuid.uuid4())
+        
+        files_saved = {}
+        file_mapping = {
+            'applicationForm': 'APPLICATION-FORM',
+            'employmentContract': 'SPES-EMPLOYMENT-CONTRACT',
+            'oathOfUndertaking': 'OATH-OF-UNDERTAKING',
+            'schoolCertification': 'SCHOOL-CERTIFICATION',
+            'corOrCoe': 'COR-COE',
+            'cog': 'COPY-OF-GRADES',
+            'barangayIndigency': 'BARANGAY-INDIGENCY',
+            'psaBirthCertificate': 'PSA-BIRTH-CERTIFICATE'
+        }
+        
+        # Process each file if provided
+        files_to_process = [
+            ('applicationForm', application_form),
+            ('employmentContract', employment_contract),
+            ('oathOfUndertaking', oath_of_undertaking),
+            ('schoolCertification', school_certification),
+            ('corOrCoe', cor_or_coe),
+            ('cog', cog),
+            ('barangayIndigency', barangay_indigency),
+            ('psaBirthCertificate', psa_birth_certificate)
+        ]
+        
+        for field_name, file in files_to_process:
+            if file and file.filename:
+                # Validate file type
+                if not file.filename.lower().endswith(('.docx', '.pdf')):
+                    return jsonify({
+                        'success': False,
+                        'message': f'{field_name} must be a .docx or .pdf file'
+                    })
+                
+                # Check file size (5MB limit)
+                if len(file.read()) > 5 * 1024 * 1024:
+                    return jsonify({
+                        'success': False,
+                        'message': f'{field_name} file size exceeds 5MB limit'
+                    })
+                file.seek(0)  # Reset file pointer
+                
+                file_extension = os.path.splitext(file.filename)[1].lower()
+                new_filename = f"{file_mapping[field_name]}_{timestamp}_{uuid_str}{file_extension}"
+                file_path = os.path.join(user_docs_dir, new_filename)
+                file.save(file_path)
+                files_saved[field_name] = new_filename
+        
+        # Update database
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                
+                # Check if user already has documents
+                cursor.execute("SELECT id FROM user_documents WHERE user_id = %s", (user_id,))
+                existing_docs = cursor.fetchone()
+                
+                if existing_docs:
+                    # Update existing record with only the files that were provided
+                    update_fields = []
+                    update_values = []
+                    
+                    for field_name in file_mapping.keys():
+                        if field_name in files_saved:
+                            update_fields.append(f"{field_name.replace('Form', '_form').replace('Contract', '_contract').replace('Undertaking', '_undertaking').replace('Certification', '_certification').replace('OrCoe', '_or_coe').replace('Indigency', '_indigency').replace('Certificate', '_certificate')} = %s")
+                            update_values.append(files_saved[field_name])
+                    
+                    if update_fields:
+                        update_fields.append("updated_at = NOW()")
+                        update_values.append(user_id)
+                        
+                        query = f"UPDATE user_documents SET {', '.join(update_fields)} WHERE user_id = %s"
+                        cursor.execute(query, update_values)
+                else:
+                    # Insert new record
+                    cursor.execute("""
+                        INSERT INTO user_documents (
+                            user_id, application_form, employment_contract, 
+                            oath_of_undertaking, school_certification, cor_or_coe,
+                            cog, barangay_indigency, psa_birth_certificate, created_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                    """, (
+                        user_id,
+                        files_saved.get('applicationForm'),
+                        files_saved.get('employmentContract'),
+                        files_saved.get('oathOfUndertaking'),
+                        files_saved.get('schoolCertification'),
+                        files_saved.get('corOrCoe'),
+                        files_saved.get('cog'),
+                        files_saved.get('barangayIndigency'),
+                        files_saved.get('psaBirthCertificate')
+                    ))
+                
+                conn.commit()
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Documents updated successfully!'
+                })
+                
+            except Exception as e:
+                print(f"Error updating documents: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': 'Error updating documents to database'
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Database connection error'
+            })
+            
+    except Exception as e:
+        print(f"Error in update_old_applicant_forms: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while updating documents'
+        })
+
+@app.route('/submit-old-applicant-forms', methods=['POST'])
+def submit_old_applicant_forms():
+    if 'user_id' not in session or session['role'] != 'old':
+        return jsonify({'success': False, 'message': 'Unauthorized access'})
+    
+    try:
+        user_id = session['user_id']
+        
+        # Get form data
+        application_form = request.files.get('applicationForm')
+        employment_contract = request.files.get('employmentContract')
+        oath_of_undertaking = request.files.get('oathOfUndertaking')
+        school_certification = request.files.get('schoolCertification')
+        cor_or_coe = request.files.get('corOrCoe')
+        cog = request.files.get('cog')
+        barangay_indigency = request.files.get('barangayIndigency')
+        psa_birth_certificate = request.files.get('psaBirthCertificate')
+        
+        # Validate that all required files are present
+        required_files = [
+            ('applicationForm', application_form),
+            ('employmentContract', employment_contract),
+            ('oathOfUndertaking', oath_of_undertaking),
+            ('schoolCertification', school_certification),
+            ('corOrCoe', cor_or_coe),
+            ('cog', cog),
+            ('barangayIndigency', barangay_indigency),
+            ('psaBirthCertificate', psa_birth_certificate)
+        ]
+        
+        missing_files = []
+        field_name_mapping = {
+            'applicationForm': 'Application Form',
+            'employmentContract': 'Employment Contract',
+            'oathOfUndertaking': 'Oath of Undertaking',
+            'schoolCertification': 'School Certification',
+            'corOrCoe': 'COR/COE',
+            'cog': 'Copy of Grades',
+            'barangayIndigency': 'Barangay Indigency',
+            'psaBirthCertificate': 'PSA Birth Certificate'
+        }
+        
+        for field_name, file in required_files:
+            if not file or file.filename == '':
+                missing_files.append(field_name_mapping[field_name])
+        
+        if missing_files:
+            return jsonify({
+                'success': False, 
+                'message': f'Missing required files: {", ".join(missing_files)}'
+            })
+        
+        # Validate file types and sizes
+        for field_name, file in required_files:
+            if file and file.filename:
+                # Check file extension
+                if not file.filename.lower().endswith(('.docx', '.pdf')):
+                    return jsonify({
+                        'success': False,
+                        'message': f'{field_name_mapping[field_name]} must be a .docx or .pdf file'
+                    })
+                
+                # Check file size (5MB limit)
+                if len(file.read()) > 5 * 1024 * 1024:
+                    return jsonify({
+                        'success': False,
+                        'message': f'{field_name_mapping[field_name]} file size exceeds 5MB limit'
+                    })
+                file.seek(0)  # Reset file pointer
+        
+        # Create user documents directory if it doesn't exist
+        user_docs_dir = os.path.join('static', 'user_documents', str(user_id))
+        os.makedirs(user_docs_dir, exist_ok=True)
+        
+        # Save files with unique names
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        uuid_str = str(uuid.uuid4())
+        
+        files_saved = {}
+        file_mapping = {
+            'applicationForm': 'APPLICATION-FORM',
+            'employmentContract': 'SPES-EMPLOYMENT-CONTRACT',
+            'oathOfUndertaking': 'OATH-OF-UNDERTAKING',
+            'schoolCertification': 'SCHOOL-CERTIFICATION',
+            'corOrCoe': 'COR-COE',
+            'cog': 'COPY-OF-GRADES',
+            'barangayIndigency': 'BARANGAY-INDIGENCY',
+            'psaBirthCertificate': 'PSA-BIRTH-CERTIFICATE'
+        }
+        
+        for field_name, file in required_files:
+            if file and file.filename:
+                file_extension = os.path.splitext(file.filename)[1].lower()
+                new_filename = f"{file_mapping[field_name]}_{timestamp}_{uuid_str}{file_extension}"
+                file_path = os.path.join(user_docs_dir, new_filename)
+                file.save(file_path)
+                files_saved[field_name] = new_filename
+        
+        # Save to database
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                
+                # Check if user already has documents
+                cursor.execute("SELECT id FROM user_documents WHERE user_id = %s", (user_id,))
+                existing_docs = cursor.fetchone()
+                
+                if existing_docs:
+                    # Update existing record
+                    cursor.execute("""
+                        UPDATE user_documents SET
+                            application_form = %s,
+                            employment_contract = %s,
+                            oath_of_undertaking = %s,
+                            school_certification = %s,
+                            cor_or_coe = %s,
+                            cog = %s,
+                            barangay_indigency = %s,
+                            psa_birth_certificate = %s,
+                            updated_at = NOW()
+                        WHERE user_id = %s
+                    """, (
+                        files_saved.get('applicationForm'),
+                        files_saved.get('employmentContract'),
+                        files_saved.get('oathOfUndertaking'),
+                        files_saved.get('schoolCertification'),
+                        files_saved.get('corOrCoe'),
+                        files_saved.get('cog'),
+                        files_saved.get('barangayIndigency'),
+                        files_saved.get('psaBirthCertificate'),
+                        user_id
+                    ))
+                else:
+                    # Insert new record
+                    cursor.execute("""
+                        INSERT INTO user_documents (
+                            user_id, application_form, employment_contract, 
+                            oath_of_undertaking, school_certification, cor_or_coe,
+                            cog, barangay_indigency, psa_birth_certificate, created_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                    """, (
+                        user_id,
+                        files_saved.get('applicationForm'),
+                        files_saved.get('employmentContract'),
+                        files_saved.get('oathOfUndertaking'),
+                        files_saved.get('schoolCertification'),
+                        files_saved.get('corOrCoe'),
+                        files_saved.get('cog'),
+                        files_saved.get('barangayIndigency'),
+                        files_saved.get('psaBirthCertificate')
+                    ))
+                
+                conn.commit()
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'All documents uploaded successfully!'
+                })
+                
+            except Exception as e:
+                print(f"Error saving documents: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': 'Error saving documents to database'
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Database connection error'
+            })
+            
+    except Exception as e:
+        print(f"Error in submit_old_applicant_forms: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while uploading documents'
+        })
 
 @app.route('/submit-application', methods=['POST'])
 def submit_application():
@@ -2128,6 +2461,63 @@ def new_applicants_forms():
             cursor.close()
             conn.close()
     return render_template('new/spes-form.html', username=session['username'], can_access_spes_form=can_access_spes_form)
+
+@app.route('/preview-template/<template_name>')
+def preview_template(template_name):
+    try:
+        template_path = os.path.join('static', 'spes-forms', f'{template_name}.docx')
+        if os.path.exists(template_path):
+            return send_file(template_path, as_attachment=False)
+        else:
+            return "Template not found", 404
+    except Exception as e:
+        print(f"Error previewing template: {e}")
+        return "Error loading template", 500
+
+@app.route('/download-template/<template_name>')
+def download_template(template_name):
+    try:
+        template_path = os.path.join('static', 'spes-forms', f'{template_name}.docx')
+        if os.path.exists(template_path):
+            return send_file(template_path, as_attachment=True, download_name=f'{template_name}.docx')
+        else:
+            return "Template not found", 404
+    except Exception as e:
+        print(f"Error downloading template: {e}")
+        return "Error downloading template", 500
+
+@app.route('/download-uploaded-document/<int:user_id>/<document_type>')
+def download_uploaded_document(user_id, document_type):
+    if 'user_id' not in session or session['user_id'] != user_id:
+        return "Unauthorized", 403
+    
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT {} FROM user_documents 
+                WHERE user_id = %s 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+            """.format(document_type), (user_id,))
+            result = cursor.fetchone()
+            
+            if result and result[document_type]:
+                file_path = os.path.join('static', 'user_documents', str(user_id), result[document_type])
+                if os.path.exists(file_path):
+                    return send_file(file_path, as_attachment=True)
+                else:
+                    return "File not found", 404
+            else:
+                return "Document not found", 404
+                
+        else:
+            return "Database error", 500
+            
+    except Exception as e:
+        print(f"Error downloading uploaded document: {e}")
+        return "Error downloading document", 500
 
 @app.route('/preview-document/<document_type>')
 def preview_document(document_type):
