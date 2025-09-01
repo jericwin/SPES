@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
+    <title>DigiSPES</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
+    />
+    <style>
+      /* this is needed to make the content scrollable on larger screens */
+      @media (min-width: 576px) {
+        .h-sm-100 {
+          height: 100%;
+        }
+      }
+
+      .spes-logo-img {
+        width: 50px;
+      }
+      #logo-name {
+        margin-left: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      #sidebar {
+        box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      #card-body {
+        background-color: #006edc;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .card-link {
+        text-decoration: none;
+        padding: 0.7rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid white;
+        background-color: white;
+
+        &:hover {
+          background-color: #006edc;
+          color: white;
+          border: 1px solid white;
+        }
+      }
+      .main-container {
+        background-color: rgb(239, 243, 255);
+        padding: 1rem;
+        border-radius: 0.25rem;
+      }
+      #sidebar-active {
+        background-color: #006edc;
+        color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        padding: 0.5rem 1rem;
+      }
+      .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background-color: #f8f9fa;
+      }
+
+      .bot-message {
+        background-color: #f0f2f5;
+        border-radius: 15px 15px 15px 0;
+      }
+
+      .bot-message .faq-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+
+      .bot-message .faq-btn {
+        white-space: normal;
+        text-align: left;
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border: 1px solid #006edc;
+        background-color: white;
+        color: #006edc;
+        transition: all 0.3s ease;
+      }
+
+      .bot-message .faq-btn:hover {
+        background-color: #006edc;
+        color: white;
+      }
+
+      .bot-message .faq-btn:last-child {
+        margin-top: 0.5rem;
+        background-color: #28a745;
+        border-color: #28a745;
+        color: white;
+      }
+
+      .bot-message .faq-btn:last-child:hover {
+        background-color: #218838;
+        border-color: #218838;
+      }
+
+      .user-message {
+        background-color: #006edc;
+        color: white;
+        border-radius: 15px 15px 0 15px;
+        margin-left: auto;
+      }
+
+      .message-input {
+        position: sticky;
+        bottom: 0;
+        background-color: white;
+        padding: 1rem 2rem;
+        border-top: 1px solid #dee2e6;
+        z-index: 1000;
+      }
+
+      /* Add these new styles */
+      .message-animation {
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .typing-bubble {
+        padding: 0.5rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        background: #006edc;
+        border-radius: 50%;
+        animation: bounce 1.4s infinite ease-in-out;
+      }
+
+      .dot:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .dot:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+
+      @keyframes bounce {
+        0%,
+        80%,
+        100% {
+          transform: scale(0);
+        }
+        40% {
+          transform: scale(1);
+        }
+      }
+
+      .bot-message .faq-btn {
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bot-message .faq-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .bot-message .faq-btn:active {
+        transform: translateY(0);
+      }
+
+      .agent-btn {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+        color: white !important;
+      }
+
+      .agent-btn:hover {
+        background-color: #218838 !important;
+        border-color: #218838 !important;
+      }
+
+      #messageInput:focus {
+        box-shadow: 0 0 0 0.2rem rgba(0, 110, 220, 0.25);
+        border-color: #006edc;
+      }
+
+      .messages-wrapper {
+        flex: 1;
+        padding: 1rem;
+        overflow-y: auto;
+      }
+
+      .typing-indicator {
+        position: relative;
+        margin-top: 1rem;
+      }
+
+      .form-template-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        border: 1px solid #dee2e6;
+        background-color: white;
+      }
+      .form-template-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .form-template-icon {
+        font-size: 2.5rem;
+        color: #006edc;
+        margin-bottom: 1rem;
+      }
+      .template-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-top: 1rem;
+      }
+      .preview-modal .modal-content {
+        border-radius: 12px;
+      }
+      .preview-modal .modal-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 12px 12px 0 0;
+      }
+      .preview-modal .modal-body {
+        padding: 0;
+        height: 80vh;
+        position: relative;
+      }
+      .preview-modal iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+      .preview-modal .modal-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+        border-radius: 0 0 12px 12px;
+      }
+      .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #006edc;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .upload-section {
+        background-color: white;
+        border-radius: 8px;
+        padding: 2rem;
+        margin-top: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .file-upload-wrapper {
+        position: relative;
+        margin-bottom: 1.5rem;
+      }
+      .file-upload-label {
+        display: block;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      .file-upload-label:hover {
+        border-color: #006edc;
+        background: #f1f8ff;
+      }
+      .file-upload-input {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+      .upload-status {
+        margin-top: 0.5rem;
+        padding: 0.75rem;
+        border-radius: 4px;
+        display: none;
+        font-size: 0.9rem;
+      }
+      .upload-status.success {
+        background-color: #d4edda;
+        color: #155724;
+        display: block;
+      }
+      .upload-status.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        display: block;
+      }
+      .file-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+      }
+      .file-info i {
+        font-size: 1.2rem;
+      }
+      .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+      }
+      .toast {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        margin-bottom: 10px;
+        min-width: 300px;
+      }
+      .toast-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 0.75rem 1rem;
+      }
+      .toast-body {
+        padding: 1rem;
+      }
+      .toast.success .toast-header {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .toast.error .toast-header {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid overflow-hidden">
+      <div class="row vh-100 overflow-auto">
+        <div
+          class="col-12 col-sm-3 col-xl-2 px-sm-2 px-0 bg-white d-flex sticky-top"
+        >
+          <div
+            class="d-flex flex-sm-column flex-row flex-grow-1 align-items-center align-items-sm-start px-3 pt-2 text-dark pb-2"
+            id="sidebar"
+          >
+            <a
+              href="/"
+              class="d-flex align-items-center pb-sm-3 mb-md-0 me-md-auto text-dark text-decoration-none"
+            >
+              <span class="fs-5 mt-2"
+                ><img
+                  src="/static/images/spes-logo.png"
+                  alt=""
+                  srcset=""
+                  class="spes-logo-img"
+                /><span class="d-none d-sm-inline" id="logo-name"
+                  >SPES</span
+                ></span
+              >
+            </a>
+            <ul
+              class="nav nav-pills flex-sm-column flex-row flex-nowrap flex-shrink-1 flex-sm-grow-0 flex-grow-1 mb-sm-auto mb-0 justify-content-center align-items-center align-items-sm-start"
+              id="menu"
+            >
+              <li>
+                <a
+                  href="{{ url_for('new_applicants_dashboard') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-speedometer2"></i
+                  ><span class="ms-3 d-none d-sm-inline">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('new_applicants_forms') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark-text"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="sidebar-active"
+                    >Forms</span
+                  >
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('new_applicants_notifications') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-bell"></i
+                  ><span class="ms-3 d-none d-sm-inline">Notifications</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('new_applicants_messages') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-envelope"></i
+                  ><span class="ms-3 d-none d-sm-inline">Messages</span>
+                </a>
+              </li>
+              <li class="dropdown d-sm-none">
+                <a
+                  href="#"
+                  class="nav-link dropdown-toggle px-sm-0 px-1"
+                  id="dropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i class="fs-5 bi-list"></i
+                  ><span class="ms-3 d-none d-sm-inline"></span>
+                </a>
+                <ul
+                  class="dropdown-menu dropdown-menu-dark text-small shadow"
+                  aria-labelledby="dropdown"
+                >
+                  <li><a class="dropdown-item" href="#">Dashboard</a></li>
+                  <li><a class="dropdown-item" href="#">Messages</a></li>
+                  <li><a class="dropdown-item" href="#">Profile</a></li>
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <div
+              class="dropdown py-sm-4 mt-sm-auto ms-auto ms-sm-0 flex-shrink-1"
+            >
+              <a
+                href="#"
+                class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+                id="dropdownUser1"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-person-circle fs-4"></i>
+                <span class="d-none d-sm-inline mx-1">{{ username }}</span>
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-dark text-small shadow"
+                aria-labelledby="dropdownUser1"
+              >
+                <li><a class="dropdown-item" href="#">Settings</a></li>
+                <li><a class="dropdown-item" href="#">Profile</a></li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col d-flex flex-column h-sm-100">
+          <main class="row overflow-auto">
+            <div class="col pt-4">
+              <h3>SPES Forms</h3>
+              <hr />
+              <div class="main-container">
+                <h4>Required Forms</h4>
+                <p class="text-muted">
+                  Click on any form to view and download the template.
+                </p>
+
+                <!-- Form Templates Grid -->
+                <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+                  <div class="col">
+                    <div class="card form-template-card h-100">
+                      <div class="card-body text-center p-4">
+                        <i
+                          class="bi bi-file-earmark-text form-template-icon"
+                        ></i>
+                        <h5 class="card-title">Application Form</h5>
+                        <p class="card-text text-muted">
+                          SPES Application Form Template
+                        </p>
+                        <div class="template-actions">
+                          <button
+                            class="btn btn-outline-primary"
+                            onclick="previewTemplate('APPLICATION-FORM')"
+                          >
+                            <i class="bi bi-eye me-2"></i>Preview
+                          </button>
+                          <button
+                            class="btn btn-outline-success"
+                            onclick="downloadTemplate('APPLICATION-FORM')"
+                          >
+                            <i class="bi bi-download me-2"></i>Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col">
+                    <div class="card form-template-card h-100">
+                      <div class="card-body text-center p-4">
+                        <i
+                          class="bi bi-file-earmark-text form-template-icon"
+                        ></i>
+                        <h5 class="card-title">School Certification</h5>
+                        <p class="card-text text-muted">
+                          School Certification Form
+                        </p>
+                        <div class="template-actions">
+                          <button
+                            class="btn btn-outline-primary"
+                            onclick="previewTemplate('SCHOOL-CERTIFICATION')"
+                          >
+                            <i class="bi bi-eye me-2"></i>Preview
+                          </button>
+                          <button
+                            class="btn btn-outline-success"
+                            onclick="downloadTemplate('SCHOOL-CERTIFICATION')"
+                          >
+                            <i class="bi bi-download me-2"></i>Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col">
+                    <div class="card form-template-card h-100">
+                      <div class="card-body text-center p-4">
+                        <i
+                          class="bi bi-file-earmark-text form-template-icon"
+                        ></i>
+                        <h5 class="card-title">SPES Employment Contract</h5>
+                        <p class="card-text text-muted">
+                          SPES Employment Contract Form
+                        </p>
+                        <div class="template-actions">
+                          <button
+                            class="btn btn-outline-primary"
+                            onclick="previewTemplate('SPES-EMPLOYMENT-CONTRACT')"
+                          >
+                            <i class="bi bi-eye me-2"></i>Preview
+                          </button>
+                          <button
+                            class="btn btn-outline-success"
+                            onclick="downloadTemplate('SPES-EMPLOYMENT-CONTRACT')"
+                          >
+                            <i class="bi bi-download me-2"></i>Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col">
+                    <div class="card form-template-card h-100">
+                      <div class="card-body text-center p-4">
+                        <i
+                          class="bi bi-file-earmark-text form-template-icon"
+                        ></i>
+                        <h5 class="card-title">Oath of Undertaking</h5>
+                        <p class="card-text text-muted">
+                          Oath of Undertaking Form
+                        </p>
+                        <div class="template-actions">
+                          <button
+                            class="btn btn-outline-primary"
+                            onclick="previewTemplate('OATH-OF-UNDERTAKING')"
+                          >
+                            <i class="bi bi-eye me-2"></i>Preview
+                          </button>
+                          <button
+                            class="btn btn-outline-success"
+                            onclick="downloadTemplate('OATH-OF-UNDERTAKING')"
+                          >
+                            <i class="bi bi-download me-2"></i>Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Upload Section -->
+                <div
+                  class="upload-section"
+                  {%
+                  if
+                  not
+                  can_access_spes_form
+                  %}style="position:relative;"
+                  {%
+                  endif
+                  %}
+                >
+                  {% if not can_access_spes_form %}
+                  <div
+                    id="spes-form-overlay"
+                    style="
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      width: 100%;
+                      height: 100%;
+                      background: rgba(255, 255, 255, 0.97);
+                      z-index: 1000;
+                      display: flex;
+                      flex-direction: column;
+                      align-items: center;
+                      justify-content: center;
+                    "
+                  >
+                    <div
+                      class="card shadow p-4"
+                      style="max-width: 400px; text-align: center"
+                    >
+                      <div class="mb-3">
+                        <i
+                          class="bi bi-lock-fill"
+                          style="font-size: 3rem; color: #006edc"
+                        ></i>
+                      </div>
+                      <h4 class="mb-2">Access Restricted</h4>
+                      <p class="mb-0">
+                        You can only access and submit these forms after passing
+                        the exam.<br />
+                      </p>
+                      <p class="text-muted mt-2">
+                        If you believe this is a mistake, please contact support
+                        or your administrator.
+                      </p>
+                    </div>
+                  </div>
+                  {% endif %}
+                  <h4 class="mb-4">Upload Completed Forms</h4>
+                  <p class="text-muted mb-4">
+                    Upload your completed forms here. Make sure all required
+                    fields are filled out. Only .docx and .pdf files are
+                    accepted, with a maximum size of 5MB per file.
+                  </p>
+
+                  <form
+                    id="formsUploadForm"
+                    onsubmit="submitForms(event)"
+                    {%
+                    if
+                    not
+                    can_access_spes_form
+                    %}style="pointer-events:none;opacity:0.5;"
+                    {%
+                    endif
+                    %}
+                  >
+                    <div class="row">
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Application Form
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted"
+                              >Attach passport size photo with blue background
+                              (Long Bond Paper)</small
+                            >
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="applicationForm"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div
+                            class="upload-status"
+                            id="applicationFormStatus"
+                          ></div>
+                          <div class="file-info" id="applicationFormInfo"></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Employment Contract
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted">A4 size paper</small>
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="employmentContract"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div
+                            class="upload-status"
+                            id="employmentContractStatus"
+                          ></div>
+                          <div
+                            class="file-info"
+                            id="employmentContractInfo"
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Oath of Undertaking
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted">A4 size paper</small>
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="oathOfUndertaking"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div
+                            class="upload-status"
+                            id="oathOfUndertakingStatus"
+                          ></div>
+                          <div
+                            class="file-info"
+                            id="oathOfUndertakingInfo"
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              School Certification
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted"
+                              >With signature of School Registrar (Long Bond
+                              Paper)</small
+                            >
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="schoolCertification"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div
+                            class="upload-status"
+                            id="schoolCertificationStatus"
+                          ></div>
+                          <div
+                            class="file-info"
+                            id="schoolCertificationInfo"
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              CERTIFICATE OF REGISTRATION (COR) / CERTIFICATE OF
+                              ENROLMENT (COE) – 1ST AND 2ND SEMESTER
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted"
+                              >Certified True Copy from School Registrar</small
+                            >
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="corOrCoe"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div class="upload-status" id="corOrCoeStatus"></div>
+                          <div class="file-info" id="corOrCoeInfo"></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Copy of Grades (COG) – 1ST SEMESTER / 1ST QUARTER
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted"
+                              >Certified True Copy from School Registrar</small
+                            >
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="cog"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div class="upload-status" id="cogStatus"></div>
+                          <div class="file-info" id="cogInfo"></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Barangay Indigency
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted"
+                              >Original Copy. For students 18 y.o. and below,
+                              the certification must be in the name of your
+                              parent/guardian with the purpose: "SPES
+                              Requirement of (indicate your name)"</small
+                            >
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="barangayIndigency"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div
+                            class="upload-status"
+                            id="barangayIndigencyStatus"
+                          ></div>
+                          <div
+                            class="file-info"
+                            id="barangayIndigencyInfo"
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div
+                          class="file-upload-wrapper h-100 d-flex flex-column justify-content-between"
+                        >
+                          <label class="file-upload-label w-100">
+                            <i class="bi bi-cloud-upload fs-3 mb-2"></i>
+                            <div>
+                              Copy of PSA Birth Certificate
+                              <span class="text-danger">*</span>
+                            </div>
+                            <small class="text-muted">Photocopy</small>
+                            <input
+                              type="file"
+                              class="file-upload-input"
+                              name="psaBirthCertificate"
+                              accept=".docx,.pdf"
+                              required
+                            />
+                          </label>
+                          <div
+                            class="upload-status"
+                            id="psaBirthCertificateStatus"
+                          ></div>
+                          <div
+                            class="file-info"
+                            id="psaBirthCertificateInfo"
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-end mt-4">
+                      <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-cloud-upload me-2"></i>Submit All Forms
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </main>
+          <!-- <footer class="row bg-light py-4 mt-auto">
+            <div class="col">&copy SPES 2025 | All rights reserved.</div>
+          </footer> -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div
+      class="modal fade preview-modal"
+      id="previewModal"
+      tabindex="-1"
+      aria-labelledby="previewModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="previewModalLabel">Document Preview</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="loading-overlay" id="loadingOverlay">
+              <div class="loading-spinner"></div>
+              <div id="loadingText">Loading document preview...</div>
+            </div>
+            <iframe id="previewFrame" src="about:blank"></iframe>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="downloadFromPreview"
+            >
+              <i class="bi bi-download me-2"></i>Download
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Function to preview template in modal
+      function previewTemplate(formType) {
+        const previewFrame = document.getElementById("previewFrame");
+        const loadingOverlay = document.getElementById("loadingOverlay");
+        const loadingText = document.getElementById("loadingText");
+
+        // Show loading overlay
+        loadingOverlay.style.display = "flex";
+        loadingText.textContent = "Loading document preview...";
+
+        // Reset iframe source
+        previewFrame.src = "about:blank";
+
+        // Update modal title
+        document.getElementById("previewModalLabel").textContent =
+          formType.replace(/-/g, " ");
+
+        // Set up download button
+        const downloadBtn = document.getElementById("downloadFromPreview");
+        downloadBtn.onclick = () => downloadTemplate(formType);
+
+        // Show modal
+        const previewModal = new bootstrap.Modal(
+          document.getElementById("previewModal")
+        );
+        previewModal.show();
+
+        // Use XMLHttpRequest to fetch the document
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", `/preview-document/${formType}`);
+        xhr.responseType = "blob";
+
+        xhr.onprogress = function (event) {
+          loadingText.textContent = `Loading document preview...`;
+        };
+
+        xhr.onload = function () {
+          if (xhr.status === 200) {
+            loadingText.textContent = "Document loaded!";
+            const blobUrl = URL.createObjectURL(xhr.response);
+            previewFrame.onload = function () {
+              setTimeout(() => {
+                loadingOverlay.style.display = "none";
+              }, 300);
+            };
+            previewFrame.src = blobUrl;
+          } else {
+            loadingText.textContent = "Failed to load document.";
+          }
+        };
+
+        xhr.onerror = function () {
+          loadingText.textContent = "Error loading document.";
+        };
+
+        xhr.send();
+      }
+
+      // Function to download template
+      function downloadTemplate(formType) {
+        const templates = {
+          "APPLICATION-FORM": "/static/spes-forms/APPLICATION-FORM.docx",
+          "SCHOOL-CERTIFICATION":
+            "/static/spes-forms/SCHOOL-CERTIFICATION.docx",
+          "SPES-EMPLOYMENT-CONTRACT":
+            "/static/spes-forms/SPES-EMPLOYMENT-CONTRACT.docx",
+          "OATH-OF-UNDERTAKING": "/static/spes-forms/OATH-OF-UNDERTAKING.docx",
+        };
+
+        const link = document.createElement("a");
+        link.href = templates[formType];
+        link.download = templates[formType].split("/").pop();
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Handle file upload preview and validation
+      document.querySelectorAll(".file-upload-input").forEach((input) => {
+        input.addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          const statusDiv = document.getElementById(e.target.name + "Status");
+          const infoDiv = document.getElementById(e.target.name + "Info");
+
+          if (file) {
+            // Validate file type
+            if (!file.name.match(/\.(docx|pdf)$/)) {
+              statusDiv.className = "upload-status error";
+              statusDiv.textContent = "Please upload only .docx or .pdf files";
+              e.target.value = "";
+              infoDiv.innerHTML = "";
+              return;
+            }
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+              statusDiv.className = "upload-status error";
+              statusDiv.textContent = "File size should not exceed 5MB";
+              e.target.value = "";
+              infoDiv.innerHTML = "";
+              return;
+            }
+
+            statusDiv.className = "upload-status success";
+            statusDiv.textContent = "File selected successfully";
+
+            // Show file info
+            infoDiv.innerHTML = `
+              <i class="bi bi-file-earmark-text"></i>
+              <span>${file.name} (${(file.size / 1024 / 1024).toFixed(
+              2
+            )} MB)</span>
+            `;
+          }
+        });
+      });
+
+      // Handle form submission
+      function submitForms(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML =
+          '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
+
+        fetch("/upload-forms", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              showToast("Forms uploaded successfully!", "success");
+              form.reset();
+              document.querySelectorAll(".upload-status").forEach((status) => {
+                status.className = "upload-status";
+                status.textContent = "";
+              });
+              document.querySelectorAll(".file-info").forEach((info) => {
+                info.innerHTML = "";
+              });
+            } else {
+              showToast(data.message || "Error uploading forms", "error");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showToast("An error occurred while uploading forms", "error");
+          })
+          .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+          });
+      }
+
+      // Toast notification function
+      function showToast(message, type = "success") {
+        const toastContainer =
+          document.querySelector(".toast-container") || createToastContainer();
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+          <div class="toast-header">
+            <i class="bi ${
+              type === "success" ? "bi-check-circle" : "bi-exclamation-circle"
+            } me-2"></i>
+            <strong class="me-auto">${
+              type === "success" ? "Success" : "Error"
+            }</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <div class="toast-body">
+            ${message}
+          </div>
+        `;
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast, {
+          autohide: true,
+          delay: 5000,
+        });
+        bsToast.show();
+        toast.addEventListener("hidden.bs.toast", () => toast.remove());
+      }
+
+      function createToastContainer() {
+        const container = document.createElement("div");
+        container.className = "toast-container";
+        document.body.appendChild(container);
+        return container;
+      }
+    </script>
+  </body>
+</html>

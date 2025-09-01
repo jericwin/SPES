@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
+    <title>DigiSPES</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
+    />
+    <style>
+      /* this is needed to make the content scrollable on larger screens */
+      @media (min-width: 576px) {
+        .h-sm-100 {
+          height: 100%;
+        }
+      }
+
+      .spes-logo-img {
+        width: 50px;
+      }
+      #logo-name {
+        margin-left: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      #sidebar {
+        box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      #card-body {
+        background-color: #006edc;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .card-link {
+        text-decoration: none;
+        padding: 0.7rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid white;
+        background-color: white;
+
+        &:hover {
+          background-color: #006edc;
+          color: white;
+          border: 1px solid white;
+        }
+      }
+      .main-container {
+        background-color: rgb(239, 243, 255);
+        padding: 1rem;
+        border-radius: 0.25rem;
+      }
+      #sidebar-active {
+        background-color: #006edc;
+        color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        padding: 0.5rem 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- sidebar boostrap 5-->
+
+    <div class="container-fluid overflow-hidden">
+      <div class="row vh-100 overflow-auto">
+        <div
+          class="col-12 col-sm-3 col-xl-2 px-sm-2 px-0 bg-white d-flex sticky-top"
+        >
+          <div
+            class="d-flex flex-sm-column flex-row flex-grow-1 align-items-center align-items-sm-start px-3 pt-2 text-dark pb-2"
+            id="sidebar"
+          >
+            <a
+              href="/"
+              class="d-flex align-items-center pb-sm-3 mb-md-0 me-md-auto text-dark text-decoration-none"
+            >
+              <span class="fs-5 mt-2"
+                ><img
+                  src="/static/images/spes-logo.png"
+                  alt=""
+                  srcset=""
+                  class="spes-logo-img"
+                /><span class="d-none d-sm-inline" id="logo-name"
+                  >SPES</span
+                ></span
+              >
+            </a>
+            <ul
+              class="nav nav-pills flex-sm-column flex-row flex-nowrap flex-shrink-1 flex-sm-grow-0 flex-grow-1 mb-sm-auto mb-0 justify-content-center align-items-center align-items-sm-start"
+              id="menu"
+            >
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-speedometer2"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="sidebar-active"
+                    >Dashboard</span
+                  >
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_announcements') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-megaphone"></i
+                  ><span class="ms-3 d-none d-sm-inline">Announcements</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_applications') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark"></i
+                  ><span class="ms-3 d-none d-sm-inline">Applicants</span>
+                </a>
+              </li>
+              <!-- students who took the exam -->
+              <li>
+                <a
+                  href="{{ url_for('admin_examinees') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Examinees</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_exams') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-pencil"></i
+                  ><span class="ms-3 d-none d-sm-inline">Exams</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Interview Panel</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_messages') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-envelope"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Messages</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-bell"></i
+                  ><span class="ms-3 d-none d-sm-inline">Notifications</span>
+                </a>
+              </li>
+              <li class="dropdown d-sm-none">
+                <a
+                  href="#"
+                  class="nav-link dropdown-toggle px-sm-0 px-1"
+                  id="dropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i class="fs-5 bi-list"></i
+                  ><span class="ms-3 d-none d-sm-inline"></span>
+                </a>
+                <ul
+                  class="dropdown-menu dropdown-menu-dark text-small shadow"
+                  aria-labelledby="dropdown"
+                >
+                  <li><a class="dropdown-item" href="#">Dashboard</a></li>
+                  <li><a class="dropdown-item" href="#">Messages</a></li>
+                  <li><a class="dropdown-item" href="#">Profile</a></li>
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <div
+              class="dropdown py-sm-4 mt-sm-auto ms-auto ms-sm-0 flex-shrink-1"
+            >
+              <a
+                href="#"
+                class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+                id="dropdownUser1"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-person-circle fs-4"></i>
+                <span class="d-none d-sm-inline mx-1">Admin</span>
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-dark text-small shadow"
+                aria-labelledby="dropdownUser1"
+              >
+                <li><a class="dropdown-item" href="#">Settings</a></li>
+                <li><a class="dropdown-item" href="#">Profile</a></li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col d-flex flex-column h-sm-100">
+          <main class="row overflow-auto">
+            <div class="col pt-4">
+              <h3>Admin Dashboard</h3>
+              <hr />
+              <div class="main-container">
+                <!-- <h3>Welcome, Honeylyn!</h3>
+                bootstrap card -->
+                <div class="container py-4">
+                  <!-- Summary Cards -->
+                  <div class="row text-white mb-4">
+                    <div class="col-md-3 mb-3">
+                      <div class="bg-primary rounded p-4 text-center shadow-sm">
+                        <h2>{{ stats.total_applicants }}</h2>
+                        <p>Total Applicants</p>
+                      </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <div
+                        class="bg-warning rounded p-4 text-center shadow-sm text-dark"
+                      >
+                        <h2>{{ stats.pending_applicants }}</h2>
+                        <p>Pending Applications</p>
+                      </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <div class="bg-primary rounded p-4 text-center shadow-sm">
+                        <h2>{{ stats.for_exam_applicants }}</h2>
+                        <p>Ongoing Exams</p>
+                      </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <div class="bg-info rounded p-4 text-center shadow-sm">
+                        <h2>{{ stats.for_interview_applicants }}</h2>
+                        <p>For Interview</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row mb-4">
+                    <!-- Charts and bar -->
+                    <!-- Bar Chart -->
+                    <div class="col-md-7">
+                      <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                          <h5>Applicant Statistics</h5>
+                          <canvas id="barChart" height="180"></canvas>
+                        </div>
+                      </div>
+                      <!--  -->
+                      <div class="col-md-12 mb-4">
+                        <div class="card shadow-sm">
+                          <div class="card-body">
+                            <h6>Examination Overview</h6>
+                            <div style="max-width: 300px; margin: 0 auto">
+                              <canvas id="pieChart" height="180"></canvas>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Recent Applications & Interview Schedule -->
+                    <div class="col-md-5">
+                      <div class="card mb-3 shadow-sm">
+                        <div class="card-body">
+                          <h6>Recent Applications</h6>
+                          <table class="table table-sm">
+                            <thead>
+                              <tr>
+                                <th>Application Date</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for application in recent_applications %}
+                              <tr>
+                                <td>{{ application.submission_date }}</td>
+                                <td>{{ application.status }}</td>
+                              </tr>
+                              {% endfor %}
+
+                              <!-- dynamic data from database -->
+
+                              <!-- <tr>
+                                <td>Justin Carter</td>
+                                <td>
+                                  <span class="badge bg-warning text-dark"
+                                    >Pending</span
+                                  >
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>Emily Howard</td>
+                                <td>
+                                  <span class="badge bg-success">Approved</span>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>Daniel Murphy</td>
+                                <td>
+                                  <span class="badge bg-success">Rejected</span>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>Olivia Perez</td>
+                                <td>
+                                  <span class="badge bg-danger">Rejected</span>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>Emma Wilson</td>
+                                <td></td>
+                              </tr> -->
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <div class="card shadow-sm mb-3">
+                        <div class="card-body">
+                          <h6>Interview Schedule</h6>
+                          <table class="table table-sm">
+                            <thead>
+                              <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <!-- dynamic data from database -->
+
+                              <!-- <tr>
+                                <td>April 20, 2025</td>
+                                <td>Amil 30 am</td>
+                              </tr>
+                              <tr>
+                                <td>April 20, 2025</td>
+                                <td>April 20 am</td>
+                              </tr>
+                              <tr>
+                                <td>April 20, 2025</td>
+                                <td>Aprii 10 am</td>
+                              </tr>
+                              <tr>
+                                <td>April 20, 2025</td>
+                                <td>Mial 30 am</td>
+                              </tr> -->
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div class="card shadow-sm">
+                        <div class="card h-100">
+                          <div class="card-body">
+                            <h5 class="card-title">Exams</h5>
+                            <p class="card-text">
+                              Total Exams: {{ exam_count }}
+                            </p>
+                            <a
+                              href="{{ url_for('admin_exams') }}"
+                              class="btn btn-primary"
+                              >Manage Exams</a
+                            >
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+          <footer class="row bg-light py-4 mt-auto">
+            <div class="col">&copy SPES 2025 | All rights reserved.</div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- chartjs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      // Prepare monthly data
+      const monthlyData = {{ monthly_data|tojson }};
+      const months = monthlyData.map(item => {
+        const date = new Date(item.month + '-01');
+        return date.toLocaleString('default', { month: 'short' });
+      });
+      const counts = monthlyData.map(item => item.count);
+
+      // Bar Chart
+      const ctx1 = document.getElementById("barChart");
+      new Chart(ctx1, {
+        type: "bar",
+        data: {
+          labels: months,
+          datasets: [
+            {
+              label: "Applicants",
+              data: counts,
+              backgroundColor: "#0d6efd",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: 'Monthly Applications'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1
+              }
+            }
+          }
+        },
+      });
+
+      // Prepare exam overview data
+      const examData = {{ exam_overview|tojson }};
+      const examLabels = ['Completed', 'Scheduled', 'In Progress'];
+      const examValues = [
+        examData.completed,
+        examData.scheduled,
+        examData.in_progress
+      ];
+
+      // Pie Chart
+      const ctx2 = document.getElementById("pieChart");
+      new Chart(ctx2, {
+        type: "doughnut",
+        data: {
+          labels: examLabels,
+          datasets: [
+            {
+              data: examValues,
+              backgroundColor: ["#0d6efd", "#fd7e14", "#20c997"],
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          cutout: "50%",
+          plugins: {
+            legend: { position: "left" },
+            title: {
+              display: true,
+              text: 'Exam Status Overview'
+            }
+          }
+        },
+      });
+    </script>
+  </body>
+</html>

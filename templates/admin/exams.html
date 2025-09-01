@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
+    <title>Exam Management - DigiSPES</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* this is needed to make the content scrollable on larger screens */
+      @media (min-width: 576px) {
+        .h-sm-100 {
+          height: 100%;
+        }
+      }
+
+      .spes-logo-img {
+        width: 50px;
+      }
+      #logo-name {
+        margin-left: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      #sidebar {
+        box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      #card-body {
+        background-color: #006edc;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .card-link {
+        text-decoration: none;
+        padding: 0.7rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid white;
+        background-color: white;
+
+        &:hover {
+          background-color: #006edc;
+          color: white;
+          border: 1px solid white;
+        }
+      }
+      .main-container {
+        background-color: rgb(239, 243, 255);
+        padding: 1rem;
+        border-radius: 0.25rem;
+      }
+      #sidebar-active {
+        background-color: #006edc;
+        color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        padding: 0.5rem 1rem;
+      }
+      .exam-card {
+        transition: transform 0.2s;
+      }
+      .exam-card:hover {
+        transform: translateY(-5px);
+      }
+      .question-list {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .option-list {
+        margin-left: 20px;
+      }
+      .correct-option {
+        color: #198754;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- sidebar boostrap 5-->
+
+    <div class="container-fluid overflow-hidden">
+      <div class="row vh-100 overflow-auto">
+        <div
+          class="col-12 col-sm-3 col-xl-2 px-sm-2 px-0 bg-white d-flex sticky-top"
+        >
+          <div
+            class="d-flex flex-sm-column flex-row flex-grow-1 align-items-center align-items-sm-start px-3 pt-2 text-dark pb-2"
+            id="sidebar"
+          >
+            <a
+              href="/"
+              class="d-flex align-items-center pb-sm-3 mb-md-0 me-md-auto text-dark text-decoration-none"
+            >
+              <span class="fs-5 mt-2"
+                ><img
+                  src="/static/images/spes-logo.png"
+                  alt=""
+                  srcset=""
+                  class="spes-logo-img"
+                /><span class="d-none d-sm-inline" id="logo-name"
+                  >SPES</span
+                ></span
+              >
+            </a>
+            <ul
+              class="nav nav-pills flex-sm-column flex-row flex-nowrap flex-shrink-1 flex-sm-grow-0 flex-grow-1 mb-sm-auto mb-0 justify-content-center align-items-center align-items-sm-start"
+              id="menu"
+            >
+              <li>
+                <a
+                  href="{{ url_for('admin_dashboard') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-speedometer2"></i
+                  ><span class="ms-3 d-none d-sm-inline">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_announcements') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-megaphone"></i
+                  ><span class="ms-3 d-none d-sm-inline">Announcements</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_applications') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark"></i
+                  ><span class="ms-3 d-none d-sm-inline">Applicants</span>
+                </a>
+              </li>
+              <!-- students who took the exam -->
+              <li>
+                <a
+                  href="{{ url_for('admin_examinees') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Examinees</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-pencil"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="sidebar-active"
+                    >Exams</span
+                  >
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Interview Panel</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_messages') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-envelope"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Messages</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-bell"></i
+                  ><span class="ms-3 d-none d-sm-inline">Notifications</span>
+                </a>
+              </li>
+              <li class="dropdown d-sm-none">
+                <a
+                  href="#"
+                  class="nav-link dropdown-toggle px-sm-0 px-1"
+                  id="dropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i class="fs-5 bi-list"></i
+                  ><span class="ms-3 d-none d-sm-inline"></span>
+                </a>
+                <ul
+                  class="dropdown-menu dropdown-menu-dark text-small shadow"
+                  aria-labelledby="dropdown"
+                >
+                  <li><a class="dropdown-item" href="#">Dashboard</a></li>
+                  <li><a class="dropdown-item" href="#">Messages</a></li>
+                  <li><a class="dropdown-item" href="#">Profile</a></li>
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <div
+              class="dropdown py-sm-4 mt-sm-auto ms-auto ms-sm-0 flex-shrink-1"
+            >
+              <a
+                href="#"
+                class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+                id="dropdownUser1"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-person-circle fs-4"></i>
+                <span class="d-none d-sm-inline mx-1">Admin</span>
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-dark text-small shadow"
+                aria-labelledby="dropdownUser1"
+              >
+                <li><a class="dropdown-item" href="#">Settings</a></li>
+                <li><a class="dropdown-item" href="#">Profile</a></li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col d-flex flex-column h-sm-100">
+          <main class="row overflow-auto">
+            <div class="col pt-4">
+              <h3>Manage Exam</h3>
+              <hr />
+              <div class="main-container">
+                <div
+                  class="d-flex justify-content-between align-items-center mb-4"
+                >
+                  <h2>Exam Management</h2>
+                  <button
+                    class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addExamModal"
+                  >
+                    <i class="bi bi-plus-circle"></i> Add New Exam
+                  </button>
+                </div>
+
+                <!-- Exam List -->
+                <div class="row" id="examList">
+                  <!-- Exams will be loaded here -->
+                </div>
+
+                <!-- Exam Details Section -->
+                <div id="examDetailsSection" class="mt-5" style="display: none">
+                  <hr class="mb-4" />
+                  <div
+                    class="d-flex justify-content-between align-items-center mb-4"
+                  >
+                    <h3>Exam Details</h3>
+                    <button
+                      class="btn btn-outline-secondary"
+                      onclick="hideExamDetails()"
+                    >
+                      <i class="bi bi-x-circle"></i> Close Details
+                    </button>
+                  </div>
+                  <div id="examDetails" class="bg-white p-4 rounded shadow-sm">
+                    <!-- Exam details will be loaded here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+          <footer class="row bg-light py-4 mt-auto">
+            <div class="col">&copy SPES 2025 | All rights reserved.</div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Exam Modal -->
+    <div class="modal fade" id="addExamModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add New Exam</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="addExamForm">
+              <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-control" name="title" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea
+                  class="form-control"
+                  name="description"
+                  rows="3"
+                  required
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Time Limit (minutes)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="timeLimit"
+                  min="1"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Passing Score (%)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="passingScore"
+                  min="0"
+                  max="100"
+                  value="70"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Available Slots</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="availableSlots"
+                  min="1"
+                  value="200"
+                  required
+                />
+                <small class="text-muted"
+                  >Number of applicants that will be selected for
+                  interviews</small
+                >
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Start Date & Time</label>
+                <input
+                  type="datetime-local"
+                  class="form-control"
+                  name="startDate"
+                  required
+                />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary" onclick="saveExam()">
+              Save Exam
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Page Modal -->
+    <div class="modal fade" id="addPageModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add New Page</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="addPageForm">
+              <input type="hidden" name="examId" id="pageExamId" />
+              <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-control" name="title" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea
+                  class="form-control"
+                  name="description"
+                  rows="3"
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Time Limit (minutes)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="timeLimit"
+                  min="1"
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Order Number</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="orderNumber"
+                  min="1"
+                  required
+                />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary" onclick="savePage()">
+              Save Page
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Question Modal -->
+    <div class="modal fade" id="addQuestionModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add New Question</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="addQuestionForm">
+              <input type="hidden" name="pageId" id="questionPageId" />
+              <div class="mb-3">
+                <label class="form-label">Question Type</label>
+                <select
+                  class="form-select"
+                  name="questionType"
+                  onchange="toggleQuestionType()"
+                  required
+                >
+                  <option value="multiple_choice">Multiple Choice</option>
+                  <option value="identification">Identification</option>
+                  <option value="essay">Essay</option>
+                  <option value="demographic">Demographic</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Question Text</label>
+                <textarea
+                  class="form-control"
+                  name="questionText"
+                  rows="3"
+                  required
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Points</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="points"
+                  min="1"
+                  value="1"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    name="isRequired"
+                    id="isRequired"
+                  />
+                  <label class="form-check-label" for="isRequired">
+                    Required
+                  </label>
+                </div>
+              </div>
+
+              <!-- Multiple Choice Options -->
+              <div id="multipleChoiceOptions">
+                <div class="mb-3">
+                  <label class="form-label">Options</label>
+                  <div id="optionsList">
+                    <div class="input-group mb-2">
+                      <input
+                        type="text"
+                        class="form-control"
+                        name="options[]"
+                        required
+                      />
+                      <button
+                        type="button"
+                        class="btn btn-outline-danger"
+                        onclick="removeOption(this)"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    onclick="addOption()"
+                  >
+                    Add Option
+                  </button>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Correct Option</label>
+                  <select class="form-select" name="correctOption" required>
+                    <option value="0">Option 1</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Identification Answer -->
+              <div id="identificationAnswer" style="display: none">
+                <div class="mb-3">
+                  <label class="form-label">Correct Answer</label>
+                  <input type="text" class="form-control" name="answerText" />
+                </div>
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      name="isCaseSensitive"
+                      id="isCaseSensitive"
+                    />
+                    <label class="form-check-label" for="isCaseSensitive">
+                      Case Sensitive
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="mb-3"
+                id="demographicInputTypeDiv"
+                style="display: none"
+              >
+                <label class="form-label">Input Type</label>
+                <select class="form-select" name="demographicInputType">
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                  <option value="email">Email</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveQuestion()"
+            >
+              Save Question
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for exam results -->
+    <div class="modal fade" id="examResultsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="examResultsModalLabel">Exam Results</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div id="examResultsContent" class="p-2">
+              <div class="text-center text-muted">Loading results...</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Exam Modal -->
+    <div class="modal fade" id="editExamModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Exam</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="editExamForm">
+              <input type="hidden" name="examId" id="editExamId" />
+              <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  name="title"
+                  id="editExamTitle"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea
+                  class="form-control"
+                  name="description"
+                  id="editExamDescription"
+                  rows="3"
+                  required
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Time Limit (minutes)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="timeLimit"
+                  id="editExamTimeLimit"
+                  min="1"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Passing Score (%)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="passingScore"
+                  id="editExamPassingScore"
+                  min="0"
+                  max="100"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Available Slots</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  name="availableSlots"
+                  id="editExamAvailableSlots"
+                  min="1"
+                  required
+                />
+                <small class="text-muted"
+                  >Number of applicants that will be selected for
+                  interviews</small
+                >
+              </div>
+              <!-- In the Edit Exam Modal, use separate date and time inputs for start date and time -->
+              <div class="mb-3">
+                <label class="form-label">Start Date & Time</label>
+                <div
+                  class="mb-1 text-muted"
+                  id="editExamStartDateDisplay"
+                ></div>
+                <div class="row g-2">
+                  <div class="col-6">
+                    <input
+                      type="date"
+                      class="form-control"
+                      name="startDateDate"
+                      id="editExamStartDateDate"
+                      required
+                    />
+                  </div>
+                  <div class="col-6">
+                    <input
+                      type="time"
+                      class="form-control"
+                      name="startDateTime"
+                      id="editExamStartDateTime"
+                      required
+                      step="1"
+                    />
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveEditExam()"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Load exams when page loads
+      document.addEventListener("DOMContentLoaded", loadExams);
+
+      function loadExams() {
+        fetch("/admin/get-exams")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const examList = document.getElementById("examList");
+              examList.innerHTML = "";
+
+              data.exams.forEach((exam) => {
+                const examCard = createExamCard(exam);
+                examList.appendChild(examCard);
+              });
+            } else {
+              alert("Error loading exams: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error loading exams");
+          });
+      }
+
+      function createExamCard(exam) {
+        const col = document.createElement("div");
+        col.className = "col-md-4 mb-4";
+
+        // Status badge color
+        let statusColor = exam.status === "ongoing" ? "success" : "secondary";
+        let statusText = exam.status
+          ? exam.status.charAt(0).toUpperCase() + exam.status.slice(1)
+          : "Closed";
+
+        col.innerHTML = `
+          <div class="card h-100 exam-card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="card-title mb-0">${exam.title}</h5>
+                <span class="badge bg-${statusColor}">${statusText}</span>
+              </div>
+              <p class="card-text">${exam.description || "No description"}</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">${exam.created_at}</small>
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-outline-primary" onclick="viewExam(${
+                    exam.id
+                  })">
+                    <i class="bi bi-eye"></i> View
+                  </button>
+                  <button class="btn btn-sm btn-outline-success" onclick="showExamResultsModal(${
+                    exam.id
+                  }, '${exam.title.replace(/'/g, "&#39;")}')">
+                    <i class="bi bi-bar-chart"></i> Results
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="showEditExamModal(${
+                    exam.id
+                  })">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" onclick="deleteExam(${
+                    exam.id
+                  })">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        return col;
+      }
+
+      function saveExam() {
+        const form = document.getElementById("addExamForm");
+        // Client-side validation
+        const requiredFields = [
+          "title",
+          "description",
+          "timeLimit",
+          "passingScore",
+          "availableSlots",
+          "startDate",
+        ];
+        let valid = true;
+        requiredFields.forEach((name) => {
+          const input = form.elements[name];
+          if (
+            !input.value ||
+            (input.type === "number" && isNaN(parseFloat(input.value)))
+          ) {
+            input.classList.add("is-invalid");
+            valid = false;
+          } else {
+            input.classList.remove("is-invalid");
+          }
+        });
+        if (!valid) {
+          alert("Please fill in all required fields.");
+          return;
+        }
+        const formData = new FormData(form);
+        fetch("/admin/add-exam", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Close modal and reload exams
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("addExamModal")
+              );
+              modal.hide();
+              form.reset();
+              loadExams();
+            } else {
+              alert("Error creating exam: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error creating exam");
+          });
+      }
+
+      function viewExam(examId) {
+        fetch(`/admin/get-exam/${examId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const exam = data.exam;
+              const details = document.getElementById("examDetails");
+              const detailsSection =
+                document.getElementById("examDetailsSection");
+
+              // Status badge color
+              let statusColor =
+                exam.status === "ongoing" ? "success" : "secondary";
+              let statusText = exam.status
+                ? exam.status.charAt(0).toUpperCase() + exam.status.slice(1)
+                : "Closed";
+
+              details.innerHTML = `
+                <div class="mb-4">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="card-title mb-0" data-exam-id="${exam.id}">${
+                exam.title
+              }</h4>
+                    <span class="badge bg-${statusColor} fs-6">${statusText}</span>
+                  </div>
+                  <p class="text-muted">Created by ${exam.created_by} on ${
+                exam.created_at
+              }</p>
+                  <p>${exam.description || "No description"}</p>
+                  <div class="row mb-2">
+                    <div class="col-md-4">
+                      <p><strong>Time Limit:</strong> ${
+                        exam.time_limit || "No limit"
+                      } minutes</p>
+                    </div>
+                    <div class="col-md-4">
+                      <p><strong>Passing Score:</strong> ${
+                        exam.passing_score
+                      }%</p>
+                    </div>
+                    <div class="col-md-4">
+                      <p><strong>Available Slots:</strong> ${
+                        exam.available_slots || "-"
+                      }</p>
+                    </div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-md-4">
+                      <p><strong>Start Date:</strong> ${
+                        exam.start_date ? exam.start_date : "Not set"
+                      }</p>
+                    </div>
+                    <div class="col-md-4">
+                      <p><strong>End Date:</strong> ${
+                        exam.end_date ? exam.end_date : "Not set"
+                      }</p>
+                    </div>
+                    <div class="col-md-4">
+                      <p><strong>Status:</strong> <span class="badge bg-${statusColor}">${statusText}</span></p>
+                    </div>
+                  </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="mb-0">Pages</h5>
+                  <button class="btn btn-sm btn-primary" onclick="addPage(${
+                    exam.id
+                  })">
+                    <i class="bi bi-plus-circle"></i> Add Page
+                  </button>
+                </div>
+                <div id="examPages">
+                  ${
+                    exam.pages && exam.pages.length > 0
+                      ? exam.pages
+                          .map(
+                            (page, index) => `
+                      <div class="card mb-3">
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                              <h6 class="mb-1">Page ${index + 1}: ${
+                              page.title
+                            }</h6>
+                              <p class="text-muted mb-2">${
+                                page.description || "No description"
+                              }</p>
+                              <p class="mb-0"><strong>Questions:</strong> ${
+                                page.questions ? page.questions.length : 0
+                              }</p>
+                            </div>
+                            <div class="btn-group">
+                              <button class="btn btn-sm btn-outline-primary" onclick="addQuestion(${
+                                page.id
+                              })">
+                                <i class="bi bi-plus-circle"></i> Add Question
+                              </button>
+                              <button class="btn btn-sm btn-outline-danger" onclick="deletePage(${
+                                page.id
+                              }, ${exam.id})">
+                                <i class="bi bi-trash"></i>
+                              </button>
+                            </div>
+                          </div>
+                          ${
+                            page.questions && page.questions.length > 0
+                              ? `
+                            <div class="mt-3">
+                              <h6>Questions:</h6>
+                              <div class="list-group">
+                                ${page.questions
+                                  .map(
+                                    (question, qIndex) => `
+                                  <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                      <div>
+                                        <p class="mb-1"><strong>Q${
+                                          qIndex + 1
+                                        }:</strong> ${
+                                      question.question_text
+                                    }</p>
+                                        <small class="text-muted">Type: ${
+                                          question.question_type
+                                        }</small>
+                                        <small class="text-muted ms-2">Points: ${
+                                          question.points
+                                        }</small>
+                                      </div>
+                                      <button class="btn btn-sm btn-outline-danger" onclick="deleteQuestion(${
+                                        question.id
+                                      }, ${exam.id})">
+                                        <i class="bi bi-trash"></i>
+                                      </button>
+                                    </div>
+                                  </div>
+                                `
+                                  )
+                                  .join("")}
+                              </div>
+                            </div>
+                          `
+                              : '<p class="text-muted mt-2">No questions added yet</p>'
+                          }
+                        </div>
+                      </div>
+                    `
+                          )
+                          .join("")
+                      : '<p class="text-muted">No pages added yet</p>'
+                  }
+                </div>
+              `;
+
+              detailsSection.style.display = "block";
+              detailsSection.scrollIntoView({ behavior: "smooth" });
+            } else {
+              alert("Error loading exam details: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error loading exam details");
+          });
+      }
+
+      function hideExamDetails() {
+        document.getElementById("examDetailsSection").style.display = "none";
+      }
+
+      function deleteExam(examId) {
+        if (confirm("Are you sure you want to delete this exam?")) {
+          fetch(`/admin/delete-exam/${examId}`, {
+            method: "POST",
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                loadExams();
+              } else {
+                alert("Error deleting exam: " + data.message);
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("Error deleting exam");
+            });
+        }
+      }
+
+      function addPage(examId) {
+        document.getElementById("pageExamId").value = examId;
+        const modal = new bootstrap.Modal(
+          document.getElementById("addPageModal")
+        );
+        modal.show();
+      }
+
+      function savePage() {
+        const form = document.getElementById("addPageForm");
+        const formData = new FormData(form);
+
+        fetch("/admin/add-page", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("addPageModal")
+              );
+              modal.hide();
+              form.reset();
+              viewExam(formData.get("examId")); // Refresh exam view
+            } else {
+              alert("Error adding page: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error adding page");
+          });
+      }
+
+      function addQuestion(pageId) {
+        document.getElementById("questionPageId").value = pageId;
+        const modal = new bootstrap.Modal(
+          document.getElementById("addQuestionModal")
+        );
+        modal.show();
+      }
+
+      function toggleQuestionType() {
+        const questionType = document.querySelector(
+          'select[name="questionType"]'
+        ).value;
+        const multipleChoiceDiv = document.getElementById(
+          "multipleChoiceOptions"
+        );
+        const identificationDiv = document.getElementById(
+          "identificationAnswer"
+        );
+        const pointsDiv = document
+          .querySelector('input[name="points"]')
+          .closest(".mb-3");
+        const demographicInputTypeDiv = document.getElementById(
+          "demographicInputTypeDiv"
+        );
+        if (questionType === "multiple_choice") {
+          multipleChoiceDiv.style.display = "block";
+          identificationDiv.style.display = "none";
+          pointsDiv.style.display = "block";
+          demographicInputTypeDiv.style.display = "none";
+        } else if (questionType === "identification") {
+          multipleChoiceDiv.style.display = "none";
+          identificationDiv.style.display = "block";
+          pointsDiv.style.display = "block";
+          demographicInputTypeDiv.style.display = "none";
+        } else if (questionType === "essay") {
+          multipleChoiceDiv.style.display = "none";
+          identificationDiv.style.display = "none";
+          pointsDiv.style.display = "block";
+          demographicInputTypeDiv.style.display = "none";
+        } else if (questionType === "demographic") {
+          multipleChoiceDiv.style.display = "none";
+          identificationDiv.style.display = "none";
+          pointsDiv.style.display = "none";
+          demographicInputTypeDiv.style.display = "block";
+        }
+      }
+
+      function addOption() {
+        const optionsList = document.getElementById("optionsList");
+        const optionCount = optionsList.children.length;
+
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "input-group mb-2";
+        optionDiv.innerHTML = `
+          <input type="text" class="form-control" name="options[]" required>
+          <button type="button" class="btn btn-outline-danger" onclick="removeOption(this)">Remove</button>
+        `;
+
+        optionsList.appendChild(optionDiv);
+
+        // Update correct option select
+        const correctOptionSelect = document.querySelector(
+          'select[name="correctOption"]'
+        );
+        const option = document.createElement("option");
+        option.value = optionCount;
+        option.textContent = `Option ${optionCount + 1}`;
+        correctOptionSelect.appendChild(option);
+      }
+
+      function removeOption(button) {
+        const optionDiv = button.parentElement;
+        const optionsList = document.getElementById("optionsList");
+        const correctOptionSelect = document.querySelector(
+          'select[name="correctOption"]'
+        );
+
+        // Remove the option
+        optionsList.removeChild(optionDiv);
+
+        // Update correct option select
+        correctOptionSelect.innerHTML = "";
+        optionsList
+          .querySelectorAll('input[name="options[]"]')
+          .forEach((input, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            option.textContent = `Option ${index + 1}`;
+            correctOptionSelect.appendChild(option);
+          });
+      }
+
+      function saveQuestion() {
+        const form = document.getElementById("addQuestionForm");
+        const formData = new FormData(form);
+        const questionType = formData.get("questionType");
+        // Validate based on question type
+        if (questionType === "multiple_choice") {
+          const options = formData.getAll("options[]");
+          if (options.length < 2) {
+            alert("Please add at least 2 options for multiple choice question");
+            return;
+          }
+        } else if (questionType === "identification") {
+          const answerText = formData.get("answerText");
+          if (!answerText) {
+            alert(
+              "Please provide a correct answer for identification question"
+            );
+            return;
+          }
+        } else if (questionType === "essay") {
+          // No validation needed for essay
+        } else if (questionType === "demographic") {
+          // No validation needed for demographic, but input type is included
+        }
+
+        fetch("/admin/add-question", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("addQuestionModal")
+              );
+              modal.hide();
+              form.reset();
+              // Refresh the exam view to show the new question
+              const examId = document
+                .querySelector("#examDetailsSection .card-title")
+                .getAttribute("data-exam-id");
+              viewExam(examId);
+            } else {
+              alert("Error adding question: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error adding question");
+          });
+      }
+
+      function deletePage(pageId, examId) {
+        if (
+          confirm(
+            "Are you sure you want to delete this page? All questions in this page will also be deleted."
+          )
+        ) {
+          fetch(`/admin/delete-page/${pageId}`, {
+            method: "POST",
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                // Refresh the exam view
+                viewExam(examId);
+              } else {
+                alert("Error deleting page: " + data.message);
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("Error deleting page");
+            });
+        }
+      }
+
+      function deleteQuestion(questionId, examId) {
+        if (confirm("Are you sure you want to delete this question?")) {
+          fetch(`/admin/delete-question/${questionId}`, {
+            method: "POST",
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                // Refresh the exam view
+                viewExam(examId);
+              } else {
+                alert("Error deleting question: " + data.message);
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("Error deleting question");
+            });
+        }
+      }
+
+      // Modal for exam results
+      const resultsModalHtml = `
+        <div class="modal fade" id="examResultsModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="examResultsModalLabel">Exam Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div id="examResultsContent" class="p-2">
+                  <div class="text-center text-muted">Loading results...</div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      if (!document.getElementById("examResultsModal")) {
+        document.body.insertAdjacentHTML("beforeend", resultsModalHtml);
+      }
+
+      function showExamResultsModal(examId, examTitle) {
+        const modal = new bootstrap.Modal(
+          document.getElementById("examResultsModal")
+        );
+        const modalTitle = document.getElementById("examResultsModalLabel");
+        modalTitle.textContent = `Results for: ${examTitle}`;
+        modalTitle.dataset.examId = examId;
+        const content = document.getElementById("examResultsContent");
+        content.innerHTML =
+          '<div class="text-center text-muted">Loading results...</div>';
+        fetch(`/get-exam-results/${examId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const results = data.results;
+              const exam = data.exam;
+              let tableRows = results
+                .map((result, idx) => {
+                  const score =
+                    result.score && result.total_points
+                      ? ((result.score / result.total_points) * 100).toFixed(1)
+                      : "Pending";
+                  const status =
+                    score === "Pending"
+                      ? "Pending"
+                      : result.passed === "passed"
+                      ? "For Interview"
+                      : "Failed";
+                  const statusClass =
+                    score === "Pending"
+                      ? "bg-warning"
+                      : result.passed === "passed"
+                      ? "bg-success"
+                      : "bg-danger";
+                  return `
+                  <tr class="${
+                    status === "For Interview"
+                      ? "table-success"
+                      : status === "Failed"
+                      ? "table-danger"
+                      : "table-light"
+                  }">
+                    <td>${idx + 1}</td>
+                    <td>${result.name}</td>
+                    <td>${
+                      score === "Pending"
+                        ? '<span class="text-muted">Pending</span>'
+                        : score + "%"
+                    }</td>
+                    <td><span class="badge ${statusClass}">${status}</span></td>
+                    <td>${new Date(result.submitted_at).toLocaleString()}</td>
+                  </tr>
+                `;
+                })
+                .join("");
+              content.innerHTML = `
+                <div class="mb-3">
+                  <h6 class="mb-1">Exam: <strong>${exam.title}</strong></h6>
+                  <div class="row mb-2">
+                    <div class="col-md-4"><strong>Available Slots:</strong> ${exam.available_slots}</div>
+                    <div class="col-md-4"><strong>Total Attempts:</strong> ${data.total_attempts}</div>
+                    <div class="col-md-4"><strong>Selected:</strong> ${data.selected_count}</div>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Submitted At</th>
+                      </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">${tableRows}</tbody>
+                  </table>
+                </div>
+              `;
+            } else {
+              content.innerHTML = `<div class='text-danger'>${data.message}</div>`;
+            }
+          })
+          .catch((error) => {
+            content.innerHTML = `<div class='text-danger'>Error loading results.</div>`;
+          });
+        modal.show();
+      }
+
+      function showEditExamModal(examId) {
+        fetch(`/admin/get-exam/${examId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const exam = data.exam;
+              document.getElementById("editExamId").value = exam.id;
+              document.getElementById("editExamTitle").value = exam.title;
+              document.getElementById("editExamDescription").value =
+                exam.description;
+              document.getElementById("editExamTimeLimit").value =
+                exam.time_limit;
+              document.getElementById("editExamPassingScore").value =
+                exam.passing_score;
+              document.getElementById("editExamAvailableSlots").value =
+                exam.available_slots;
+              // Show the DB value
+              let dbStartDate =
+                exam.db_start_date ||
+                (exam.start_date
+                  ? exam.start_date.replace("T", " ") + ":00"
+                  : "");
+              document.getElementById("editExamStartDateDisplay").textContent =
+                dbStartDate;
+              // Split DB value into date and time
+              if (dbStartDate && dbStartDate.length >= 16) {
+                const [datePart, timePart] = dbStartDate.split(" ");
+                document.getElementById("editExamStartDateDate").value =
+                  datePart;
+                document.getElementById("editExamStartDateTime").value = (
+                  timePart || ""
+                ).substring(0, 8); // HH:MM:SS
+              } else {
+                document.getElementById("editExamStartDateDate").value = "";
+                document.getElementById("editExamStartDateTime").value = "";
+              }
+              const modal = new bootstrap.Modal(
+                document.getElementById("editExamModal")
+              );
+              modal.show();
+            } else {
+              alert("Error loading exam details: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error loading exam details");
+          });
+      }
+
+      function saveEditExam() {
+        const form = document.getElementById("editExamForm");
+        // Client-side validation
+        const requiredFields = [
+          "title",
+          "description",
+          "timeLimit",
+          "passingScore",
+          "availableSlots",
+          "startDateDate",
+          "startDateTime",
+        ];
+        let valid = true;
+        requiredFields.forEach((name) => {
+          const input = form.elements[name];
+          if (!input.value) {
+            input.classList.add("is-invalid");
+            valid = false;
+          } else {
+            input.classList.remove("is-invalid");
+          }
+        });
+        // Validate date and time
+        const dateVal = form.elements["startDateDate"].value;
+        const timeVal = form.elements["startDateTime"].value;
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        const timeRegex = /^\d{2}:\d{2}(:\d{2})?$/;
+        if (!dateRegex.test(dateVal) || !timeRegex.test(timeVal)) {
+          form.elements["startDateDate"].classList.add("is-invalid");
+          form.elements["startDateTime"].classList.add("is-invalid");
+          alert("Start Date and Time must be valid.");
+          return;
+        }
+        // Combine into 'YYYY-MM-DD HH:MM:SS'
+        let combinedStartDate =
+          dateVal + " " + (timeVal.length === 5 ? timeVal + ":00" : timeVal);
+        // Add to FormData as 'startDate'
+        const formData = new FormData(form);
+        formData.set("startDate", combinedStartDate);
+        if (!valid) {
+          alert("Please fill in all required fields.");
+          return;
+        }
+        fetch("/admin/update-exam", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Close modal and reload exams
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("editExamModal")
+              );
+              modal.hide();
+              form.reset();
+              loadExams();
+            } else {
+              alert("Error updating exam: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error updating exam");
+          });
+      }
+    </script>
+  </body>
+</html>

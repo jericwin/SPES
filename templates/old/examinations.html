@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
+    <title>Examination - DigiSPES</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <style>
+      .exam-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .exam-header {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .exam-timer {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545;
+      }
+      .question-card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .question-text {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+      }
+      .option-list {
+        list-style: none;
+        padding: 0;
+      }
+      .option-item {
+        padding: 10px;
+        margin: 5px 0;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .option-item:hover {
+        background-color: #f8f9fa;
+      }
+      .option-item.selected {
+        background-color: #e9ecef;
+        border-color: #0d6efd;
+      }
+      .navigation-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      .progress-container {
+        margin: 20px 0;
+      }
+      .page-indicator {
+        text-align: center;
+        margin: 10px 0;
+        color: #6c757d;
+      }
+      .identification-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-top: 10px;
+      }
+      .exam-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+      }
+      .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+      .warning-badge {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #dc3545;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 8px;
+        display: none;
+        z-index: 1000;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .warning-badge i {
+        font-size: 1.2rem;
+      }
+      .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+      }
+      .custom-toast {
+        background-color: white;
+        border-left: 4px solid #dc3545;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+      .custom-toast .toast-header {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+      .custom-toast .toast-header i {
+        margin-right: 8px;
+      }
+      .fullscreen-modal .modal-content {
+        border-left: 4px solid #dc3545;
+      }
+      .fullscreen-modal .modal-header {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+      .fullscreen-modal .modal-header i {
+        margin-right: 8px;
+      }
+      .final-warning-modal .modal-content {
+        border-left: 4px solid #dc3545;
+      }
+      .final-warning-modal .modal-header {
+        background-color: #dc3545;
+        color: white;
+      }
+      .final-warning-modal .modal-header i {
+        margin-right: 8px;
+      }
+    </style>
+  </head>
+  <body class="bg-light">
+    <!-- Start Exam Modal -->
+    <div
+      class="modal fade"
+      id="startExamModal"
+      data-bs-backdrop="static"
+      data-bs-keyboard="false"
+      tabindex="-1"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Exam Instructions</h5>
+          </div>
+          <div class="modal-body">
+            <p>Before starting the exam, please note the following:</p>
+            <ul>
+              <li>You will be monitored for any suspicious behavior</li>
+              <li>The exam will be in fullscreen mode</li>
+              <li>Do not switch tabs or leave the exam window</li>
+              <li>You will receive warnings for any violations</li>
+              <li>
+                After 3 warnings, your exam will be automatically submitted
+              </li>
+            </ul>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" onclick="startExam()">
+              Start Exam
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning Badge -->
+    <div id="warningBadge" class="warning-badge">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>Warnings: <span id="warningCount">0</span>/3</span>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <!-- Fullscreen Warning Modal -->
+    <div
+      class="modal fade fullscreen-modal"
+      id="fullscreenWarningModal"
+      data-bs-backdrop="static"
+      tabindex="-1"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <h5 class="modal-title">Fullscreen Required</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              The exam must be taken in fullscreen mode. Please click "I
+              Understand" to return to fullscreen.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="handleFullscreenModalConfirm()"
+            >
+              I Understand
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Warning Modal -->
+    <div
+      class="modal fade final-warning-modal"
+      id="finalWarningModal"
+      data-bs-backdrop="static"
+      data-bs-keyboard="false"
+      tabindex="-1"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <h5 class="modal-title">Final Warning</h5>
+          </div>
+          <div class="modal-body">
+            <p>
+              You have received 3 warnings. Your exam will be submitted
+              automatically.
+            </p>
+            <p class="text-muted">
+              Please wait while we process your submission...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="exam-container">
+      <div class="exam-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 id="examTitle">Loading Exam...</h2>
+          <div class="exam-timer" id="examTimer">Time Remaining: --:--</div>
+        </div>
+        <div class="progress-container">
+          <div class="progress">
+            <div
+              class="progress-bar"
+              role="progressbar"
+              style="width: 0%"
+            ></div>
+          </div>
+          <div class="page-indicator">
+            Page <span id="currentPage">1</span> of
+            <span id="totalPages">1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="exam-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        Please ensure you have a stable internet connection. Do not refresh the
+        page or navigate away during the exam.
+      </div>
+
+      <div id="questionContainer">
+        <!-- Questions will be loaded here -->
+      </div>
+
+      <div class="navigation-buttons">
+        <button
+          class="btn btn-secondary"
+          id="prevButton"
+          onclick="previousPage()"
+          disabled
+        >
+          <i class="bi bi-arrow-left"></i> Previous Page
+        </button>
+        <button class="btn btn-primary" id="nextButton" onclick="nextPage()">
+          Next Page <i class="bi bi-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      let currentExam = null;
+      let currentPageIndex = 0;
+      let answers = {};
+      let timeRemaining = 0;
+      let timerInterval = null;
+      let warningCount = 0;
+      let lastActivity = Date.now();
+      let activityInterval = null;
+      let isFullscreen = false;
+      let fullscreenWarningModal = null;
+      let finalWarningModal = null;
+
+      // Load exam when page loads
+      document.addEventListener("DOMContentLoaded", () => {
+        const startModal = new bootstrap.Modal(
+          document.getElementById("startExamModal")
+        );
+        startModal.show();
+      });
+
+      function startExam() {
+        // Close the modal
+        bootstrap.Modal.getInstance(
+          document.getElementById("startExamModal")
+        ).hide();
+
+        // Initialize modals
+        fullscreenWarningModal = new bootstrap.Modal(
+          document.getElementById("fullscreenWarningModal")
+        );
+        finalWarningModal = new bootstrap.Modal(
+          document.getElementById("finalWarningModal")
+        );
+
+        // Enter fullscreen
+        enterFullscreen();
+
+        // Start monitoring
+        startMonitoring();
+
+        // Load the exam
+        loadExam();
+      }
+
+      function enterFullscreen() {
+        const element = document.documentElement;
+        if (element.requestFullscreen) {
+          element.requestFullscreen();
+        } else if (element.webkitRequestFullscreen) {
+          element.webkitRequestFullscreen();
+        } else if (element.msRequestFullscreen) {
+          element.msRequestFullscreen();
+        }
+        isFullscreen = true;
+      }
+
+      function exitFullscreen() {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+        isFullscreen = false;
+      }
+
+      function startMonitoring() {
+        // Monitor fullscreen changes
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+        document.addEventListener(
+          "webkitfullscreenchange",
+          handleFullscreenChange
+        );
+        document.addEventListener(
+          "mozfullscreenchange",
+          handleFullscreenChange
+        );
+        document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+        // Monitor visibility changes (tab switching)
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        // Monitor user activity
+        document.addEventListener("mousemove", updateLastActivity);
+        document.addEventListener("keydown", updateLastActivity);
+        document.addEventListener("click", updateLastActivity);
+
+        // Start activity monitoring interval
+        activityInterval = setInterval(checkActivity, 1000);
+      }
+
+      function handleFullscreenChange() {
+        if (
+          !document.fullscreenElement &&
+          !document.webkitFullscreenElement &&
+          !document.mozFullScreenElement &&
+          !document.msFullscreenElement
+        ) {
+          addWarning("Fullscreen mode is required for the exam");
+          // Show fullscreen warning modal
+          fullscreenWarningModal.show();
+        }
+      }
+
+      function handleVisibilityChange() {
+        if (document.hidden) {
+          addWarning("Do not switch tabs during the exam");
+        }
+      }
+
+      function updateLastActivity() {
+        lastActivity = Date.now();
+      }
+
+      function checkActivity() {
+        const idleTime = (Date.now() - lastActivity) / 1000;
+        if (idleTime >= 20) {
+          addWarning("You have been idle for too long");
+          updateLastActivity();
+        }
+      }
+
+      function showToast(message, type = "warning") {
+        const toastContainer = document.querySelector(".toast-container");
+        const toast = document.createElement("div");
+        toast.className = "toast custom-toast";
+        toast.setAttribute("role", "alert");
+        toast.setAttribute("aria-live", "assertive");
+        toast.setAttribute("aria-atomic", "true");
+
+        toast.innerHTML = `
+          <div class="toast-header">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <strong class="me-auto">Warning</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <div class="toast-body">
+            ${message}
+          </div>
+        `;
+
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast, {
+          autohide: true,
+          delay: 5000,
+        });
+        bsToast.show();
+
+        // Remove toast from DOM after it's hidden
+        toast.addEventListener("hidden.bs.toast", () => {
+          toast.remove();
+        });
+      }
+
+      function addWarning(reason) {
+        warningCount++;
+        document.getElementById("warningCount").textContent = warningCount;
+        document.getElementById("warningBadge").style.display = "flex";
+
+        showToast(`Warning ${warningCount}/3: ${reason}`);
+
+        if (warningCount >= 3) {
+          // Fill unanswered required fields with placeholder values before auto-submit
+          fillRequiredWithPlaceholders();
+
+          // Show final warning modal
+          finalWarningModal.show();
+
+          // Submit after a delay
+          setTimeout(() => {
+            submitExam(true);
+          }, 2000);
+        }
+      }
+
+      function fillRequiredWithPlaceholders() {
+        // Fill all unanswered required fields with placeholder values
+        currentExam.pages.forEach((page) => {
+          page.questions.forEach((question) => {
+            if (question.is_required) {
+              let answer = answers[question.id];
+              if (
+                answer === undefined ||
+                answer === null ||
+                (typeof answer === "string" && answer.trim() === "")
+              ) {
+                // Fill based on type
+                if (question.question_type === "demographic") {
+                  let inputType = question.input_type || "text";
+                  if (inputType === "email") {
+                    answers[question.id] = "auto_submitted@example.com";
+                  } else if (inputType === "text") {
+                    answers[question.id] = "AUTO_SUBMITTED";
+                  } else if (inputType === "number") {
+                    answers[question.id] = 0;
+                  } else if (inputType === "date") {
+                    answers[question.id] = "1970-01-01";
+                  } else {
+                    answers[question.id] = "AUTO_SUBMITTED";
+                  }
+                } else if (
+                  question.question_type === "essay" ||
+                  question.question_type === "identification"
+                ) {
+                  answers[question.id] = "AUTO_SUBMITTED";
+                } else if (question.question_type === "multiple_choice") {
+                  // Pick first option if available
+                  if (question.options && question.options.length > 0) {
+                    answers[question.id] = question.options[0].option_text;
+                  } else {
+                    answers[question.id] = "AUTO_SUBMITTED";
+                  }
+                }
+              }
+            }
+          });
+        });
+      }
+
+      function loadExam() {
+        fetch("/get-current-exam")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              currentExam = data.exam;
+              timeRemaining = currentExam.time_limit * 60; // Convert to seconds
+              document.getElementById("examTitle").textContent =
+                currentExam.title;
+              document.getElementById("totalPages").textContent =
+                currentExam.pages.length;
+              startTimer();
+              loadPage(0);
+            } else {
+              // Show error message and redirect to dashboard
+              alert(data.message);
+              window.location.href = "/new-applicants/dashboard";
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Error loading exam");
+            window.location.href = "/new-applicants/dashboard";
+          });
+      }
+
+      function startTimer() {
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+          timeRemaining--;
+          updateTimerDisplay();
+          if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            submitExam();
+          }
+        }, 1000);
+      }
+
+      function updateTimerDisplay() {
+        const minutes = Math.floor(timeRemaining / 60);
+        const seconds = timeRemaining % 60;
+        document.getElementById(
+          "examTimer"
+        ).textContent = `Time Remaining: ${minutes
+          .toString()
+          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+      }
+
+      function loadPage(pageIndex) {
+        const page = currentExam.pages[pageIndex];
+        const container = document.getElementById("questionContainer");
+        container.innerHTML = "";
+
+        // Update navigation buttons
+        document.getElementById("prevButton").disabled = pageIndex === 0;
+        document.getElementById("nextButton").textContent =
+          pageIndex === currentExam.pages.length - 1
+            ? "Submit Exam"
+            : "Next Page";
+        document.getElementById("nextButton").onclick =
+          pageIndex === currentExam.pages.length - 1
+            ? submitExam
+            : () => nextPageWithValidation(pageIndex);
+
+        // Update progress
+        const progress = ((pageIndex + 1) / currentExam.pages.length) * 100;
+        document.querySelector(".progress-bar").style.width = `${progress}%`;
+        document.getElementById("currentPage").textContent = pageIndex + 1;
+
+        // Load questions
+        page.questions.forEach((question, index) => {
+          const questionCard = createQuestionCard(question, index);
+          container.appendChild(questionCard);
+        });
+      }
+
+      function createQuestionCard(question, index) {
+        const card = document.createElement("div");
+        card.className = "question-card";
+        card.innerHTML = `
+          <div class="question-text" style="font-weight: 600;">
+            ${question.question_text}
+            ${
+              question.is_required
+                ? '<span style="color: #dc3545; font-weight: bold; margin-left: 6px;">*</span>'
+                : ""
+            }
+            <span class="badge bg-secondary float-end">${
+              question.points
+            } points</span>
+          </div>
+          ${renderQuestionInput(question, index)}
+        `;
+        return card;
+      }
+
+      function renderQuestionInput(question, questionIndex) {
+        const requiredAttr = question.is_required ? "required" : "";
+        if (question.question_type === "multiple_choice") {
+          return createMultipleChoiceOptions(question, questionIndex);
+        } else if (question.question_type === "identification") {
+          return `<input type="text" class="identification-input" placeholder="Enter your answer" value="${
+            answers[question.id] || ""
+          }" onchange="updateAnswer(${
+            question.id
+          }, this.value)" ${requiredAttr}>`;
+        } else if (question.question_type === "essay") {
+          return `<textarea class="identification-input" rows="5" placeholder="Enter your answer" onchange="updateAnswer(${
+            question.id
+          }, this.value)" ${requiredAttr}>${
+            answers[question.id] || ""
+          }</textarea>`;
+        } else if (question.question_type === "demographic") {
+          let inputType = question.input_type || "text";
+          let inputHtml = "";
+          if (inputType === "email") {
+            inputHtml = `<input type="email" class="identification-input" placeholder="Enter your email" value="${
+              answers[question.id] || ""
+            }" onchange="updateAnswer(${
+              question.id
+            }, this.value)" ${requiredAttr}>`;
+          } else if (
+            inputType === "text" ||
+            inputType === "number" ||
+            inputType === "date"
+          ) {
+            inputHtml = `<input type="${inputType}" class="identification-input" placeholder="Enter your answer" value="${
+              answers[question.id] || ""
+            }" onchange="updateAnswer(${
+              question.id
+            }, this.value)" ${requiredAttr}>`;
+          } else {
+            inputHtml = `<input type="text" class="identification-input" placeholder="Enter your answer" value="${
+              answers[question.id] || ""
+            }" onchange="updateAnswer(${
+              question.id
+            }, this.value)" ${requiredAttr}>`;
+          }
+          return inputHtml;
+        } else {
+          return `<input type="text" class="identification-input" placeholder="Enter your answer" value="${
+            answers[question.id] || ""
+          }" onchange="updateAnswer(${
+            question.id
+          }, this.value)" ${requiredAttr}>`;
+        }
+      }
+
+      function createMultipleChoiceOptions(question, questionIndex) {
+        return `
+          <ul class="option-list">
+            ${question.options
+              .map(
+                (option, optionIndex) => `
+              <li class="option-item ${
+                answers[question.id] === option.option_text ? "selected" : ""
+              }"
+                onclick="selectOption(${question.id}, '${option.option_text}')">
+                ${option.option_text}
+              </li>
+            `
+              )
+              .join("")}
+          </ul>
+        `;
+      }
+
+      function createIdentificationInput(question, questionIndex) {
+        return `
+          <input type="text" 
+                 class="identification-input" 
+                 placeholder="Enter your answer"
+                 value="${answers[question.id] || ""}"
+                 onchange="updateAnswer(${question.id}, this.value)">
+        `;
+      }
+
+      function selectOption(questionId, optionText) {
+        answers[questionId] = optionText;
+        // Update UI to show selected option
+        const options = document.querySelectorAll(`[onclick*="${questionId}"]`);
+        options.forEach((option) => {
+          option.classList.toggle(
+            "selected",
+            option.textContent.trim() === optionText
+          );
+        });
+      }
+
+      function updateAnswer(questionId, value) {
+        answers[questionId] = value;
+      }
+
+      function previousPage() {
+        if (currentPageIndex > 0) {
+          currentPageIndex--;
+          loadPage(currentPageIndex);
+        }
+      }
+
+      function nextPage() {
+        if (currentPageIndex < currentExam.pages.length - 1) {
+          currentPageIndex++;
+          loadPage(currentPageIndex);
+        }
+      }
+
+      function nextPageWithValidation(pageIndex) {
+        const page = currentExam.pages[pageIndex];
+        let allValid = true;
+        let firstInvalid = null;
+        page.questions.forEach((question) => {
+          if (question.is_required) {
+            let answer = answers[question.id];
+            // For number, 0 is valid, so check for undefined/null/empty string
+            let inputElem = document.querySelector(
+              `[onchange*='updateAnswer(${question.id},']`
+            );
+            if (
+              answer === undefined ||
+              answer === null ||
+              (typeof answer === "string" && answer.trim() === "")
+            ) {
+              allValid = false;
+              if (!firstInvalid) firstInvalid = question.id;
+            } else if (
+              inputElem &&
+              inputElem.type === "email" &&
+              !inputElem.checkValidity()
+            ) {
+              allValid = false;
+              if (!firstInvalid) firstInvalid = question.id;
+            }
+          }
+        });
+        if (!allValid) {
+          showToast(
+            "Please answer all required questions with valid values before proceeding.",
+            "warning"
+          );
+          // Optionally, scroll to first invalid input
+          const invalidInput = document.querySelector(
+            `[onchange*='updateAnswer(${firstInvalid},']`
+          );
+          if (invalidInput) invalidInput.focus();
+          return;
+        }
+        nextPage();
+      }
+
+      function handleFullscreenModalConfirm() {
+        fullscreenWarningModal.hide();
+        enterFullscreen();
+      }
+
+      function stopMonitoring() {
+        // Remove all event listeners
+        document.removeEventListener(
+          "fullscreenchange",
+          handleFullscreenChange
+        );
+        document.removeEventListener(
+          "webkitfullscreenchange",
+          handleFullscreenChange
+        );
+        document.removeEventListener(
+          "mozfullscreenchange",
+          handleFullscreenChange
+        );
+        document.removeEventListener(
+          "MSFullscreenChange",
+          handleFullscreenChange
+        );
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
+        document.removeEventListener("mousemove", updateLastActivity);
+        document.removeEventListener("keydown", updateLastActivity);
+        document.removeEventListener("click", updateLastActivity);
+
+        // Clear intervals
+        clearInterval(activityInterval);
+        clearInterval(timerInterval);
+      }
+
+      function submitExam(isAutoSubmit = false) {
+        // Validate all required questions on ALL pages before submitting (unless auto-submit)
+        if (!isAutoSubmit) {
+          let allValid = true;
+          let firstInvalid = null;
+          let firstInvalidInput = null;
+          currentExam.pages.forEach((page) => {
+            page.questions.forEach((question) => {
+              if (question.is_required) {
+                let answer = answers[question.id];
+                let inputElem = document.querySelector(
+                  `[onchange*='updateAnswer(${question.id},']`
+                );
+                if (
+                  answer === undefined ||
+                  answer === null ||
+                  (typeof answer === "string" && answer.trim() === "")
+                ) {
+                  allValid = false;
+                  if (!firstInvalid) {
+                    firstInvalid = question.id;
+                    firstInvalidInput = inputElem;
+                  }
+                } else if (
+                  inputElem &&
+                  inputElem.type === "email" &&
+                  !inputElem.checkValidity()
+                ) {
+                  allValid = false;
+                  if (!firstInvalid) {
+                    firstInvalid = question.id;
+                    firstInvalidInput = inputElem;
+                  }
+                }
+              }
+            });
+          });
+          if (!allValid) {
+            showToast(
+              "Please answer all required questions with valid values before submitting.",
+              "warning"
+            );
+            // Try to focus the first invalid input, and if not on current page, go to that page
+            if (firstInvalid) {
+              // Find which page the invalid question is on
+              let invalidPageIndex = currentExam.pages.findIndex((page) =>
+                page.questions.some((q) => q.id === firstInvalid)
+              );
+              if (
+                invalidPageIndex !== -1 &&
+                invalidPageIndex !== currentPageIndex
+              ) {
+                currentPageIndex = invalidPageIndex;
+                loadPage(currentPageIndex);
+                setTimeout(() => {
+                  let inputElem = document.querySelector(
+                    `[onchange*='updateAnswer(${firstInvalid},']`
+                  );
+                  if (inputElem) inputElem.focus();
+                }, 100);
+              } else if (firstInvalidInput) {
+                firstInvalidInput.focus();
+              }
+            }
+            return;
+          }
+        }
+        // Stop all monitoring
+        stopMonitoring();
+
+        // Exit fullscreen
+        if (isFullscreen) {
+          exitFullscreen();
+        }
+
+        // Get all questions from all pages
+        const allQuestions = currentExam.pages.reduce((acc, page) => {
+          return acc.concat(page.questions);
+        }, []);
+
+        // Ensure all questions have answers
+        const completeAnswers = {};
+        allQuestions.forEach((question) => {
+          // If no answer exists for this question, set a default based on question type
+          if (!answers[question.id]) {
+            if (question.question_type === "multiple_choice") {
+              // For multiple choice, set first option as default
+              completeAnswers[question.id] =
+                question.options[0]?.option_text || "";
+            } else {
+              // For identification, set empty string
+              completeAnswers[question.id] = "";
+            }
+          } else {
+            // Keep existing answer
+            completeAnswers[question.id] = answers[question.id];
+          }
+        });
+
+        // Prepare submission data
+        const submissionData = {
+          exam_id: currentExam.id,
+          answers: completeAnswers, // Use the complete answers object
+          status: "completed",
+          score: 0,
+          time_taken: currentExam.time_limit * 60 - timeRemaining,
+          warning_count: warningCount,
+          questions: allQuestions.map((q) => ({
+            id: q.id,
+            question_text: q.question_text,
+            question_type: q.question_type,
+            points: q.points,
+            options: q.options || [],
+          })),
+        };
+
+        fetch("/submit-exam", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(submissionData),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Stop all monitoring
+              stopMonitoring();
+
+              // Exit fullscreen
+              if (isFullscreen) {
+                exitFullscreen();
+              }
+
+              showToast("Exam submitted successfully!", "success");
+              setTimeout(() => {
+                window.location.href = "/new-applicants/dashboard";
+              }, 2000);
+            } else {
+              showToast("Error submitting exam: " + data.message, "error");
+              // Restore fullscreen and monitoring if submission failed
+              if (
+                !document.fullscreenElement &&
+                !document.webkitFullscreenElement &&
+                !document.mozFullScreenElement &&
+                !document.msFullscreenElement
+              ) {
+                enterFullscreen();
+              }
+              // Optionally, check if monitoring is not active before starting
+              if (!timerInterval || !activityInterval) {
+                startMonitoring();
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showToast("Error submitting exam", "error");
+          });
+      }
+
+      // Prevent accidental navigation
+      window.onbeforeunload = function () {
+        return "Are you sure you want to leave? Your progress will be lost.";
+      };
+    </script>
+  </body>
+</html>
