@@ -7,4 +7,5 @@ pywin32==306
 Werkzeug==3.0.1
 numpy==1.26.2
 setuptools>=68.0.0
-Flask-SocketIO 
+Flask-SocketIO
+docxtpl==0.16.7 
