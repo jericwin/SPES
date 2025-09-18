@@ -368,7 +368,7 @@
                   Click on any form to view and download the template.
                 </p> -->
 
-                <!-- Form Templates Grid
+                <!-- Form Templates Grid -->
                 <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
                   <div class="col">
                     <div class="card form-template-card h-100">
@@ -392,6 +392,12 @@
                             onclick="downloadTemplate('APPLICATION-FORM')"
                           >
                             <i class="bi bi-download me-2"></i>Download
+                          </button>
+                          <button
+                            class="btn btn-outline-warning"
+                            onclick="openEditableForm()"
+                          >
+                            <i class="bi bi-pencil-square me-2"></i>Fill Online
                           </button>
                         </div>
                       </div>
@@ -478,7 +484,8 @@
                       </div>
                     </div>
                   </div>
-                </div> -->
+                </div>
+                -->
 
                 <!-- Upload Section -->
                 <div class="upload-section">
@@ -1036,59 +1043,842 @@
       </div>
     </div>
 
+    <!-- Editable Application Form Modal -->
+    <div
+      class="modal fade"
+      id="editableFormModal"
+      tabindex="-1"
+      aria-labelledby="editableFormModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editableFormModalLabel">
+              <i class="bi bi-pencil-square me-2"></i>Fill Application Form
+              Online
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div id="formLoadingSpinner" class="text-center py-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="mt-3">Loading form...</p>
+            </div>
+            <form id="editableApplicationForm" style="display: none">
+              <!-- Personal Information Section -->
+              <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                  <h6 class="mb-0">
+                    <i class="bi bi-person me-2"></i>Personal Information
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <label for="last_name" class="form-label"
+                        >Last Name <span class="text-danger">*</span></label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="last_name"
+                        name="last_name"
+                        required
+                      />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label for="first_name" class="form-label"
+                        >First Name <span class="text-danger">*</span></label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="first_name"
+                        name="first_name"
+                        required
+                      />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label for="middle_name" class="form-label"
+                        >Middle Name</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="middle_name"
+                        name="middle_name"
+                      />
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="birth_date" class="form-label"
+                        >Date of Birth <span class="text-danger">*</span></label
+                      >
+                      <input
+                        type="date"
+                        class="form-control"
+                        id="birth_date"
+                        name="birth_date"
+                        required
+                      />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="birth_place" class="form-label"
+                        >Place of Birth
+                        <span class="text-danger">*</span></label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="birth_place"
+                        name="birth_place"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-3 mb-3">
+                      <label for="age" class="form-label"
+                        >Age <span class="text-danger">*</span></label
+                      >
+                      <input
+                        type="number"
+                        class="form-control"
+                        id="age"
+                        name="age"
+                        required
+                      />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label for="sex" class="form-label"
+                        >Sex <span class="text-danger">*</span></label
+                      >
+                      <select class="form-select" id="sex" name="sex" required>
+                        <option value="">Select...</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="civil_status" class="form-label"
+                        >Civil Status <span class="text-danger">*</span></label
+                      >
+                      <select
+                        class="form-select"
+                        id="civil_status"
+                        name="civil_status"
+                        required
+                      >
+                        <option value="">Select...</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Widowed">Widowed</option>
+                        <option value="Divorced">Divorced</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label for="present_address" class="form-label"
+                      >Present Address <span class="text-danger">*</span></label
+                    >
+                    <textarea
+                      class="form-control"
+                      id="present_address"
+                      name="present_address"
+                      rows="2"
+                      required
+                    ></textarea>
+                  </div>
+                  <div class="mb-3">
+                    <label for="permanent_address" class="form-label"
+                      >Permanent Address
+                      <span class="text-danger">*</span></label
+                    >
+                    <textarea
+                      class="form-control"
+                      id="permanent_address"
+                      name="permanent_address"
+                      rows="2"
+                      required
+                    ></textarea>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="contact_number" class="form-label"
+                        >Contact Number
+                        <span class="text-danger">*</span></label
+                      >
+                      <input
+                        type="tel"
+                        class="form-control"
+                        id="contact_number"
+                        name="contact_number"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input
+                      type="email"
+                      class="form-control"
+                      id="email"
+                      name="email"
+                    />
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="other_social" class="form-label"
+                      >Social Media Accounts</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="other_social"
+                      name="other_social"
+                      placeholder="Other social media accounts"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label for="gsis_relationship" class="form-label"
+                      >GSIS Relationship</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="gsis_relationship"
+                      name="gsis_relationship"
+                      placeholder="e.g., Son, Daughter, Self"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label for="passport_image" class="form-label"
+                      >Passport Size Photo</label
+                    >
+                    <input
+                      type="file"
+                      class="form-control"
+                      id="passport_image"
+                      name="passport_image"
+                      accept="image/*"
+                      onchange="previewImage(this)"
+                    />
+                    <div id="imagePreview" class="mt-2" style="display: none">
+                      <img
+                        id="previewImg"
+                        src=""
+                        alt="Preview"
+                        style="
+                          max-width: 150px;
+                          max-height: 150px;
+                          border: 1px solid #ddd;
+                          border-radius: 4px;
+                        "
+                      />
+                    </div>
+                    <small class="form-text text-muted"
+                      >Upload a passport size photo with blue background</small
+                    >
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Digital Signature</label>
+                    <div class="signature-container">
+                      <canvas
+                        id="signatureCanvas"
+                        width="400"
+                        height="150"
+                        style="
+                          border: 2px dashed #dee2e6;
+                          border-radius: 8px;
+                          cursor: crosshair;
+                          background-color: #f8f9fa;
+                        "
+                      ></canvas>
+                      <div class="mt-2">
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary btn-sm me-2"
+                          onclick="clearSignature()"
+                        >
+                          <i class="bi bi-eraser me-1"></i>Clear
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-outline-primary btn-sm"
+                          onclick="saveSignature()"
+                        >
+                          <i class="bi bi-check-circle me-1"></i>Save Signature
+                        </button>
+                      </div>
+                      <small class="form-text text-muted"
+                        >Draw your signature above using your mouse or
+                        touch</small
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Educational Information Section -->
+              <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                  <h6 class="mb-0">
+                    <i class="bi bi-mortarboard me-2"></i>Educational
+                    Information
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-bordered">
+                      <thead class="table-dark">
+                        <tr>
+                          <th>Education Level</th>
+                          <th>Name of School</th>
+                          <th>Degree Earned/Course</th>
+                          <th>Year/Level</th>
+                          <th>Date of Attendance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>Elementary</strong></td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="elem_school"
+                              name="elem_school"
+                              placeholder="Elementary School Name"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="elem_degree"
+                              name="elem_degree"
+                              placeholder="Elementary Certificate"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="elem_year"
+                              name="elem_year"
+                              placeholder="Grade 6"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="elem_attendance"
+                              name="elem_attendance"
+                              placeholder="2010-2016"
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><strong>Secondary</strong></td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="sec_school"
+                              name="sec_school"
+                              placeholder="High School Name"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="sec_degree"
+                              name="sec_degree"
+                              placeholder="High School Diploma"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="sec_year"
+                              name="sec_year"
+                              placeholder="Grade 12"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="sec_attendance"
+                              name="sec_attendance"
+                              placeholder="2016-2020"
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><strong>Tertiary</strong></td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="ter_school"
+                              name="ter_school"
+                              placeholder="College/University Name"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="ter_degree"
+                              name="ter_degree"
+                              placeholder="Bachelor's Degree"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="ter_year"
+                              name="ter_year"
+                              placeholder="4th Year"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="ter_attendance"
+                              name="ter_attendance"
+                              placeholder="2020-2024"
+                            />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><strong>Tech-Voc</strong></td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="tech_school"
+                              name="tech_school"
+                              placeholder="Technical/Vocational School"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="tech_degree"
+                              name="tech_degree"
+                              placeholder="Technical Certificate"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="tech_year"
+                              name="tech_year"
+                              placeholder="Level 3"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="tech_attendance"
+                              name="tech_attendance"
+                              placeholder="2023-2024"
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Family Information Section -->
+              <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                  <h6 class="mb-0">
+                    <i class="bi bi-people me-2"></i>Family Information
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="father_name" class="form-label"
+                        >Father's Name/Contact No.</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="father_name"
+                        name="father_name"
+                      />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="father_occupation" class="form-label"
+                        >Father's Occupation</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="father_occupation"
+                        name="father_occupation"
+                      />
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="mother_name" class="form-label"
+                        >Mother's Name/Contact No.</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="mother_name"
+                        name="mother_name"
+                      />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="mother_occupation" class="form-label"
+                        >Mother's Occupation</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="mother_occupation"
+                        name="mother_occupation"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Student Category Section -->
+              <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                  <h6 class="mb-0">
+                    <i class="bi bi-mortarboard me-2"></i>Student Category
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-12 mb-3">
+                      <label class="form-label"
+                        >Select Category
+                        <span class="text-danger">*</span></label
+                      >
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          name="student_category"
+                          id="students"
+                          value="students"
+                        />
+                        <label class="form-check-label" for="students">
+                          Students
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          name="student_category"
+                          id="als"
+                          value="als"
+                        />
+                        <label class="form-check-label" for="als">
+                          ALS (Alternative Learning System)
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          name="student_category"
+                          id="osy"
+                          value="osy"
+                        />
+                        <label class="form-check-label" for="osy">
+                          OSY (Out-of-School Youth)
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Beneficiary/Parents Status Section -->
+              <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                  <h6 class="mb-0">
+                    <i class="bi bi-people me-2"></i>Current Status of the
+                    Beneficiary/Parents
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Family Status</label>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="living_together"
+                          value="living together"
+                        />
+                        <label class="form-check-label" for="living_together">
+                          Living together
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="solo_parent"
+                          value="solo parent"
+                        />
+                        <label class="form-check-label" for="solo_parent">
+                          Solo Parent
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="separated"
+                          value="separated"
+                        />
+                        <label class="form-check-label" for="separated">
+                          Separated
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="senior_citizen"
+                          value="senior citizen"
+                        />
+                        <label class="form-check-label" for="senior_citizen">
+                          Senior Citizen
+                        </label>
+                      </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Special Categories</label>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="sugar_plantation"
+                          value="sugar plantation worker"
+                        />
+                        <label class="form-check-label" for="sugar_plantation">
+                          Sugar Plantation Worker
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="indigenous_people"
+                          value="indigenous people"
+                        />
+                        <label class="form-check-label" for="indigenous_people">
+                          Indigenous People
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="displaced_worker"
+                          value="displaced worker"
+                        />
+                        <label class="form-check-label" for="displaced_worker">
+                          Displaced Worker
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="rebel_returnee"
+                          value="rebel returnee"
+                        />
+                        <label class="form-check-label" for="rebel_returnee">
+                          Rebel Returnee
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="victims_armed_conflicts"
+                          value="victims of armed conflicts"
+                        />
+                        <label
+                          class="form-check-label"
+                          for="victims_armed_conflicts"
+                        >
+                          Victims of Armed Conflicts
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="person_with_disability"
+                          value="person with disability"
+                        />
+                        <label
+                          class="form-check-label"
+                          for="person_with_disability"
+                        >
+                          Person with Disability
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Employment Status</label>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="local"
+                          value="local"
+                        />
+                        <label class="form-check-label" for="local">
+                          Local
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="checkbox"
+                          name="beneficiary_status"
+                          id="ofw"
+                          value="ofw"
+                        />
+                        <label class="form-check-label" for="ofw"> OFW </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="generateFormBtn"
+              onclick="generateApplicationForm()"
+            >
+              <i class="bi bi-file-earmark-text me-2"></i>Generate Application
+              Form
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+      const hasUploaded = {% if has_uploaded %}true{% else %}false{% endif %};
+    </script>
+    <script>
       // File upload handling
-      {% if not has_uploaded %}
-      document.querySelectorAll(".file-upload-input").forEach((input) => {
-        input.addEventListener("change", function (e) {
-          const file = e.target.files[0];
-          const statusDiv = document.getElementById(this.name + "Status");
-          const infoDiv = document.getElementById(this.name + "Info");
+      document.addEventListener("DOMContentLoaded", function () {
+        if (!hasUploaded) {
+          document.querySelectorAll(".file-upload-input").forEach((input) => {
+            input.addEventListener("change", function (e) {
+              const file = e.target.files[0];
+              const statusDiv = document.getElementById(this.name + "Status");
+              const infoDiv = document.getElementById(this.name + "Info");
 
-          if (file) {
-            // Validate file size (5MB limit)
-            if (file.size > 5 * 1024 * 1024) {
-              statusDiv.textContent = "File size exceeds 5MB limit";
-              statusDiv.className = "upload-status error";
-              this.value = "";
-              return;
-            }
+              if (file) {
+                // Validate file size (5MB limit)
+                if (file.size > 5 * 1024 * 1024) {
+                  statusDiv.textContent = "File size exceeds 5MB limit";
+                  statusDiv.className = "upload-status error";
+                  this.value = "";
+                  return;
+                }
 
-            // Validate file type
-            const allowedTypes = [".docx", ".pdf"];
-            const fileExtension =
-              "." + file.name.split(".").pop().toLowerCase();
+                // Validate file type
+                const allowedTypes = [".docx", ".pdf"];
+                const fileExtension =
+                  "." + file.name.split(".").pop().toLowerCase();
 
-            if (!allowedTypes.includes(fileExtension)) {
-              statusDiv.textContent = "Only .docx and .pdf files are allowed";
-              statusDiv.className = "upload-status error";
-              this.value = "";
-              return;
-            }
+                if (!allowedTypes.includes(fileExtension)) {
+                  statusDiv.textContent =
+                    "Only .docx and .pdf files are allowed";
+                  statusDiv.className = "upload-status error";
+                  this.value = "";
+                  return;
+                }
 
-            // Show success status
-            statusDiv.textContent = "File selected successfully";
-            statusDiv.className = "upload-status success";
+                // Show success status
+                statusDiv.textContent = "File selected successfully";
+                statusDiv.className = "upload-status success";
 
-            // Show file info
-            infoDiv.innerHTML = `
+                // Show file info
+                infoDiv.innerHTML = `
               <i class="bi bi-file-earmark-text"></i>
               <span>${file.name} (${(file.size / 1024 / 1024).toFixed(
-              2
-            )} MB)</span>
+                  2
+                )} MB)</span>
             `;
-          } else {
-            statusDiv.className = "upload-status";
-            statusDiv.textContent = "";
-            infoDiv.innerHTML = "";
-          }
-        });
+              } else {
+                statusDiv.className = "upload-status";
+                statusDiv.textContent = "";
+                infoDiv.innerHTML = "";
+              }
+            });
+          });
+        }
       });
-      {% endif %}
 
       // Form submission
       function submitForms(event) {
@@ -1221,6 +2011,217 @@
             document.body.removeChild(link);
           }
         });
+
+      // Editable Form Functions
+      function openEditableForm() {
+        const modal = new bootstrap.Modal(
+          document.getElementById("editableFormModal")
+        );
+        modal.show();
+
+        // Show loading spinner initially
+        document.getElementById("formLoadingSpinner").style.display = "block";
+        document.getElementById("editableApplicationForm").style.display =
+          "none";
+
+        // Hide loading spinner and show form after a short delay
+        setTimeout(() => {
+          document.getElementById("formLoadingSpinner").style.display = "none";
+          document.getElementById("editableApplicationForm").style.display =
+            "block";
+        }, 500);
+      }
+
+      function generateApplicationForm() {
+        const form = document.getElementById("editableApplicationForm");
+        const formData = new FormData(form);
+
+        // Handle multiple checkbox selections for beneficiary status
+        const beneficiaryCheckboxes = document.querySelectorAll(
+          'input[name="beneficiary_status"]:checked'
+        );
+        const beneficiaryStatusValues = Array.from(beneficiaryCheckboxes).map(
+          (cb) => cb.value
+        );
+        formData.set("beneficiary_status", beneficiaryStatusValues.join(", "));
+
+        // Add signature data if available
+        if (signatureData) {
+          formData.set("signature", signatureData);
+        }
+
+        // Show loading state
+        const generateBtn = document.getElementById("generateFormBtn");
+        const originalText = generateBtn.innerHTML;
+        generateBtn.disabled = true;
+        generateBtn.innerHTML =
+          '<i class="bi bi-hourglass-split me-2"></i>Generating...';
+
+        // Send data to server (using FormData for file uploads)
+        fetch("/edit-application-form", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              showToast(data.message, "success");
+
+              // Create download link
+              const downloadLink = document.createElement("a");
+              downloadLink.href = data.download_url;
+              downloadLink.download = data.filename;
+              downloadLink.click();
+
+              // Close modal
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("editableFormModal")
+              );
+              modal.hide();
+
+              // Reset form
+              form.reset();
+            } else {
+              showToast(data.message, "error");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showToast("An error occurred while generating the form", "error");
+          })
+          .finally(() => {
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = originalText;
+          });
+      }
+
+      // Auto-calculate age when birth date changes
+      document.addEventListener("DOMContentLoaded", function () {
+        const birthDateInput = document.getElementById("birth_date");
+        const ageInput = document.getElementById("age");
+
+        if (birthDateInput && ageInput) {
+          birthDateInput.addEventListener("change", function () {
+            const birthDate = new Date(this.value);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+
+            if (
+              monthDiff < 0 ||
+              (monthDiff === 0 && today.getDate() < birthDate.getDate())
+            ) {
+              age--;
+            }
+
+            ageInput.value = age;
+          });
+        }
+      });
+
+      // Image preview function
+      function previewImage(input) {
+        const preview = document.getElementById("imagePreview");
+        const previewImg = document.getElementById("previewImg");
+
+        if (input.files && input.files[0]) {
+          const reader = new FileReader();
+
+          reader.onload = function (e) {
+            previewImg.src = e.target.result;
+            preview.style.display = "block";
+          };
+
+          reader.readAsDataURL(input.files[0]);
+        } else {
+          preview.style.display = "none";
+        }
+      }
+
+      // Signature Canvas Functions
+      let isDrawing = false;
+      let signatureData = null;
+
+      function initSignatureCanvas() {
+        const canvas = document.getElementById("signatureCanvas");
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+
+        // Mouse events
+        canvas.addEventListener("mousedown", startDrawing);
+        canvas.addEventListener("mousemove", draw);
+        canvas.addEventListener("mouseup", stopDrawing);
+        canvas.addEventListener("mouseout", stopDrawing);
+
+        // Touch events for mobile
+        canvas.addEventListener("touchstart", handleTouch);
+        canvas.addEventListener("touchmove", handleTouch);
+        canvas.addEventListener("touchend", stopDrawing);
+      }
+
+      function startDrawing(e) {
+        isDrawing = true;
+        const canvas = document.getElementById("signatureCanvas");
+        const rect = canvas.getBoundingClientRect();
+        const ctx = canvas.getContext("2d");
+
+        ctx.beginPath();
+        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+
+        const canvas = document.getElementById("signatureCanvas");
+        const rect = canvas.getBoundingClientRect();
+        const ctx = canvas.getContext("2d");
+
+        ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        ctx.stroke();
+      }
+
+      function stopDrawing() {
+        isDrawing = false;
+      }
+
+      function handleTouch(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent(
+          e.type === "touchstart"
+            ? "mousedown"
+            : e.type === "touchmove"
+            ? "mousemove"
+            : "mouseup",
+          {
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+          }
+        );
+        canvas.dispatchEvent(mouseEvent);
+      }
+
+      function clearSignature() {
+        const canvas = document.getElementById("signatureCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        signatureData = null;
+      }
+
+      function saveSignature() {
+        const canvas = document.getElementById("signatureCanvas");
+        signatureData = canvas.toDataURL("image/png");
+        showToast("Signature saved successfully!", "success");
+      }
+
+      // Initialize signature canvas when DOM is loaded
+      document.addEventListener("DOMContentLoaded", function () {
+        initSignatureCanvas();
+      });
     </script>
   </body>
 </html>
