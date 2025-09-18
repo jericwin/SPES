@@ -3292,6 +3292,384 @@ def get_user_message_history(admin_id):
             conn.close()
     return jsonify({'success': True, 'messages': messages})
 
+# Editable Application Form Routes
+@app.route('/edit-application-form', methods=['GET', 'POST'])
+@login_required
+def edit_application_form():
+    if request.method == 'POST':
+        try:
+            # Get form data (now using FormData for file uploads)
+            form_data = request.form.to_dict()
+            
+            # Generate DOCX with filled data
+            from docxtpl import DocxTemplate
+            import os
+            import uuid
+            from datetime import datetime
+            
+            # Handle image upload
+            passport_image = None
+            if 'passport_image' in request.files:
+                file = request.files['passport_image']
+                if file and file.filename:
+                    # Save the uploaded image
+                    user_id = session['user_id']
+                    user_docs_path = os.path.join('static', 'user_documents', str(user_id))
+                    os.makedirs(user_docs_path, exist_ok=True)
+                    
+                    # Generate unique filename for image
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    unique_id = str(uuid.uuid4())[:8]
+                    image_filename = f'passport_photo_{timestamp}_{unique_id}.jpg'
+                    image_path = os.path.join(user_docs_path, image_filename)
+                    
+                    # Save image
+                    file.save(image_path)
+                    passport_image = image_path
+            
+            # Load template
+            template_path = os.path.join('static', 'spes-forms', 'APPLICATION-FORM.docx')
+            doc = DocxTemplate(template_path)
+            
+            # Prepare context data - using the exact placeholder names from your template
+            context = {
+                'l_name': form_data.get('last_name', ''), # l_name is the placeholder for last name
+                'f_name': form_data.get('first_name', ''), # f_name is the placeholder for first name
+                'm_name': form_data.get('middle_name', ''), # m_name is the placeholder for middle name
+                'gsis_relationship': form_data.get('gsis_relationship', ''),
+                'passport_size_picture': '[PASSPORT PHOTO]',  # Will be replaced with actual image
+                
+                # Checkbox placeholders - handle civil status
+                'b1': '☐',  # Single checkbox
+                'b2': '☐',  # Married checkbox  
+                'b3': '☐',  # Widow checkbox
+                
+                # Additional checkbox placeholders for other fields
+                'b4': '☐',  # Male checkbox
+                'b5': '☐',  # Female checkbox
+                
+                # Student category checkboxes
+                'b6': '☐', # Students checkbox
+                'b7': '☐', # ALS checkbox
+                'b8': '☐', # OSY checkbox
+                
+                # Beneficiary/Parents status checkboxes
+                'b9': '☐', # Living together
+                'b10': '☐', # Solo Parent
+                'b11': '☐', # Separated
+                'b12': '☐', # Senior Citizen
+                'b13': '☐', # Sugar Plantation Worker
+                'b14': '☐', # Indigenous People
+                'b15': '☐', # Displaced Worker
+                'b16': '☐', # Local
+                'b17': '☐', # OFW
+                'b18': '☐', # Rebel Returnee
+                'b19': '☐', # Victims of Armed Conflicts
+                'b20': '☐', # Person with Disability
+                
+                # Add any other placeholders you've added to your template
+                'applicant_name': f"{form_data.get('first_name', '')} {form_data.get('middle_name', '')} {form_data.get('last_name', '')}".strip(),
+                'present_address': form_data.get('present_address', ''),
+                'permanent_address': form_data.get('permanent_address', ''),
+                'birth_date': form_data.get('birth_date', ''),
+                'birth_place': form_data.get('birth_place', ''),
+                'age': form_data.get('age', ''),
+                'sex': form_data.get('sex', ''),
+                'civil_status': form_data.get('civil_status', ''),
+                'contact_number': form_data.get('contact_number', ''),
+                'email': form_data.get('email', ''),
+                'facebook': form_data.get('facebook', ''),
+                'instagram': form_data.get('instagram', ''),
+                'twitter': form_data.get('twitter', ''),
+                'other_social': form_data.get('other_social', ''),
+                
+                # Education table placeholders
+                'elem_school': form_data.get('elem_school', ''),
+                'elem_degree': form_data.get('elem_degree', ''),
+                'elem_year': form_data.get('elem_year', ''),
+                'elem_attendance': form_data.get('elem_attendance', ''),
+                'sec_school': form_data.get('sec_school', ''),
+                'sec_degree': form_data.get('sec_degree', ''),
+                'sec_year': form_data.get('sec_year', ''),
+                'sec_attendance': form_data.get('sec_attendance', ''),
+                'ter_school': form_data.get('ter_school', ''),
+                'ter_degree': form_data.get('ter_degree', ''),
+                'ter_year': form_data.get('ter_year', ''),
+                'ter_attendance': form_data.get('ter_attendance', ''),
+                'tech_school': form_data.get('tech_school', ''),
+                'tech_degree': form_data.get('tech_degree', ''),
+                'tech_year': form_data.get('tech_year', ''),
+                'tech_attendance': form_data.get('tech_attendance', ''),
+                'father_name': form_data.get('father_name', ''),
+                'father_occupation': form_data.get('father_occupation', ''),
+                'mother_name': form_data.get('mother_name', ''),
+                'mother_occupation': form_data.get('mother_occupation', ''),
+                'signature': '[SIGNATURE]',  # Will be replaced with actual signature image
+                'signature_date': datetime.now().strftime('%B %d, %Y'),
+                'applicant_signature': '[SIGNATURE]'  # Placeholder for signature
+            }
+            
+            # Handle checkbox selection based on civil status
+            civil_status = form_data.get('civil_status', '').lower()
+            if civil_status == 'single':
+                context['b1'] = '☑'  # Checked
+                context['b2'] = '☐'  # Unchecked
+                context['b3'] = '☐'  # Unchecked
+            elif civil_status == 'married':
+                context['b1'] = '☐'  # Unchecked
+                context['b2'] = '☑'  # Checked
+                context['b3'] = '☐'  # Unchecked
+            elif civil_status == 'widowed':
+                context['b1'] = '☐'  # Unchecked
+                context['b2'] = '☐'  # Unchecked
+                context['b3'] = '☑'  # Checked
+            
+            # Handle checkbox selection based on sex
+            sex = form_data.get('sex', '').lower()
+            if sex == 'male':
+                context['b4'] = '☑'  # Checked
+                context['b5'] = '☐'  # Unchecked
+            elif sex == 'female':
+                context['b4'] = '☐'  # Unchecked
+                context['b5'] = '☑'  # Checked
+            
+            # Handle student category checkboxes
+            student_category = form_data.get('student_category', '').lower()
+            if student_category == 'students':
+                context['b6'] = '☑'  # Students checked
+            elif student_category == 'als':
+                context['b7'] = '☑'  # ALS checked
+            elif student_category == 'osy':
+                context['b8'] = '☑'  # OSY checked
+                
+            # Handle beneficiary/parents status checkboxes (can be multiple selections)
+            beneficiary_status = form_data.get('beneficiary_status', '').lower()
+            if 'living together' in beneficiary_status:
+                context['b9'] = '☑'  # Living together checked
+            if 'solo parent' in beneficiary_status:
+                context['b10'] = '☑'  # Solo Parent checked
+            if 'separated' in beneficiary_status:
+                context['b11'] = '☑'  # Separated checked
+            if 'senior citizen' in beneficiary_status:
+                context['b12'] = '☑'  # Senior Citizen checked
+            if 'sugar plantation worker' in beneficiary_status:
+                context['b13'] = '☑'  # Sugar Plantation Worker checked
+            if 'indigenous people' in beneficiary_status:
+                context['b14'] = '☑'  # Indigenous People checked
+            if 'displaced worker' in beneficiary_status:
+                context['b15'] = '☑'  # Displaced Worker checked
+            if 'local' in beneficiary_status:
+                context['b16'] = '☑'  # Local checked
+            if 'ofw' in beneficiary_status:
+                context['b17'] = '☑'  # OFW checked
+            if 'rebel returnee' in beneficiary_status:
+                context['b18'] = '☑'  # Rebel Returnee checked
+            if 'victims of armed conflicts' in beneficiary_status:
+                context['b19'] = '☑'  # Victims of Armed Conflicts checked
+            if 'person with disability' in beneficiary_status:
+                context['b20'] = '☑'  # Person with Disability checked
+            
+            # Render document
+            doc.render(context)
+            
+            # Insert actual image if passport photo was uploaded
+            if passport_image and os.path.exists(passport_image):
+                from docx.shared import Inches
+                from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+                # Find and replace the [PASSPORT PHOTO] placeholder with actual image
+                for paragraph in doc.paragraphs:
+                    if '[PASSPORT PHOTO]' in paragraph.text:
+                        # Clear the paragraph
+                        paragraph.clear()
+
+                        # Add the image
+                        run = paragraph.add_run()
+                        run.add_picture(passport_image, width=Inches(1.2), height=Inches(1.5))
+                        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                        break
+
+                # Also check in tables
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            for paragraph in cell.paragraphs:
+                                if '[PASSPORT PHOTO]' in paragraph.text:
+                                    # Clear the paragraph
+                                    paragraph.clear()
+
+                                    # Add the image
+                                    run = paragraph.add_run()
+                                    run.add_picture(passport_image, width=Inches(1.2), height=Inches(1.5))
+                                    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                                    break
+
+            # Insert signature if provided
+            signature_data = form_data.get('signature', '')
+            if signature_data:
+                from docx.shared import Inches
+                from docx.enum.text import WD_ALIGN_PARAGRAPH
+                import base64
+                from io import BytesIO
+
+                try:
+                    # Remove data URL prefix if present
+                    if signature_data.startswith('data:image'):
+                        signature_data = signature_data.split(',')[1]
+                    
+                    # Decode base64 image
+                    signature_bytes = base64.b64decode(signature_data)
+                    signature_stream = BytesIO(signature_bytes)
+
+                    # Find and replace the [SIGNATURE] placeholder with actual signature
+                    # Check regular paragraphs
+                    for paragraph in doc.paragraphs:
+                        for run in paragraph.runs:
+                            if '[SIGNATURE]' in run.text:
+                                # Replace the text with image in the same run
+                                run.clear()
+                                
+                                # Add signature image with custom positioning
+                                picture = run.add_picture(signature_stream, width=Inches(2.0), height=Inches(0.5))
+                                
+                                # Apply custom margins and positioning (like CSS)
+                                # You can customize these values:
+                                right_margin = Inches(0.5)  # Adjust this value for right margin
+                                left_margin = Inches(0.2)   # Adjust this value for left margin
+                                top_margin = Inches(0.1)    # Adjust this value for top margin
+                                bottom_margin = Inches(0.1) # Adjust this value for bottom margin
+                                
+                                # Set paragraph indentation for margins
+                                paragraph.paragraph_format.left_indent = left_margin
+                                paragraph.paragraph_format.right_indent = right_margin
+                                paragraph.paragraph_format.space_before = top_margin
+                                paragraph.paragraph_format.space_after = bottom_margin
+                                
+                                break
+
+                    # Check in tables
+                    for table in doc.tables:
+                        for row in table.rows:
+                            for cell in row.cells:
+                                for paragraph in cell.paragraphs:
+                                    for run in paragraph.runs:
+                                        if '[SIGNATURE]' in run.text:
+                                            # Replace the text with image in the same run
+                                            run.clear()
+                                            
+                                            # Add signature image with custom positioning
+                                            picture = run.add_picture(signature_stream, width=Inches(2.0), height=Inches(0.5))
+                                            
+                                            # Apply custom margins and positioning for table cells
+                                            right_margin = Inches(.5)  # Adjust this value for right margin
+                                            left_margin = Inches(0.1)   # Adjust this value for left margin
+                                            top_margin = Inches(0)   # Adjust this value for top margin
+                                            bottom_margin = Inches(0) # Adjust this value for bottom margin
+                                            
+                                            # Set paragraph indentation for margins
+                                            paragraph.paragraph_format.left_indent = left_margin
+                                            paragraph.paragraph_format.right_indent = right_margin
+                                            paragraph.paragraph_format.space_before = top_margin
+                                            paragraph.paragraph_format.space_after = bottom_margin
+                                            
+                                            break
+                except Exception as e:
+                    print(f"Error inserting signature: {e}")
+            else:
+                # If no signature provided, replace [SIGNATURE] with empty text
+                for paragraph in doc.paragraphs:
+                    for run in paragraph.runs:
+                        if '[SIGNATURE]' in run.text:
+                            run.text = run.text.replace('[SIGNATURE]', '')
+                            break
+
+                # Also check in tables
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            for paragraph in cell.paragraphs:
+                                for run in paragraph.runs:
+                                    if '[SIGNATURE]' in run.text:
+                                        run.text = run.text.replace('[SIGNATURE]', '')
+                                        break
+            
+            # Generate unique filename
+            user_id = session['user_id']
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            unique_id = str(uuid.uuid4())[:8]
+            filename = f'APPLICATION-FORM_{timestamp}_{unique_id}.docx'
+            
+            # Save to user documents folder
+            user_docs_path = os.path.join('static', 'user_documents', str(user_id))
+            os.makedirs(user_docs_path, exist_ok=True)
+            output_path = os.path.join(user_docs_path, filename)
+            
+            doc.save(output_path)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Application form generated successfully',
+                'filename': filename,
+                'download_url': f'/download-generated-form/{user_id}/{filename}'
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Error generating form: {str(e)}'})
+    
+    else:
+        # Return form template data
+        return jsonify({
+            'success': True,
+            'form_fields': {
+                'personal_info': {
+                    'last_name': {'type': 'text', 'label': 'Last Name', 'required': True},
+                    'first_name': {'type': 'text', 'label': 'First Name', 'required': True},
+                    'middle_name': {'type': 'text', 'label': 'Middle Name', 'required': False},
+                    'address': {'type': 'textarea', 'label': 'Complete Address', 'required': True},
+                    'barangay': {'type': 'text', 'label': 'Barangay', 'required': True},
+                    'city': {'type': 'text', 'label': 'City/Municipality', 'required': True},
+                    'province': {'type': 'text', 'label': 'Province', 'required': True},
+                    'zip_code': {'type': 'text', 'label': 'ZIP Code', 'required': True},
+                    'birth_date': {'type': 'date', 'label': 'Date of Birth', 'required': True},
+                    'birth_place': {'type': 'text', 'label': 'Place of Birth', 'required': True},
+                    'age': {'type': 'number', 'label': 'Age', 'required': True},
+                    'sex': {'type': 'select', 'label': 'Sex', 'required': True, 'options': ['Male', 'Female']},
+                    'civil_status': {'type': 'select', 'label': 'Civil Status', 'required': True, 'options': ['Single', 'Married', 'Widowed', 'Divorced']},
+                    'contact_number': {'type': 'tel', 'label': 'Contact Number', 'required': True},
+                    'email': {'type': 'email', 'label': 'Email Address', 'required': False}
+                },
+                'educational_info': {
+                    'school_name': {'type': 'text', 'label': 'School Name', 'required': True},
+                    'course': {'type': 'text', 'label': 'Course/Program', 'required': True},
+                    'year_level': {'type': 'select', 'label': 'Year Level', 'required': True, 'options': ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year']},
+                    'gpa': {'type': 'text', 'label': 'GPA/GWA', 'required': True}
+                },
+                'family_info': {
+                    'father_name': {'type': 'text', 'label': "Father's Name", 'required': False},
+                    'father_occupation': {'type': 'text', 'label': "Father's Occupation", 'required': False},
+                    'mother_name': {'type': 'text', 'label': "Mother's Name", 'required': False},
+                    'mother_occupation': {'type': 'text', 'label': "Mother's Occupation", 'required': False},
+                    'guardian_name': {'type': 'text', 'label': "Guardian's Name", 'required': False},
+                    'guardian_relationship': {'type': 'text', 'label': 'Relationship to Guardian', 'required': False},
+                    'guardian_contact': {'type': 'tel', 'label': "Guardian's Contact Number", 'required': False}
+                }
+            }
+        })
+
+@app.route('/download-generated-form/<int:user_id>/<filename>')
+@login_required
+def download_generated_form(user_id, filename):
+    # Verify user can access this file
+    if session['user_id'] != user_id and session['role'] != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized access'})
+    
+    file_path = os.path.join('static', 'user_documents', str(user_id), filename)
+    
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True, download_name=filename)
+    else:
+        return jsonify({'success': False, 'message': 'File not found'})
+
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
     threading.Thread(target=exam_auto_trigger, daemon=True).start()
