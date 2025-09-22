@@ -3670,6 +3670,177 @@ def download_generated_form(user_id, filename):
     else:
         return jsonify({'success': False, 'message': 'File not found'})
 
+@app.route('/edit-school-certification', methods=['GET', 'POST'])
+@login_required
+def edit_school_certification():
+    if request.method == 'POST':
+        try:
+            # Get form data
+            form_data = request.form.to_dict()
+
+            from docxtpl import DocxTemplate
+            from docx import Document
+            import os
+            import uuid
+            from datetime import datetime
+            import re
+
+            # Load template
+            template_path = os.path.join('static', 'spes-forms', 'SCHOOL-CERTIFICATION.docx')
+            
+            # First try with docxtpl
+            try:
+                doc = DocxTemplate(template_path)
+                
+                # Prepare context data - using the exact placeholder names from your template
+                context = {
+                    'f_name': form_data.get('f_name', ''),
+                    'm_name': form_data.get('m_name', ''),
+                    'l_name': form_data.get('l_name', ''),
+                    'average': form_data.get('average', ''),
+                    'day': form_data.get('day', ''),
+                    'month': form_data.get('month', ''),
+                    'r_name': form_data.get('r_name', ''),
+                    'school': form_data.get('school', ''),
+                    'municipality': form_data.get('municipality', ''),
+                    'province': form_data.get('province', '')
+                }
+
+                # Render document
+                doc.render(context)
+                
+            except Exception as e:
+                # If docxtpl fails (likely due to text boxes), use manual replacement
+                print(f"DocxTemplate failed: {e}. Using manual replacement...")
+                
+                # Load document with python-docx
+                doc = Document(template_path)
+                
+                # Prepare replacement data
+                replacements = {
+                    '{{ f_name }}': form_data.get('f_name', ''),
+                    '{{ m_name }}': form_data.get('m_name', ''),
+                    '{{ l_name }}': form_data.get('l_name', ''),
+                    '{{ average }}': form_data.get('average', ''),
+                    '{{ day }}': form_data.get('day', ''),
+                    '{{ month }}': form_data.get('month', ''),
+                    '{{ r_name }}': form_data.get('r_name', ''),
+                    '{{ school }}': form_data.get('school', ''),
+                    '{{ municipality }}': form_data.get('municipality', ''),
+                    '{{ province }}': form_data.get('province', '')
+                }
+                
+                # Function to replace text in paragraphs
+                def replace_text_in_paragraph(paragraph, replacements):
+                    for placeholder, replacement in replacements.items():
+                        if placeholder in paragraph.text:
+                            # Get the full text
+                            full_text = paragraph.text
+                            # Replace the placeholder
+                            new_text = full_text.replace(placeholder, replacement)
+                            
+                            # Clear the paragraph and add new text
+                            paragraph.clear()
+                            paragraph.add_run(new_text)
+                
+                # Function to replace text in text boxes and shapes
+                def replace_text_in_shapes(doc, replacements):
+                    # Handle inline shapes (text boxes)
+                    for shape in doc.inline_shapes:
+                        try:
+                            # Access the text box content through the XML
+                            if hasattr(shape, '_inline') and shape._inline.graphic:
+                                textbox = shape._inline.graphic.graphicData
+                                if textbox is not None:
+                                    # Find text elements and replace
+                                    for text_elem in textbox.iter():
+                                        if hasattr(text_elem, 'text') and text_elem.text:
+                                            for placeholder, replacement in replacements.items():
+                                                if placeholder in text_elem.text:
+                                                    text_elem.text = text_elem.text.replace(placeholder, replacement)
+                        except:
+                            continue
+                    
+                    # Handle floating shapes (another type of text box)
+                    for shape in doc.part.related_parts:
+                        try:
+                            if hasattr(shape, 'element') and shape.element is not None:
+                                for text_elem in shape.element.iter():
+                                    if hasattr(text_elem, 'text') and text_elem.text:
+                                        for placeholder, replacement in replacements.items():
+                                            if placeholder in text_elem.text:
+                                                text_elem.text = text_elem.text.replace(placeholder, replacement)
+                        except:
+                            continue
+                
+                # Replace text in all paragraphs
+                for paragraph in doc.paragraphs:
+                    replace_text_in_paragraph(paragraph, replacements)
+                
+                # Replace text in tables
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            for paragraph in cell.paragraphs:
+                                replace_text_in_paragraph(paragraph, replacements)
+                
+                # Try to replace text in text boxes and shapes
+                replace_text_in_shapes(doc, replacements)
+                
+                # Also try to replace in headers and footers
+                for section in doc.sections:
+                    for paragraph in section.header.paragraphs:
+                        replace_text_in_paragraph(paragraph, replacements)
+                    for paragraph in section.footer.paragraphs:
+                        replace_text_in_paragraph(paragraph, replacements)
+            
+            # Generate unique filename
+            user_id = session['user_id']
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            unique_id = str(uuid.uuid4())[:8]
+            filename = f'SCHOOL-CERTIFICATION_{timestamp}_{unique_id}.docx'
+
+            # Save to user documents folder
+            user_docs_path = os.path.join('static', 'user_documents', str(user_id))
+            os.makedirs(user_docs_path, exist_ok=True)
+            output_path = os.path.join(user_docs_path, filename)
+
+            doc.save(output_path)
+
+            return jsonify({
+                'success': True,
+                'message': 'School certification generated successfully',
+                'filename': filename,
+                'download_url': f'/download-generated-form/{user_id}/{filename}'
+            })
+
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Error generating school certification: {str(e)}'})
+
+    else:
+        # Return form template data
+        return jsonify({
+            'success': True,
+            'form_fields': {
+                'student_info': {
+                    'f_name': {'type': 'text', 'label': 'First Name', 'required': True},
+                    'm_name': {'type': 'text', 'label': 'Middle Name', 'required': False},
+                    'l_name': {'type': 'text', 'label': 'Last Name', 'required': True},
+                    'average': {'type': 'text', 'label': 'Average (during first sem)', 'required': True}
+                },
+                'date_info': {
+                    'day': {'type': 'text', 'label': 'Day', 'required': True, 'placeholder': 'e.g., 15'},
+                    'month': {'type': 'text', 'label': 'Month', 'required': True, 'placeholder': 'e.g., January'}
+                },
+                'school_info': {
+                    'r_name': {'type': 'text', 'label': 'Registrar Name', 'required': True},
+                    'school': {'type': 'text', 'label': 'School Name', 'required': True},
+                    'municipality': {'type': 'text', 'label': 'Municipality', 'required': True},
+                    'province': {'type': 'text', 'label': 'Province', 'required': True}
+                }
+            }
+        })
+
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
     threading.Thread(target=exam_auto_trigger, daemon=True).start()
