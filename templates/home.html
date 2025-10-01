@@ -368,6 +368,31 @@
                       >
                         <i class="fas fa-sign-in-alt me-2"></i>Login
                       </button>
+
+                      <!-- Gmail Login Section -->
+                      <div class="text-center mb-3">
+                        <hr class="my-3" />
+                        <p class="text-muted small">Or login with Gmail</p>
+                      </div>
+
+                      <div class="d-grid gap-2">
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger w-100 py-2 mb-2"
+                          onclick="loginWithGmail('new')"
+                        >
+                          <i class="fab fa-google me-2"></i>Login with Gmail
+                          (New Applicant)
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger w-100 py-2"
+                          onclick="loginWithGmail('old')"
+                        >
+                          <i class="fab fa-google me-2"></i>Login with Gmail
+                          (Old Applicant)
+                        </button>
+                      </div>
                     </form>
                   </div>
                   <!-- Register Tab -->
@@ -472,11 +497,36 @@
                       </div>
                       <button
                         type="submit"
-                        class="btn btn-primary w-100 py-2"
+                        class="btn btn-primary w-100 py-2 mb-3"
                         style="background-color: #3a5ea8; border: none"
                       >
                         <i class="fas fa-user-plus me-2"></i>Register
                       </button>
+
+                      <!-- Gmail Registration Section -->
+                      <div class="text-center mb-3">
+                        <hr class="my-3" />
+                        <p class="text-muted small">Or register with Gmail</p>
+                      </div>
+
+                      <div class="d-grid gap-2">
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger w-100 py-2 mb-2"
+                          onclick="registerWithGmail('new')"
+                        >
+                          <i class="fab fa-google me-2"></i>Register with Gmail
+                          (New Applicant)
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger w-100 py-2"
+                          onclick="registerWithGmail('old')"
+                        >
+                          <i class="fab fa-google me-2"></i>Register with Gmail
+                          (Old Applicant)
+                        </button>
+                      </div>
                     </form>
                   </div>
                 </div>
@@ -624,7 +674,263 @@
         />
       </div>
     </section>
+    <!-- Google OAuth Script -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <!-- script for bs modal -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Google OAuth Configuration
+      // Client ID is now loaded from server-side .env file
+      const GOOGLE_CLIENT_ID = "{{ google_client_id }}";
+
+      // Initialize Google OAuth
+      function initializeGoogleAuth() {
+        // Check if Google OAuth is loaded
+        if (typeof google === "undefined" || !google.accounts) {
+          console.error("Google OAuth library not loaded");
+          showMessage(
+            "Google OAuth library failed to load. Please refresh the page.",
+            "error"
+          );
+          return;
+        }
+
+        // Check if Client ID is valid
+        if (
+          !GOOGLE_CLIENT_ID ||
+          GOOGLE_CLIENT_ID === "your-google-client-id-here"
+        ) {
+          console.error("Invalid Google Client ID:", GOOGLE_CLIENT_ID);
+          showMessage(
+            "Google OAuth not configured. Please contact administrator.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse,
+            ux_mode: "popup",
+            auto_select: false,
+            use_fedcm_for_prompt: false,
+          });
+
+          // Render a hidden Google button to ensure popup flow is available
+          let hidden = document.getElementById("gsi_btn");
+          if (!hidden) {
+            hidden = document.createElement("div");
+            hidden.id = "gsi_btn";
+            hidden.style.display = "none";
+            document.body.appendChild(hidden);
+          }
+          google.accounts.id.renderButton(hidden, {
+            theme: "outline",
+            size: "large",
+          });
+
+          console.log("Google OAuth initialized successfully");
+        } catch (error) {
+          console.error("Error initializing Google OAuth:", error);
+          showMessage(
+            "Failed to initialize Google OAuth. Please refresh the page.",
+            "error"
+          );
+        }
+      }
+
+      // Handle the credential response from Google
+      function handleCredentialResponse(response) {
+        // This will be called after user selects Gmail account
+        const token = response.credential;
+
+        // Determine applicant type from the button that was clicked
+        const applicantType = window.currentApplicantType || "new";
+
+        // Send token to server for verification
+        fetch("/gmail-login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token: token,
+            applicantType: applicantType,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Show success message
+              showMessage(data.message, "success");
+
+              // Redirect to appropriate dashboard
+              setTimeout(() => {
+                window.location.href = data.redirect;
+              }, 1000);
+            } else {
+              showMessage(data.message, "error");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showMessage("Login failed. Please try again.", "error");
+          });
+      }
+
+      // Login with Gmail
+      function loginWithGmail(applicantType) {
+        console.log("Gmail login clicked for:", applicantType);
+
+        // Show loading message
+        showMessage("Opening Gmail login...", "info");
+
+        // Check if Google OAuth is initialized
+        if (
+          typeof google === "undefined" ||
+          !google.accounts ||
+          !google.accounts.id
+        ) {
+          showMessage(
+            "Google OAuth not loaded. Please refresh the page and try again.",
+            "error"
+          );
+          return;
+        }
+
+        // Check if Client ID is valid
+        if (
+          !GOOGLE_CLIENT_ID ||
+          GOOGLE_CLIENT_ID === "your-google-client-id-here"
+        ) {
+          console.error("Invalid Google Client ID:", GOOGLE_CLIENT_ID);
+          showMessage(
+            "Google OAuth not configured. Please contact administrator.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          window.currentApplicantType = applicantType;
+          const gBtn = document.querySelector('#gsi_btn div[role="button"]');
+          if (gBtn) {
+            gBtn.click();
+          } else {
+            google.accounts.id.prompt();
+          }
+        } catch (error) {
+          console.error("Error with Gmail login:", error);
+          showMessage("Failed to open Gmail login. Please try again.", "error");
+        }
+      }
+
+      // Register with Gmail (same as login for new users)
+      function registerWithGmail(applicantType) {
+        console.log("Gmail registration clicked for:", applicantType);
+
+        // Show loading message
+        showMessage("Opening Gmail registration...", "info");
+
+        // Check if Google OAuth is initialized
+        if (
+          typeof google === "undefined" ||
+          !google.accounts ||
+          !google.accounts.id
+        ) {
+          showMessage(
+            "Google OAuth not loaded. Please refresh the page and try again.",
+            "error"
+          );
+          return;
+        }
+
+        // Check if Client ID is valid
+        if (
+          !GOOGLE_CLIENT_ID ||
+          GOOGLE_CLIENT_ID === "your-google-client-id-here"
+        ) {
+          console.error("Invalid Google Client ID:", GOOGLE_CLIENT_ID);
+          showMessage(
+            "Google OAuth not configured. Please contact administrator.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          window.currentApplicantType = applicantType;
+          const gBtn = document.querySelector('#gsi_btn div[role="button"]');
+          if (gBtn) {
+            gBtn.click();
+          } else {
+            google.accounts.id.prompt();
+          }
+        } catch (error) {
+          console.error("Error with Gmail registration:", error);
+          showMessage(
+            "Failed to open Gmail registration. Please try again.",
+            "error"
+          );
+        }
+      }
+
+      // Show message function
+      function showMessage(message, type) {
+        // Create a toast notification
+        const toast = document.createElement("div");
+
+        // Determine alert class based on type
+        let alertClass = "danger"; // default
+        if (type === "success") {
+          alertClass = "success";
+        } else if (type === "info") {
+          alertClass = "info";
+        } else if (type === "warning") {
+          alertClass = "warning";
+        }
+
+        toast.className = `alert alert-${alertClass} alert-dismissible fade show position-fixed`;
+        toast.style.cssText =
+          "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+        toast.innerHTML = `
+          ${message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+          }
+        }, 5000);
+      }
+
+      // Initialize when page loads
+      window.onload = function () {
+        console.log("Page loaded, initializing Google OAuth...");
+        console.log("Google Client ID loaded:", GOOGLE_CLIENT_ID);
+        console.log("Current origin:", window.location.origin);
+        console.log("Current hostname:", window.location.hostname);
+        console.log("Current port:", window.location.port);
+        initializeGoogleAuth();
+
+        // Add click event listeners for debugging
+        document
+          .querySelectorAll(
+            'button[onclick*="loginWithGmail"], button[onclick*="registerWithGmail"]'
+          )
+          .forEach((button) => {
+            button.addEventListener("click", function () {
+              console.log("Gmail button clicked:", this.textContent.trim());
+            });
+          });
+      };
+    </script>
   </body>
 </html>
