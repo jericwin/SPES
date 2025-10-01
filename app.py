@@ -84,6 +84,39 @@ def role_required(roles):
         return decorated_function
     return decorator
 
+def get_user_municipality():
+    if 'user_id' not in session:
+        return None
+    
+    conn = get_db_connection()
+    if not conn:
+        return None
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT m.* FROM municipalities m
+            JOIN users u ON u.municipality_id = m.id
+            WHERE u.id = %s
+        """, (session['user_id'],))
+        municipality = cursor.fetchone()
+        return municipality
+    except Exception as e:
+        print(f"Error getting municipality: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_municipality_access_filter():
+    if session.get('role') == 'provincial_peso':
+        return ""  # No filter for provincial PESO - they can see all
+    
+    municipality = get_user_municipality()
+    if municipality:
+        return f"AND ui.municipality_id = {municipality['id']}"
+    return "AND 1=0"  # If no municipality found, show nothing
+
 # Configure upload folder
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'pdf'}
@@ -91,6 +124,27 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_user_municipality_id():
+    """Get the municipality_id of the current user"""
+    if 'user_id' not in session:
+        return None
+    
+    conn = get_db_connection()
+    if not conn:
+        return None
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT municipality_id FROM users WHERE id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        return user['municipality_id'] if user else None
+    except Exception as e:
+        print(f"Error getting municipality_id: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
 
 # Test database connection
 def test_db_connection():
@@ -101,19 +155,80 @@ def test_db_connection():
     else:
         print("Failed to connect to MySQL database!")
 
+@app.route('/peso/municipalities', methods=['GET', 'POST'])
+@login_required
+@role_required(['provincial_peso'])
+def manage_municipalities():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        province = request.form.get('province')
+        
+        if not name or not province:
+            flash('Municipality name and province are required', 'error')
+            return redirect(url_for('manage_municipalities'))
+        
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO municipalities (name, province, created_by)
+                    VALUES (%s, %s, %s)
+                """, (name, province, session['user_id']))
+                conn.commit()
+                flash('Municipality added successfully', 'success')
+            except Exception as e:
+                flash(f'Error adding municipality: {str(e)}', 'error')
+            finally:
+                cursor.close()
+                conn.close()
+        return redirect(url_for('manage_municipalities'))
+    
+    # GET request - show municipalities list
+    conn = get_db_connection()
+    municipalities = []
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT m.*, u.name as created_by_name
+                FROM municipalities m
+                LEFT JOIN users u ON u.id = m.created_by
+                ORDER BY m.province, m.name
+            """)
+            municipalities = cursor.fetchall()
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template('peso/municipalities.html', 
+                         municipalities=municipalities)
+
 @app.route('/') 
 def home():
     return render_template('home.html', google_client_id=GOOGLE_CLIENT_ID)
 
 @app.route('/peso/dashboard')
 @login_required
-@role_required(['peso'])
+@role_required(['provincial_peso'])
 def peso_dashboard():
     conn = get_db_connection()
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
-            # Get user info
+            # Get municipalities data
+            cursor.execute("""
+                SELECT m.*, 
+                       COUNT(DISTINCT u.id) as admin_count,
+                       COUNT(DISTINCT a.id) as applicant_count
+                FROM municipalities m
+                LEFT JOIN users u ON u.municipality_id = m.id AND u.role = 'municipal_peso'
+                LEFT JOIN user_info ui ON ui.municipality_id = m.id
+                LEFT JOIN applicants a ON a.user_id = ui.user_id
+                GROUP BY m.id
+            """)
+            municipalities = cursor.fetchall()
+            
             cursor.execute('SELECT name FROM users WHERE id = %s', (session['user_id'],))
             user = cursor.fetchone()
             if user:
@@ -355,7 +470,7 @@ def old_applicants_forms():
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
-    if session.get('role') != 'admin':
+    if session.get('role') != 'municipal_peso':
         return redirect(url_for('login'))
     
     try:
@@ -477,7 +592,7 @@ def admin_dashboard():
 # announcements
 @app.route('/admin/announcements')
 def admin_announcements():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         flash('Please login as admin to access this page', 'error')
         return redirect(url_for('home'))
 
@@ -487,14 +602,27 @@ def admin_announcements():
         try:
             cursor = conn.cursor(dictionary=True)
             # Fetch announcements with admin name
-            cursor.execute("""
-                SELECT 
-                    a.*,
-                    u.name as admin_name
-                FROM announcements a
-                LEFT JOIN users u ON a.posted_by = u.id
-                ORDER BY a.announcement_date DESC
-            """)
+            # If provincial_peso, show all announcements. If municipal_peso, show only their municipality's announcements
+            if session['role'] == 'provincial_peso':
+                cursor.execute("""
+                    SELECT 
+                        a.*,
+                        u.name as admin_name
+                    FROM announcements a
+                    LEFT JOIN users u ON a.posted_by = u.id
+                    ORDER BY a.announcement_date DESC
+                """)
+            else:
+                municipality_id = get_user_municipality_id()
+                cursor.execute("""
+                    SELECT 
+                        a.*,
+                        u.name as admin_name
+                    FROM announcements a
+                    LEFT JOIN users u ON a.posted_by = u.id
+                    WHERE u.municipality_id = %s
+                    ORDER BY a.announcement_date DESC
+                """, (municipality_id,))
             announcements = cursor.fetchall()
 
             # Format dates for display
@@ -513,7 +641,7 @@ def admin_announcements():
 
 @app.route('/post-announcement', methods=['POST'])
 def post_announcement():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
 
     try:
@@ -569,7 +697,7 @@ def post_announcement():
 
 @app.route('/get-announcement/<int:announcement_id>')
 def get_announcement(announcement_id):
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
 
     conn = None
@@ -582,16 +710,31 @@ def get_announcement(announcement_id):
             return jsonify({'success': False, 'message': 'Database connection failed'})
 
         cursor = conn.cursor(dictionary=True)
-        query = """
-            SELECT 
-                a.*,
-                u.name as admin_name
-            FROM announcements a
-            LEFT JOIN users u ON a.posted_by = u.id
-            WHERE a.id = %s
-        """
+        # Build query based on role
+        if session['role'] == 'provincial_peso':
+            query = """
+                SELECT 
+                    a.*,
+                    u.name as admin_name
+                FROM announcements a
+                LEFT JOIN users u ON a.posted_by = u.id
+                WHERE a.id = %s
+            """
+            params = (announcement_id,)
+        else:
+            municipality_id = get_user_municipality_id()
+            query = """
+                SELECT 
+                    a.*,
+                    u.name as admin_name
+                FROM announcements a
+                LEFT JOIN users u ON a.posted_by = u.id
+                WHERE a.id = %s AND u.municipality_id = %s
+            """
+            params = (announcement_id, municipality_id)
+        
         print(f"Executing query: {query} with ID: {announcement_id}")
-        cursor.execute(query, (announcement_id,))
+        cursor.execute(query, params)
         
         announcement = cursor.fetchone()
         print(f"Query result: {announcement}")
@@ -635,7 +778,7 @@ def get_announcement(announcement_id):
 
 @app.route('/delete-announcement/<int:announcement_id>', methods=['POST'])
 def delete_announcement(announcement_id):
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
 
     try:
@@ -677,7 +820,7 @@ def delete_announcement(announcement_id):
 
 @app.route('/update-announcement', methods=['POST'])
 def update_announcement():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
 
     try:
@@ -744,8 +887,13 @@ def update_announcement():
 # admin applicantions.html
 @app.route('/admin/applications')
 def admin_applications():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         flash('Please login as admin to access this page', 'error')
+        return redirect(url_for('home'))
+
+    municipality_id = get_user_municipality_id()
+    if municipality_id is None:
+        flash('Municipality not found', 'error')
         return redirect(url_for('home'))
 
     conn = get_db_connection()
@@ -766,8 +914,9 @@ def admin_applications():
                 FROM applicants a
                 JOIN users u ON a.user_id = u.id
                 LEFT JOIN user_info ui ON u.id = ui.user_id
+                WHERE u.municipality_id = %s OR ui.municipality_id = %s
                 ORDER BY a.submission_date DESC
-            """)
+            """, (municipality_id, municipality_id))
             applications = cursor.fetchall()
         except Exception as e:
             print(f"Error fetching applications: {e}")
@@ -780,7 +929,7 @@ def admin_applications():
 
 @app.route('/update-application-status', methods=['POST'])
 def update_application_status():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
 
     try:
@@ -994,6 +1143,13 @@ def register():
 @app.route('/login', methods=['POST'])
 def login():
     if request.method == 'POST':
+        # Update role mapping for the new role system
+        role_redirect_map = {
+            'municipal_peso': '/admin/dashboard',
+            'provincial_peso': '/peso/dashboard',
+            'new': '/new-applicants/dashboard',
+            'old': '/old-applicants/dashboard'
+        }
         username = request.form['username']
         password = request.form['password']
         password_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -1015,13 +1171,13 @@ def login():
                     session['role'] = user['role']
                     
                     # Redirect based on role
-                    if user['role'] == 'admin':
+                    if user['role'] == 'municipal_peso':
                         return redirect(url_for('admin_dashboard'))
                     elif user['role'] == 'new':
                         return redirect(url_for('new_applicants_dashboard'))
                     elif user['role'] == 'old':
                         return redirect(url_for('old_applicants_dashboard'))
-                    elif user['role'] == 'peso':
+                    elif user['role'] == 'provincial_peso':
                         return redirect(url_for('peso_dashboard'))
                     else:
                         return redirect(url_for('home'))
@@ -1161,14 +1317,13 @@ def gmail_login():
 
 def get_redirect_url(role):
     """Get redirect URL based on user role"""
-    if role == 'admin':
-        return '/admin/dashboard'
-    elif role == 'new':
-        return '/new-applicants/dashboard'
-    elif role == 'old':
-        return '/old-applicants/dashboard'
-    else:
-        return '/'
+    role_urls = {
+        'municipal_peso': '/admin/dashboard',
+        'provincial_peso': '/peso/dashboard',
+        'new': '/new-applicants/dashboard',
+        'old': '/old-applicants/dashboard'
+    }
+    return role_urls.get(role, '/')
 
 @app.route('/logout')
 def logout():
@@ -1227,7 +1382,7 @@ def process_file(file, filename):
 
 @app.route('/update-old-applicant-forms', methods=['POST'])
 def update_old_applicant_forms():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized access'})
     
     try:
@@ -1769,7 +1924,7 @@ def revoke_application():
 
 @app.route('/get-application-details/<int:application_id>')
 def get_application_details(application_id):
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
 
     try:
@@ -1821,7 +1976,7 @@ def get_application_details(application_id):
 
 @app.route('/download-document/<int:application_id>/<document_type>')
 def download_document(application_id, document_type):
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
 
     try:
@@ -1982,9 +2137,16 @@ def delete_all_notifications():
 
 @app.route('/admin/exams')
 def admin_exams():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         flash('Please login as admin to access this page', 'error')
         return redirect(url_for('home'))
+
+    # Check municipality access
+    municipality_id = get_user_municipality_id()
+    if municipality_id is None and session['role'] != 'provincial_peso':
+        flash('Municipality not found', 'error')
+        return redirect(url_for('home'))
+        
     return render_template('admin/exams.html')
 
 @app.route('/admin/get-exams')
@@ -1997,14 +2159,27 @@ def get_exams():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Get all exams with creator name
-        cursor.execute('''
-            SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at, e.status, e.start_date, e.end_date,
-                   u.name as created_by
-            FROM exams e
-            LEFT JOIN users u ON e.created_by = u.id
-            ORDER BY e.created_at DESC
-        ''')
+        # Get exams based on role and municipality
+        if session['role'] == 'provincial_peso':
+            # Provincial PESO can see all exams
+            cursor.execute('''
+                SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at, e.status, e.start_date, e.end_date,
+                       u.name as created_by
+                FROM exams e
+                LEFT JOIN users u ON e.created_by = u.id
+                ORDER BY e.created_at DESC
+            ''')
+        else:
+            # Municipal PESO can only see exams created by their municipality
+            municipality_id = get_user_municipality_id()
+            cursor.execute('''
+                SELECT e.id, e.title, e.description, e.time_limit, e.passing_score, e.created_at, e.status, e.start_date, e.end_date,
+                       u.name as created_by
+                FROM exams e
+                LEFT JOIN users u ON e.created_by = u.id
+                WHERE u.municipality_id = %s
+                ORDER BY e.created_at DESC
+            ''', (municipality_id,))
         exams = cursor.fetchall()
         
         # Format dates
@@ -2319,7 +2494,7 @@ def delete_question(question_id):
         return jsonify({'success': False, 'message': str(e)})
 
 def is_admin():
-    return 'user_id' in session and session.get('role') == 'admin'
+    return 'user_id' in session and session.get('role') == 'municipal_peso'
 
 @app.route('/get-current-exam')
 def get_current_exam():
@@ -2997,8 +3172,13 @@ def get_exam_results(exam_id):
     
 @app.route('/admin/examinees')
 def admin_examinees():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         flash('Please login as admin to access this page', 'error')
+        return redirect(url_for('home'))
+
+    municipality_id = get_user_municipality_id()
+    if municipality_id is None:
+        flash('Municipality not found', 'error')
         return redirect(url_for('home'))
 
     conn = get_db_connection()
@@ -3006,19 +3186,37 @@ def admin_examinees():
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT 
-                    e.id as examinee_id,
-                    e.status,
-                    u.name as applicant_name,
-                    ui.first_name,
-                    ui.middle_name,
-                    ui.last_name
-                FROM examinees e
-                JOIN users u ON e.user_id = u.id
-                LEFT JOIN user_info ui ON u.id = ui.user_id
-                ORDER BY e.created_at DESC
-            """)
+            if session['role'] == 'provincial_peso':
+                # Provincial PESO can see all examinees
+                cursor.execute("""
+                    SELECT 
+                        e.id as examinee_id,
+                        e.status,
+                        u.name as applicant_name,
+                        ui.first_name,
+                        ui.middle_name,
+                        ui.last_name
+                    FROM examinees e
+                    JOIN users u ON e.user_id = u.id
+                    LEFT JOIN user_info ui ON u.id = ui.user_id
+                    ORDER BY e.created_at DESC
+                """)
+            else:
+                # Municipal PESO can only see examinees from their municipality
+                cursor.execute("""
+                    SELECT 
+                        e.id as examinee_id,
+                        e.status,
+                        u.name as applicant_name,
+                        ui.first_name,
+                        ui.middle_name,
+                        ui.last_name
+                    FROM examinees e
+                    JOIN users u ON e.user_id = u.id
+                    LEFT JOIN user_info ui ON u.id = ui.user_id
+                    WHERE u.municipality_id = %s OR ui.municipality_id = %s
+                    ORDER BY e.created_at DESC
+                """, (municipality_id, municipality_id))
             examinees = cursor.fetchall()
         except Exception as e:
             print(f"Error fetching examinees: {e}")
@@ -3187,7 +3385,7 @@ def exam_auto_trigger():
 @app.route('/admin/examinee-answers/<int:examinee_id>')
 @login_required
 def get_examinee_answers(examinee_id):
-    if session.get('role') != 'admin':
+    if session.get('role') != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
     try:
         conn = get_db_connection()
@@ -3210,7 +3408,7 @@ def get_examinee_answers(examinee_id):
 @app.route('/admin/update-examinee-answer', methods=['POST'])
 @login_required
 def update_examinee_answer():
-    if session.get('role') != 'admin':
+    if session.get('role') != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized'})
     try:
         data = request.get_json()
@@ -3312,7 +3510,7 @@ def update_examinee_answer():
     
 @app.route('/admin/messages')
 def admin_messages():
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session or session['role'] != 'municipal_peso':
         flash('Please login as admin to access this page', 'error')
         return redirect(url_for('home'))
     return render_template('admin/messages.html', username=session['username'])
@@ -3333,7 +3531,7 @@ def get_message_users():
                 SELECT DISTINCT u.id, u.name, u.role
                 FROM users u
                 JOIN messages m ON (u.id = m.sender_id OR u.id = m.receiver_id)
-                WHERE u.role != 'admin' AND (m.sender_id = %s OR m.receiver_id = %s)
+                WHERE u.role != 'municipal_peso' AND (m.sender_id = %s OR m.receiver_id = %s)
             ''', (session['user_id'], session['user_id']))
             users = cursor.fetchall()
         except Exception as e:
@@ -3888,7 +4086,7 @@ def edit_application_form():
 @login_required
 def download_generated_form(user_id, filename):
     # Verify user can access this file
-    if session['user_id'] != user_id and session['role'] != 'admin':
+    if session['user_id'] != user_id and session['role'] != 'municipal_peso':
         return jsonify({'success': False, 'message': 'Unauthorized access'})
     
     file_path = os.path.join('static', 'user_documents', str(user_id), filename)
