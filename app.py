@@ -22,6 +22,13 @@ import time
 import pytz
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from threading import Timer
+import requests
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure Tesseract path
 if os.name == 'nt':  # Windows
@@ -31,6 +38,11 @@ elif os.name == 'posix':  # Linux/Mac
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flash messages and sessions
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', 'your-google-client-id-here')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', 'your-google-client-secret-here')
+
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Track active chat timers and sockets
@@ -60,6 +72,18 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def role_required(roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                return redirect(url_for('index'))
+            if session.get('role') not in roles:
+                return redirect(url_for('index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 # Configure upload folder
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'pdf'}
@@ -79,7 +103,36 @@ def test_db_connection():
 
 @app.route('/') 
 def home():
-    return render_template('home.html')
+    return render_template('home.html', google_client_id=GOOGLE_CLIENT_ID)
+
+@app.route('/peso/dashboard')
+@login_required
+@role_required(['peso'])
+def peso_dashboard():
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Get user info
+            cursor.execute('SELECT name FROM users WHERE id = %s', (session['user_id'],))
+            user = cursor.fetchone()
+            if user:
+                return render_template('peso/dashboard.html', username=user['name'])
+        except Exception as e:
+            flash('An error occurred', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+    return redirect(url_for('home'))
+
+@app.route('/test-env')
+def test_env():
+    """Test route to verify environment variables are loaded correctly"""
+    return jsonify({
+        'google_client_id': GOOGLE_CLIENT_ID,
+        'google_client_secret': '***' if GOOGLE_CLIENT_SECRET else 'Not set',
+        'env_loaded': True
+    })
 
 @app.route('/new-applicants/dashboard')
 def new_applicants_dashboard():
@@ -849,6 +902,44 @@ def is_valid_email(email):
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     return re.match(pattern, email) is not None
 
+def generate_id_from_gmail(gmail):
+    """Generate a unique ID number from Gmail address"""
+    # Extract username part before @
+    username = gmail.split('@')[0]
+    
+    # Create a hash from the username
+    hash_object = hashlib.md5(username.encode())
+    hash_hex = hash_object.hexdigest()
+    
+    # Take first 8 characters and convert to uppercase
+    id_part = hash_hex[:8].upper()
+    
+    # Add current year prefix
+    current_year = datetime.now().year
+    id_number = f"SPES{current_year}{id_part}"
+    
+    return id_number
+
+def verify_google_token(token):
+    """Verify Google OAuth token and return user info"""
+    try:
+        # Verify the token
+        idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), GOOGLE_CLIENT_ID)
+        
+        # Check if the token is from the correct issuer
+        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            raise ValueError('Wrong issuer.')
+        
+        return {
+            'email': idinfo['email'],
+            'name': idinfo['name'],
+            'picture': idinfo.get('picture', ''),
+            'verified_email': idinfo.get('email_verified', False)
+        }
+    except ValueError as e:
+        print(f"Token verification failed: {e}")
+        return None
+
 @app.route('/register', methods=['POST'])
 def register():
     if request.method == 'POST':
@@ -930,6 +1021,8 @@ def login():
                         return redirect(url_for('new_applicants_dashboard'))
                     elif user['role'] == 'old':
                         return redirect(url_for('old_applicants_dashboard'))
+                    elif user['role'] == 'peso':
+                        return redirect(url_for('peso_dashboard'))
                     else:
                         return redirect(url_for('home'))
                 else:
@@ -941,6 +1034,141 @@ def login():
                 cursor.close()
                 conn.close()
     return redirect(url_for('home'))
+
+@app.route('/gmail-login', methods=['OPTIONS','POST'])
+def gmail_login():
+    """Handle Gmail OAuth login"""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        resp = Response(status=200)
+        origin = request.headers.get('Origin', '*')
+        resp.headers['Access-Control-Allow-Origin'] = origin
+        resp.headers['Vary'] = 'Origin'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        resp.headers['Access-Control-Allow-Credentials'] = 'true'
+        return resp
+    try:
+        data = request.get_json()
+        token = data.get('token')
+        applicant_type = data.get('applicantType', 'new')  # Default to 'new' if not specified
+        
+        if not token:
+            resp = jsonify({'success': False, 'message': 'No token provided'})
+            resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            resp.headers['Vary'] = 'Origin'
+            return resp
+        
+        # Verify the Google token
+        user_info = verify_google_token(token)
+        if not user_info:
+            resp = jsonify({'success': False, 'message': 'Invalid token'})
+            resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            resp.headers['Vary'] = 'Origin'
+            return resp
+        
+        email = user_info['email']
+        name = user_info['name']
+        
+        # Check if it's a Gmail address
+        if not email.endswith('@gmail.com'):
+            resp = jsonify({'success': False, 'message': 'Please use a Gmail account'})
+            resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            resp.headers['Vary'] = 'Origin'
+            return resp
+        
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor(dictionary=True)
+                
+                # Check if user already exists
+                cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+                user = cursor.fetchone()
+                
+                if user:
+                    # User exists, log them in
+                    session['user_id'] = user['id']
+                    session['username'] = user['name']
+                    session['role'] = user['role']
+                    session['email'] = user['email']
+                    
+                    # Generate and store ID number if not exists
+                    if not user.get('id_number'):
+                        id_number = generate_id_from_gmail(email)
+                        cursor.execute("UPDATE users SET id_number = %s WHERE id = %s", (id_number, user['id']))
+                        conn.commit()
+                        session['id_number'] = id_number
+                    else:
+                        session['id_number'] = user['id_number']
+                    
+                    resp = jsonify({
+                        'success': True, 
+                        'message': 'Login successful',
+                        'redirect': get_redirect_url(user['role'])
+                    })
+                    resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                    resp.headers['Vary'] = 'Origin'
+                    return resp
+                else:
+                    # New user, create account
+                    id_number = generate_id_from_gmail(email)
+                    
+                    cursor.execute(
+                        "INSERT INTO users (name, email, password_hash, role, id_number) VALUES (%s, %s, %s, %s, %s)",
+                        (name, email, 'gmail_oauth', applicant_type, id_number)
+                    )
+                    user_id = cursor.lastrowid
+                    conn.commit()
+                    
+                    # Set session
+                    session['user_id'] = user_id
+                    session['username'] = name
+                    session['role'] = applicant_type
+                    session['email'] = email
+                    session['id_number'] = id_number
+                    
+                    resp = jsonify({
+                        'success': True, 
+                        'message': 'Account created and login successful',
+                        'redirect': get_redirect_url(applicant_type)
+                    })
+                    resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                    resp.headers['Vary'] = 'Origin'
+                    return resp
+                    
+            except Exception as e:
+                print(f"Database error: {e}")
+                resp = jsonify({'success': False, 'message': 'Database error occurred'})
+                resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                resp.headers['Vary'] = 'Origin'
+                return resp
+            finally:
+                cursor.close()
+                conn.close()
+        else:
+            resp = jsonify({'success': False, 'message': 'Database connection failed'})
+            resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+            resp.headers['Vary'] = 'Origin'
+            return resp
+            
+    except Exception as e:
+        print(f"Gmail login error: {e}")
+        resp = jsonify({'success': False, 'message': 'Login failed'})
+        resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        resp.headers['Vary'] = 'Origin'
+        return resp
+
+def get_redirect_url(role):
+    """Get redirect URL based on user role"""
+    if role == 'admin':
+        return '/admin/dashboard'
+    elif role == 'new':
+        return '/new-applicants/dashboard'
+    elif role == 'old':
+        return '/old-applicants/dashboard'
+    else:
+        return '/'
 
 @app.route('/logout')
 def logout():
@@ -4174,7 +4402,7 @@ def edit_oath_undertaking():
                 }
             }
         })
-
+        
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
     threading.Thread(target=exam_auto_trigger, daemon=True).start()
