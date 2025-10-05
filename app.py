@@ -240,6 +240,71 @@ def peso_dashboard():
             conn.close()
     return redirect(url_for('home'))
 
+
+@app.route('/peso/create-municipal-account', methods=['POST'])
+@login_required
+@role_required(['provincial_peso'])
+def create_municipal_account():
+    # Expected form fields: username, password, municipality_id
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+    municipality_id = request.form.get('municipality_id')
+
+    if not username or not password or not municipality_id:
+        flash('Username, password and municipality are required', 'error')
+        return redirect(url_for('peso_dashboard'))
+
+    if len(password) < 6:
+        flash('Password must be at least 6 characters long', 'error')
+        return redirect(url_for('peso_dashboard'))
+
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection failed', 'error')
+        return redirect(url_for('peso_dashboard'))
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+        # Ensure municipality exists
+        cursor.execute('SELECT id, province FROM municipalities WHERE id = %s', (municipality_id,))
+        muni = cursor.fetchone()
+        if not muni:
+            flash('Selected municipality not found', 'error')
+            return redirect(url_for('peso_dashboard'))
+
+        # Ensure username is unique
+        cursor.execute('SELECT id FROM users WHERE name = %s', (username,))
+        if cursor.fetchone():
+            flash('Username already taken', 'error')
+            return redirect(url_for('peso_dashboard'))
+
+        # Ensure municipality does not already have a municipal_peso account
+        cursor.execute("SELECT id FROM users WHERE municipality_id = %s AND role = 'municipal_peso'", (municipality_id,))
+        if cursor.fetchone():
+            flash('This municipality already has a Municipal PESO account', 'error')
+            return redirect(url_for('peso_dashboard'))
+
+        # Hash password and insert user
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        cursor.execute(
+            "INSERT INTO users (name, password_hash, role, municipality_id) VALUES (%s, %s, %s, %s)",
+            (username, password_hash, 'municipal_peso', municipality_id)
+        )
+        conn.commit()
+        flash('Municipal PESO account created successfully', 'success')
+    except Exception as e:
+        print(f"Error creating municipal account: {e}")
+        flash('An error occurred while creating the account', 'error')
+    finally:
+        try:
+            cursor.close()
+        except:
+            pass
+        conn.close()
+
+    return redirect(url_for('peso_dashboard'))
+
 @app.route('/test-env')
 def test_env():
     """Test route to verify environment variables are loaded correctly"""
