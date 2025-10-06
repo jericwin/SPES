@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <title>DigiSPES</title>
     <link
       rel="stylesheet"
@@ -14,55 +15,172 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
     />
     <style>
-      /* this is needed to make the content scrollable on larger screens */
-      @media (min-width: 576px) {
-        .h-sm-100 {
-          height: 100%;
-        }
-      }
+     /* this is needed to make the content scrollable on larger screens */
+@media (min-width: 576px) {
+  .h-sm-100 {
+    height: 100%;
+  }
+}
 
-      .spes-logo-img {
-        width: 50px;
-      }
-      #logo-name {
-        margin-left: 0.5rem;
-        font-size: 1.5rem;
-        font-weight: bold;
-      }
-      #sidebar {
-        box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.1);
-      }
-      #card-body {
-        background-color: #006edc;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      }
-      .card-link {
-        text-decoration: none;
-        padding: 0.7rem 1rem;
-        border-radius: 0.5rem;
-        border: 1px solid white;
-        background-color: white;
+.spes-logo-img {
+  width: 50px;
+}
+#logo-name {
+  margin-left: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+#sidebar {
+  box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.1);
+}
+#card-body {
+  background-color: #006edc;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.card-link {
+  text-decoration: none;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid white;
+  background-color: white;
 
-        &:hover {
-          background-color: #006edc;
-          color: white;
-          border: 1px solid white;
-        }
-      }
-      .main-container {
-        background-color: rgb(239, 243, 255);
-        padding: 1rem;
-        border-radius: 0.25rem;
-      }
-      #sidebar-active {
-        background-color: #006edc;
-        color: white;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        transition: background-color 0.3s ease, color 0.3s ease;
-        padding: 0.5rem 1rem;
-      }
+  &:hover {
+    background-color: #006edc;
+    color: white;
+    border: 1px solid white;
+  }
+}
+.main-container {
+  background-color: rgb(239, 243, 255);
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+#sidebar-active {
+  background-color: #006edc;
+  color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  padding: 0.5rem 1rem;
+}
+
+/* Star Rating Styles */
+.stars {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.star {
+  font-size: 2.5rem;
+  color: #ccc;
+  transition: color 0.3s ease;
+}
+
+.star.selected {
+  color: gold;
+}
+
+.star:hover {
+  color: #f39c12;
+}
+
+/* Anonymous Switch Styling */
+.form-check-input {
+  width: 50px;
+  height: 30px;
+  border-radius: 50px;
+  background-color: #ccc;
+  transition: background-color 0.3s ease;
+}
+
+.form-check-input:checked {
+  background-color: #006edc;
+}
+
+.form-check-input:checked::before {
+  transform: translateX(20px);
+  background-color: white;
+}
+
+.form-check-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Remove the outline or square effect when toggling */
+.form-check-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+textarea {
+  font-size: 1.1rem;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid #ccc;
+  transition: border-color 0.3s ease;
+}
+
+textarea:focus {
+  border-color: #006edc;
+  outline: none;
+}
+
+.btn-primary {
+  background-color: #006edc;
+  border-color: #006edc;
+  color: white;
+  font-weight: bold;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+/* Anonymous Toggle Button */
+.form-check-input:checked {
+  background-color: #006edc; /* Blue for checked */
+}
+
+.form-switch .form-check-input {
+  width: 40px; /* Smaller width */
+  height: 24px; /* Smaller height */
+  border-radius: 50px; /* Rounded shape */
+  position: relative;
+  background-color: #ccc;
+  transition: background-color 0.3s ease;
+}
+
+.form-switch .form-check-input:checked {
+  background-color: #006edc; /* Blue when checked */
+}
+
+.form-switch .form-check-input::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px; /* Adjust to fit inside the toggle */
+  height: 20px; /* Adjust to fit inside the toggle */
+  border-radius: 50px;
+  background-color: white;
+  transition: transform 0.3s ease;
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translateX(16px); /* Move the toggle circle to the right */
+}
+
+.form-check-input:focus {
+  outline: none;
+  box-shadow: none;
+}
     </style>
   </head>
   <body>
@@ -205,8 +323,48 @@
 
               <hr />
               <div class="main-container">
-                
-              </div>
+  <form action="/submit_feedback" method="POST">
+    <!-- Star Rating -->
+    <div class="mb-4">
+      <label for="rating" class="form-label fs-5">Rating</label>
+      <div class="stars d-flex justify-content-start gap-3">
+        <span class="star" data-value="1">&#9733;</span>
+        <span class="star" data-value="2">&#9733;</span>
+        <span class="star" data-value="3">&#9733;</span>
+        <span class="star" data-value="4">&#9733;</span>
+        <span class="star" data-value="5">&#9733;</span>
+      </div>
+      <input type="hidden" id="rating_value" name="rating" value="" />
+    </div>
+
+    <!-- Feedback Message -->
+    <div class="mb-4">
+      <label for="message" class="form-label fs-5">Your Feedback</label>
+      <textarea
+        class="form-control"
+        id="message"
+        name="message"
+        rows="5"
+        placeholder="Write your feedback here..."
+        required
+        style="resize: none;"
+      ></textarea>
+    </div>
+
+    <!-- Anonymous Switch -->
+    <div class="mb-4 d-flex align-items-center">
+      <label for="anonymousCheck" class="form-label me-3 fs-5">Submit anonymously:</label>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="anonymousCheck" name="anonymous" value="1">
+        <label class="form-check-label" for="anonymousCheck"></label>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-primary w-100 py-2 fs-5">Submit Feedback</button>
+  </form>
+</div>
+
             </div>
           </main>
           <footer class="row bg-light py-4 mt-auto">
@@ -215,8 +373,38 @@
         </div>
       </div>
     </div>
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
-      crossorigin="anonymous"
-    ></script>
+    <script>
+  // Star Rating Functionality
+  const stars = document.querySelectorAll('.star');
+  const ratingValue = document.getElementById('rating_value');
+
+  stars.forEach(star => {
+    star.addEventListener('click', function () {
+      const value = this.getAttribute('data-value');
+      
+      // Set the value in the hidden input field
+      ratingValue.value = value;
+      
+      // Highlight the clicked stars
+      stars.forEach(s => {
+        s.classList.remove('selected');
+        if (s.getAttribute('data-value') <= value) {
+          s.classList.add('selected');
+        }
+      });
+    });
+  });
+
+  // Anonymous Toggle Behavior
+  const switchInput = document.getElementById('anonymousCheck');
+
+  switchInput.addEventListener('change', () => {
+    if (switchInput.checked) {
+      switchInput.parentElement.style.backgroundColor = "#006edc"; // Blue when checked
+    } else {
+      switchInput.parentElement.style.backgroundColor = "#ccc"; // Gray when unchecked
+    }
+  });
+</script>
+  </body>
+</html>
