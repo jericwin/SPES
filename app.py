@@ -4665,6 +4665,24 @@ def edit_oath_undertaking():
                 }
             }
         })
+    
+    # Add the feedback page route
+@app.route('/feedback')
+def feedback():
+    return render_template('new/feedback.html')
+
+@app.route('/submit_feedback', methods=['POST'])
+def submit_feedback():
+    name = request.form['name']
+    email = request.form['email']
+    message = request.form['message']
+    
+    # You can save the feedback or process it as needed
+    print(f"Feedback received from {name} ({email}): {message}")
+    
+    return "Thank you for your feedback!"
+
+
         
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
