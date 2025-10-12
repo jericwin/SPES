@@ -4668,19 +4668,117 @@ def edit_oath_undertaking():
     
     # Add the feedback page route
 @app.route('/feedback')
+@login_required
 def feedback():
-    return render_template('new/feedback.html')
+    return render_template('new/feedback.html', username=session.get('username'), role=session.get('role'))
 
 @app.route('/submit_feedback', methods=['POST'])
+@login_required
 def submit_feedback():
-    name = request.form['name']
-    email = request.form['email']
-    message = request.form['message']
-    
-    # You can save the feedback or process it as needed
-    print(f"Feedback received from {name} ({email}): {message}")
-    
-    return "Thank you for your feedback!"
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Please login first'})
+
+    try:
+        rating = request.form.get('rating')
+        message = request.form.get('message')
+        is_anonymous = bool(request.form.get('anonymous'))
+
+        if not rating or not message:
+            return jsonify({'success': False, 'message': 'Rating and message are required'})
+
+        # Validate rating
+        try:
+            rating = int(rating)
+            if rating < 1 or rating > 5:
+                return jsonify({'success': False, 'message': 'Rating must be between 1 and 5'})
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Invalid rating format'})
+
+        # Get user's municipality_id
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # First check user_info table for municipality_id
+        cursor.execute("""
+            SELECT municipality_id 
+            FROM user_info 
+            WHERE user_id = %s
+        """, (session['user_id'],))
+        result = cursor.fetchone()
+
+        if result and result['municipality_id']:
+            municipality_id = result['municipality_id']
+        else:
+            # Check users table
+            cursor.execute("""
+                SELECT municipality_id 
+                FROM users 
+                WHERE id = %s
+            """, (session['user_id'],))
+            result = cursor.fetchone()
+            municipality_id = result['municipality_id'] if result else None
+
+        if not municipality_id:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Municipality not found. Please contact administrator.'})
+
+        # Insert feedback
+        cursor.execute("""
+            INSERT INTO feedback (user_id, municipality_id, rating, message, is_anonymous)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (session['user_id'], municipality_id, rating, message, is_anonymous))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Thank you for your feedback!'})
+
+    except Exception as e:
+        print(f"Error submitting feedback: {e}")
+        return jsonify({'success': False, 'message': 'Error submitting feedback. Please try again.'})
+
+@app.route('/admin/feedback')
+@login_required
+def admin_feedback():
+    if session.get('role') != 'municipal_peso':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('home'))
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get all feedback for the admin's municipality
+        cursor.execute("""
+            SELECT 
+                f.*,
+                CASE 
+                    WHEN f.is_anonymous = 1 THEN 'Anonymous User'
+                    ELSE u.name
+                END as user_name,
+                DATE_FORMAT(f.created_at, '%M %d, %Y at %h:%i %p') as formatted_date
+            FROM feedback f
+            LEFT JOIN users u ON f.user_id = u.id
+            WHERE f.municipality_id = (
+                SELECT municipality_id 
+                FROM users 
+                WHERE id = %s
+            )
+            ORDER BY f.created_at DESC
+        """, (session['user_id'],))
+        
+        feedback_list = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        return render_template('admin/feedback.html', feedback_list=feedback_list)
+
+    except Exception as e:
+        print(f"Error getting feedback: {e}")
+        flash('Error loading feedback', 'error')
+        return redirect(url_for('admin_dashboard'))
 
 
         
