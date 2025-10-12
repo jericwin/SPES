@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
+    <title>DigiSPES</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
+    />
+    <style>
+      /* this is needed to make the content scrollable on larger screens */
+      @media (min-width: 576px) {
+        .h-sm-100 {
+          height: 100%;
+        }
+      }
+
+      .spes-logo-img {
+        width: 50px;
+      }
+      #logo-name {
+        margin-left: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      #sidebar {
+        box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      #card-body {
+        background-color: #006edc;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .card-link {
+        text-decoration: none;
+        padding: 0.7rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid white;
+        background-color: white;
+
+        &:hover {
+          background-color: #006edc;
+          color: white;
+          border: 1px solid white;
+        }
+      }
+      .main-container {
+        background-color: rgb(239, 243, 255);
+        padding: 1rem;
+        border-radius: 0.25rem;
+      }
+      #sidebar-active {
+        background-color: #006edc;
+        color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        padding: 0.5rem 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- sidebar boostrap 5-->
+
+    <div class="container-fluid overflow-hidden">
+      <div class="row vh-100 overflow-auto">
+        <div
+          class="col-12 col-sm-3 col-xl-2 px-sm-2 px-0 bg-white d-flex sticky-top"
+        >
+          <div
+            class="d-flex flex-sm-column flex-row flex-grow-1 align-items-center align-items-sm-start px-3 pt-2 text-dark pb-2"
+            id="sidebar"
+          >
+            <a
+              href="/"
+              class="d-flex align-items-center pb-sm-3 mb-md-0 me-md-auto text-dark text-decoration-none"
+            >
+              <span class="fs-5 mt-2"
+                ><img
+                  src="/static/images/spes-logo.png"
+                  alt=""
+                  srcset=""
+                  class="spes-logo-img"
+                /><span class="d-none d-sm-inline" id="logo-name"
+                  >SPES</span
+                ></span
+              >
+            </a>
+            <ul
+              class="nav nav-pills flex-sm-column flex-row flex-nowrap flex-shrink-1 flex-sm-grow-0 flex-grow-1 mb-sm-auto mb-0 justify-content-center align-items-center align-items-sm-start"
+              id="menu"
+            >
+              <li>
+                <a
+                  href="{{ url_for('admin_dashboard') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-speedometer2"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_announcements') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-megaphone"></i
+                  ><span class="ms-3 d-none d-sm-inline">Announcements</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_applications') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark"></i
+                  ><span class="ms-3 d-none d-sm-inline">Applicants</span>
+                </a>
+              </li>
+              <!-- students who took the exam -->
+              <li>
+                <a
+                  href="{{ url_for('admin_examinees') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Examinees</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_exams') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-pencil"></i
+                  ><span class="ms-3 d-none d-sm-inline">Exams</span>
+                </a>
+              </li>
+              <!-- <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Interview Panel</span>
+                </a>
+              </li> -->
+              <li>
+                <a
+                  href="{{ url_for('admin_messages') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-envelope"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Messages</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-star"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="sidebar-active"
+                    >Feedback</span
+                  >
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-folder2-open"></i
+                  ><span class="ms-3 d-none d-sm-inline">Reports</span>
+                </a>
+              </li>
+              <li class="dropdown d-sm-none">
+                <a
+                  href="#"
+                  class="nav-link dropdown-toggle px-sm-0 px-1"
+                  id="dropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i class="fs-5 bi-list"></i
+                  ><span class="ms-3 d-none d-sm-inline"></span>
+                </a>
+                <ul
+                  class="dropdown-menu dropdown-menu-dark text-small shadow"
+                  aria-labelledby="dropdown"
+                >
+                  <li><a class="dropdown-item" href="#">Dashboard</a></li>
+                  <li><a class="dropdown-item" href="#">Messages</a></li>
+                  <li><a class="dropdown-item" href="#">Profile</a></li>
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <div
+              class="dropdown py-sm-4 mt-sm-auto ms-auto ms-sm-0 flex-shrink-1"
+            >
+              <a
+                href="#"
+                class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+                id="dropdownUser1"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-person-circle fs-4"></i>
+                <span class="d-none d-sm-inline mx-1">Admin</span>
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-dark text-small shadow"
+                aria-labelledby="dropdownUser1"
+              >
+                <li><a class="dropdown-item" href="#">Settings</a></li>
+                <li><a class="dropdown-item" href="#">Profile</a></li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col d-flex flex-column h-sm-100">
+          <main class="row overflow-auto">
+            <div class="col pt-4">
+              <h3>Feedbacks</h3>
+              <hr />
+
+              <div class="main-container">
+                <!-- Stats Overview -->
+                <div class="row mb-4">
+                  <div class="col-md-3 mb-3">
+                    <div class="card" id="card-body">
+                      <div class="card-body text-center text-white">
+                        <h4 class="mb-0">{{ feedback_list|length }}</h4>
+                        <p class="mb-0">Total Feedback</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <div class="card" id="card-body">
+                      <div class="card-body text-center text-white">
+                        {% set avg_rating =
+                        (feedback_list|sum(attribute='rating') /
+                        feedback_list|length) if feedback_list else 0 %}
+                        <h4 class="mb-0">{{ "%.1f"|format(avg_rating) }}</h4>
+                        <p class="mb-0">Average Rating</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <div class="card" id="card-body">
+                      <div class="card-body text-center text-white">
+                        <h4 class="mb-0">
+                          {{ feedback_list|selectattr('rating', 'greaterthan',
+                          3)|list|length }}
+                        </h4>
+                        <p class="mb-0">Positive (4-5★)</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <div class="card" id="card-body">
+                      <div class="card-body text-center text-white">
+                        <h4 class="mb-0">
+                          {{ feedback_list|selectattr('is_anonymous', 'equalto',
+                          1)|list|length }}
+                        </h4>
+                        <p class="mb-0">Anonymous</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Filter Options -->
+                <div class="row mb-4">
+                  <div class="col-md-12">
+                    <div
+                      class="d-flex justify-content-between align-items-center"
+                    >
+                      <div>
+                        <h5 class="mb-0 text-dark">Comments</h5>
+                      </div>
+                      <div class="btn-group" role="group">
+                        <input
+                          type="radio"
+                          class="btn-check"
+                          name="ratingFilter"
+                          id="allRatings"
+                          autocomplete="off"
+                          checked
+                        />
+                        <label class="btn btn-outline-primary" for="allRatings"
+                          >All Ratings</label
+                        >
+
+                        <input
+                          type="radio"
+                          class="btn-check"
+                          name="ratingFilter"
+                          id="rating5"
+                          autocomplete="off"
+                        />
+                        <label class="btn btn-outline-primary" for="rating5"
+                          >5★</label
+                        >
+
+                        <input
+                          type="radio"
+                          class="btn-check"
+                          name="ratingFilter"
+                          id="rating4"
+                          autocomplete="off"
+                        />
+                        <label class="btn btn-outline-primary" for="rating4"
+                          >4★</label
+                        >
+
+                        <input
+                          type="radio"
+                          class="btn-check"
+                          name="ratingFilter"
+                          id="rating3"
+                          autocomplete="off"
+                        />
+                        <label class="btn btn-outline-primary" for="rating3"
+                          >3★</label
+                        >
+
+                        <input
+                          type="radio"
+                          class="btn-check"
+                          name="ratingFilter"
+                          id="rating2"
+                          autocomplete="off"
+                        />
+                        <label class="btn btn-outline-primary" for="rating2"
+                          >2★</label
+                        >
+
+                        <input
+                          type="radio"
+                          class="btn-check"
+                          name="ratingFilter"
+                          id="rating1"
+                          autocomplete="off"
+                        />
+                        <label class="btn btn-outline-primary" for="rating1"
+                          >1★</label
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Feedback Cards -->
+                <div class="row" id="feedbackContainer">
+                  {% for feedback in feedback_list %}
+                  <div
+                    class="col-md-6 mb-3 feedback-item"
+                    data-rating="{{ feedback.rating }}"
+                  >
+                    <div class="card h-100 border-0 shadow-sm">
+                      <div class="card-body p-4">
+                        <div
+                          class="d-flex justify-content-between align-items-start mb-3"
+                        >
+                          <div class="rating-section">
+                            <div class="star-display mb-2">
+                              {% for i in range(feedback.rating) %}
+                              <i class="bi bi-star-fill text-warning fs-5"></i>
+                              {% endfor %} {% for i in range(5 -
+                              feedback.rating) %}
+                              <i class="bi bi-star text-muted fs-5"></i>
+                              {% endfor %}
+                            </div>
+                            <span
+                              class="badge"
+                              style="background-color: #006edc; color: white"
+                            >
+                              {{ feedback.rating }}/5 Stars
+                            </span>
+                          </div>
+                          <small class="text-muted">
+                            <i class="bi bi-calendar3 me-1"></i>
+                            {{ feedback.formatted_date }}
+                          </small>
+                        </div>
+
+                        <div class="feedback-content mb-3">
+                          <p
+                            class="card-text text-dark mb-0"
+                            style="line-height: 1.6"
+                          >
+                            "{{ feedback.message }}"
+                          </p>
+                        </div>
+
+                        <div
+                          class="d-flex justify-content-between align-items-center pt-2 border-top"
+                        >
+                          <div class="user-info">
+                            <i class="bi bi-person-circle me-2 text-muted"></i>
+                            <strong class="text-dark"
+                              >{{ feedback.user_name }}</strong
+                            >
+                            {% if feedback.is_anonymous %}
+                            <span class="badge bg-secondary ms-2">
+                              <i class="bi bi-eye-slash me-1"></i>Anonymous
+                            </span>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+
+                {% if not feedback_list %}
+                <div class="row">
+                  <div class="col-12">
+                    <div
+                      class="alert alert-info text-center border-0"
+                      style="background-color: #e3f2fd; color: #1976d2"
+                    >
+                      <i class="bi bi-info-circle me-2 fs-4"></i>
+                      <h5 class="mb-1">No Feedback Yet</h5>
+                      <p class="mb-0">
+                        No feedback has been received from applicants in your
+                        municipality.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </main>
+          <footer class="row bg-light py-4 mt-auto">
+            <div class="col">&copy SPES 2025 | All rights reserved.</div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Filter functionality
+      document
+        .querySelectorAll('input[name="ratingFilter"]')
+        .forEach((radio) => {
+          radio.addEventListener("change", function () {
+            const selectedRating = this.id.replace("rating", "");
+            const feedbackItems = document.querySelectorAll(".feedback-item");
+
+            feedbackItems.forEach((item) => {
+              if (
+                selectedRating === "allRatings" ||
+                item.dataset.rating === selectedRating
+              ) {
+                item.style.display = "block";
+              } else {
+                item.style.display = "none";
+              }
+            });
+          });
+        });
+    </script>
+  </body>
+</html>
