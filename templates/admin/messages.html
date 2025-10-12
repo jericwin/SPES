@@ -295,12 +295,12 @@
                   ><span class="ms-3 d-none d-sm-inline">Exams</span>
                 </a>
               </li>
-              <li>
+              <!-- <li>
                 <a href="#" class="nav-link px-sm-0 px-2">
                   <i class="fs-5 bi-people"></i
                   ><span class="ms-3 d-none d-sm-inline">Interview Panel</span>
                 </a>
-              </li>
+              </li> -->
               <li>
                 <a href="#" class="nav-link px-sm-0 px-2">
                   <i class="fs-5 bi-envelope"></i
@@ -310,9 +310,19 @@
                 </a>
               </li>
               <li>
+                <a
+                  href="{{ url_for('admin_feedback') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-chat-dots"></i
+                  ><span class="ms-3 d-none d-sm-inline">Feedback</span>
+                </a>
+              </li>
+
+              <li>
                 <a href="#" class="nav-link px-sm-0 px-2">
-                  <i class="fs-5 bi-bell"></i
-                  ><span class="ms-3 d-none d-sm-inline">Notifications</span>
+                  <i class="fs-5 bi-folder2-open"></i
+                  ><span class="ms-3 d-none d-sm-inline">Reports</span>
                 </a>
               </li>
               <li class="dropdown d-sm-none">
