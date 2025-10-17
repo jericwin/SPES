@@ -2788,7 +2788,13 @@ def submit_exam():
         percentage_score = (total_score / total_points * 100) if total_points > 0 else 0
         
         # Update application and examinee status based on passing score
-        new_status = 'for interview' if percentage_score >= passing_score else 'pending'
+        # Modified for new workflow: exam passed -> pending for requirements instead of directly to interview
+        if percentage_score >= passing_score:
+            new_status = 'pending for requirements'
+            # Unlock SPES forms for requirements submission
+            unlock_spes_forms(session['user_id'], exam_id)
+        else:
+            new_status = 'failed'
         
         cursor.execute("""
             UPDATE applicants 
@@ -2804,15 +2810,35 @@ def submit_exam():
             WHERE user_id = %s 
         """, (new_status, exam_id, session['user_id']))
         
-        # Create notification
+        # Create notification based on result
+        if percentage_score >= passing_score:
+            notification_title = 'Exam Passed - Submit Requirements'
+            notification_message = 'Congratulations! You passed the exam. Please submit your SPES requirements within 7 days.'
+        else:
+            notification_title = 'Exam Result'
+            notification_message = 'Unfortunately, you did not pass the examination. Thank you for your participation.'
+            
         cursor.execute("""
             INSERT INTO notifications (user_id, title, message, type)
             VALUES (%s, %s, %s, %s)
         """, (
             session['user_id'],
-            'Exam Completed',
-            'You have completed the examination. Please wait for the result announcement.',
+            notification_title,
+            notification_message,
             'exam_result'
+        ))
+        
+        # Log workflow change
+        cursor.execute("""
+            INSERT INTO workflow_audit (user_id, exam_id, old_status, new_status, change_reason, changed_by)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            session['user_id'], 
+            exam_id, 
+            'for exam', 
+            new_status, 
+            f'Exam completed with score {percentage_score:.1f}%',
+            session['user_id']
         ))
         
         # Update exam assignment status
@@ -2914,21 +2940,190 @@ def new_applicants_forms():
     if 'user_id' not in session or session['role'] != 'new':
         flash('Please login to access this page', 'error')
         return redirect(url_for('home'))
+    
     can_access_spes_form = False
+    existing_files = {}
+    
     conn = get_db_connection()
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
+            
+            # Check if user can access SPES forms
             cursor.execute("SELECT status FROM examinees WHERE user_id = %s ORDER BY created_at DESC LIMIT 1", (session['user_id'],))
             row = cursor.fetchone()
-            if row and row['status'] == 'for interview':
+            if row and row['status'] in ['for interview', 'pending for requirements']:
                 can_access_spes_form = True
+            
+            # Get existing uploaded files
+            cursor.execute("""
+                SELECT application_form, employment_contract, oath_of_undertaking, 
+                       school_certification, cor_or_coe, cog, barangay_indigency, 
+                       psa_birth_certificate
+                FROM user_documents 
+                WHERE user_id = %s
+            """, (session['user_id'],))
+            files_row = cursor.fetchone()
+            
+            if files_row:
+                existing_files = {
+                    'application_form': files_row['application_form'],
+                    'employment_contract': files_row['employment_contract'],
+                    'oath_of_undertaking': files_row['oath_of_undertaking'],
+                    'school_certification': files_row['school_certification'],
+                    'cor_or_coe': files_row['cor_or_coe'],
+                    'cog': files_row['cog'],
+                    'barangay_indigency': files_row['barangay_indigency'],
+                    'psa_birth_certificate': files_row['psa_birth_certificate']
+                }
+                
         except Exception as e:
-            print(f"Error checking examinee status: {e}")
+            print(f"Error checking examinee status or files: {e}")
         finally:
             cursor.close()
             conn.close()
-    return render_template('new/spes-form.html', username=session['username'], can_access_spes_form=can_access_spes_form)
+    
+    return render_template('new/spes-form.html', 
+                         username=session['username'], 
+                         can_access_spes_form=can_access_spes_form,
+                         existing_files=existing_files)
+
+@app.route('/upload-forms', methods=['POST'])
+@login_required
+def upload_forms():
+    """Handle SPES forms file uploads for new applicants"""
+    if session.get('role') != 'new':
+        return jsonify({'success': False, 'message': 'Access denied'})
+    
+    user_id = session['user_id']
+    
+    # Create user documents directory if it doesn't exist
+    user_docs_dir = os.path.join('static', 'user_documents', str(user_id))
+    os.makedirs(user_docs_dir, exist_ok=True)
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Check if user can upload forms (must be in interview or pending requirements status)
+        cursor.execute("SELECT status, exam_id FROM examinees WHERE user_id = %s ORDER BY created_at DESC LIMIT 1", (user_id,))
+        examinee_row = cursor.fetchone()
+        
+        if not examinee_row or examinee_row['status'] not in ['for interview', 'pending for requirements']:
+            return jsonify({'success': False, 'message': 'You are not authorized to upload forms at this time'})
+        
+        # Get the exam_id from the examinee record
+        exam_id = examinee_row['exam_id']
+        if not exam_id:
+            return jsonify({'success': False, 'message': 'No exam assigned. Please contact administrator.'})
+        
+        # Define allowed file types and field mappings (form_field_name: db_column_name)
+        allowed_extensions = {'pdf', 'jpg', 'jpeg', 'png', 'docx'}
+        file_fields = {
+            'applicationForm': 'application_form',
+            'employmentContract': 'employment_contract', 
+            'oathOfUndertaking': 'oath_of_undertaking',
+            'schoolCertification': 'school_certification',
+            'corOrCoe': 'cor_or_coe',
+            'cog': 'cog',
+            'barangayIndigency': 'barangay_indigency',
+            'psaBirthCertificate': 'psa_birth_certificate'
+        }
+        
+        uploaded_files = {}
+        
+        # Process each uploaded file
+        for field_name, db_column in file_fields.items():
+            if field_name in request.files:
+                file = request.files[field_name]
+                if file and file.filename:
+                    # Check file extension
+                    filename = secure_filename(file.filename)
+                    file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                    
+                    if file_extension not in allowed_extensions:
+                        return jsonify({'success': False, 'message': f'Invalid file type for {field_name}. Only PDF, JPG, JPEG, PNG allowed.'})
+                    
+                    # Generate unique filename
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    new_filename = f"{field_name}_{timestamp}.{file_extension}"
+                    file_path = os.path.join(user_docs_dir, new_filename)
+                    
+                    # Save file
+                    file.save(file_path)
+                    uploaded_files[db_column] = new_filename
+        
+        if not uploaded_files:
+            return jsonify({'success': False, 'message': 'No files were uploaded'})
+        
+        # Check if user already has documents record
+        cursor.execute("SELECT id FROM user_documents WHERE user_id = %s", (user_id,))
+        existing_record = cursor.fetchone()
+        
+        if existing_record:
+            # Update existing record
+            update_fields = []
+            update_values = []
+            
+            for db_column, filename in uploaded_files.items():
+                update_fields.append(f"{db_column} = %s")
+                update_values.append(filename)
+            
+            update_values.append(user_id)
+            update_query = f"UPDATE user_documents SET {', '.join(update_fields)} WHERE user_id = %s"
+            cursor.execute(update_query, update_values)
+        else:
+            # Insert new record
+            columns = ['user_id'] + list(uploaded_files.keys())
+            values = [user_id] + list(uploaded_files.values())
+            placeholders = ', '.join(['%s'] * len(values))
+            
+            insert_query = f"INSERT INTO user_documents ({', '.join(columns)}) VALUES ({placeholders})"
+            cursor.execute(insert_query, values)
+        
+        conn.commit()
+        
+        # Create requirements submission entry if it doesn't exist
+        cursor.execute("""
+            SELECT id FROM requirements_submissions 
+            WHERE user_id = %s 
+            ORDER BY submitted_at DESC 
+            LIMIT 1
+        """, (user_id,))
+        req_submission = cursor.fetchone()
+        
+        if not req_submission:
+            # Create new requirements submission record using the exam_id we already have
+            cursor.execute("""
+                INSERT INTO requirements_submissions 
+                (user_id, exam_id, submission_status, submitted_at)
+                VALUES (%s, %s, 'pending_review', NOW())
+            """, (user_id, exam_id))
+        else:
+            # Update existing submission
+            cursor.execute("""
+                UPDATE requirements_submissions 
+                SET submission_status = 'pending_review', submitted_at = NOW()
+                WHERE id = %s
+            """, (req_submission['id'],))
+        
+        conn.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Successfully uploaded {len(uploaded_files)} file(s). Your requirements are now under review.'
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error uploading forms: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error uploading forms: {str(e)}'})
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/preview-template/<template_name>')
 def preview_template(template_name):
@@ -4780,7 +4975,922 @@ def admin_feedback():
         flash('Error loading feedback', 'error')
         return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/generate-final-report', methods=['POST'])
+@login_required
+@role_required(['municipal_peso'])
+def generate_final_report():
+    """Generate final report for all passed candidates"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        municipality_filter = get_municipality_access_filter()
+        
+        # Fix municipality filter for our query (replace ui. with u.)
+        if municipality_filter and "ui.municipality_id" in municipality_filter:
+            municipality_filter = municipality_filter.replace("ui.municipality_id", "u.municipality_id")
+        
+        # Get all passed candidates for final report
+        cursor.execute(f"""
+            SELECT 
+                u.id as user_id,
+                u.name,
+                u.email,
+                e.exam_id,
+                ex.title as exam_title,
+                CASE 
+                    WHEN ea.total_points > 0 THEN ROUND((ea.score / ea.total_points * 100), 2)
+                    ELSE 0
+                END as exam_score,
+                ip.interview_score,
+                CASE 
+                    WHEN ea.total_points > 0 AND ip.interview_score IS NOT NULL THEN 
+                        ROUND(((ea.score / ea.total_points * 100) + ip.interview_score) / 2, 2)
+                    WHEN ea.total_points > 0 THEN 
+                        ROUND((ea.score / ea.total_points * 100), 2)
+                    ELSE 0
+                END as total_score,
+                ip.final_decision,
+                m.name as municipality_name
+            FROM users u
+            JOIN examinees e ON u.id = e.user_id
+            JOIN exams ex ON e.exam_id = ex.id
+            JOIN exam_attempts ea ON u.id = ea.user_id AND e.exam_id = ea.exam_id
+            JOIN interview_panel ip ON u.id = ip.user_id AND e.exam_id = ip.exam_id
+            JOIN municipalities m ON u.municipality_id = m.id
+            WHERE ip.final_decision = 'passed'
+            AND ea.passed = 'passed'
+            {municipality_filter}
+            ORDER BY total_score DESC, u.name ASC
+        """)
+        passed_candidates = cursor.fetchall()
+        
+        if not passed_candidates:
+            return jsonify({'success': False, 'message': 'No passed candidates found to generate report'})
+        
+        # Generate ranking
+        for i, candidate in enumerate(passed_candidates):
+            cursor.execute("""
+                INSERT INTO final_reports 
+                (user_id, exam_id, interview_panel_id, final_status, exam_score, 
+                 interview_score, total_score, rank_position, generated_by, generated_at)
+                SELECT %s, %s, ip.id, 'passed', %s, %s, %s, %s, %s, NOW()
+                FROM interview_panel ip
+                WHERE ip.user_id = %s AND ip.exam_id = %s
+                ON DUPLICATE KEY UPDATE
+                final_status = VALUES(final_status),
+                exam_score = VALUES(exam_score),
+                interview_score = VALUES(interview_score),
+                total_score = VALUES(total_score),
+                rank_position = VALUES(rank_position),
+                generated_by = VALUES(generated_by),
+                generated_at = VALUES(generated_at)
+            """, (
+                candidate['user_id'], candidate['exam_id'], 
+                candidate['exam_score'], candidate['interview_score'], 
+                candidate['total_score'], i + 1, session['user_id'],
+                candidate['user_id'], candidate['exam_id']
+            ))
+        
+        conn.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Final report generated successfully for {len(passed_candidates)} passed candidates',
+            'candidates_count': len(passed_candidates)
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error generating final report: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error generating final report: {str(e)}'})
+    finally:
+        cursor.close()
+        conn.close()
 
+@app.route('/admin/reports')
+@login_required
+def admin_reports():
+    if session.get('role') != 'municipal_peso':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('home'))
+    
+    conn = get_db_connection()
+    if not conn:
+        return render_template('admin/reports.html', final_reports=[], stats={})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        municipality_filter = get_municipality_access_filter()
+        
+        # Get final reports with candidate details
+        cursor.execute(f"""
+            SELECT 
+                fr.*,
+                u.name, u.email, u.id_number,
+                SUBSTRING_INDEX(u.name, ' ', 1) as first_name,
+                SUBSTRING_INDEX(SUBSTRING_INDEX(u.name, ' ', 2), ' ', -1) as middle_name,
+                SUBSTRING_INDEX(u.name, ' ', -1) as last_name,
+                m.name as municipality_name
+            FROM final_reports fr
+            JOIN users u ON fr.user_id = u.id
+            LEFT JOIN municipalities m ON u.municipality_id = m.id
+            WHERE 1=1 {municipality_filter}
+            ORDER BY fr.rank_position ASC, fr.total_score DESC
+        """)
+        final_reports = cursor.fetchall()
+        
+        # Get statistics
+        cursor.execute(f"""
+            SELECT 
+                COUNT(*) as total_passed,
+                SUM(CASE WHEN fr.sent_to_provincial = 0 THEN 1 ELSE 0 END) as pending_provincial,
+                SUM(CASE WHEN fr.sent_to_provincial = 1 THEN 1 ELSE 0 END) as sent_provincial,
+                SUM(CASE WHEN fr.total_score >= 90 THEN 1 ELSE 0 END) as score_90_100,
+                SUM(CASE WHEN fr.total_score >= 80 AND fr.total_score < 90 THEN 1 ELSE 0 END) as score_80_89,
+                SUM(CASE WHEN fr.total_score >= 70 AND fr.total_score < 80 THEN 1 ELSE 0 END) as score_70_79,
+                SUM(CASE WHEN fr.total_score >= 60 AND fr.total_score < 70 THEN 1 ELSE 0 END) as score_60_69,
+                SUM(CASE WHEN fr.total_score < 60 THEN 1 ELSE 0 END) as score_below_60
+            FROM final_reports fr
+            JOIN users u ON fr.user_id = u.id
+            WHERE fr.final_status = 'passed' {municipality_filter}
+        """)
+        stats = cursor.fetchone() or {}
+        
+        # Get available slots from latest exam
+        cursor.execute("""
+            SELECT available_slots 
+            FROM exams 
+            ORDER BY created_at DESC 
+            LIMIT 1
+        """)
+        exam = cursor.fetchone()
+        stats['total_slots'] = exam['available_slots'] if exam else 0
+        
+        # Get municipality distribution for chart
+        cursor.execute(f"""
+            SELECT m.name, COUNT(*) as count
+            FROM final_reports fr
+            JOIN users u ON fr.user_id = u.id
+            LEFT JOIN municipalities m ON u.municipality_id = m.id
+            WHERE fr.final_status = 'passed' {municipality_filter}
+            GROUP BY m.name
+            ORDER BY count DESC
+        """)
+        municipality_data = cursor.fetchall()
+        municipality_labels = [row['name'] or 'Unknown' for row in municipality_data]
+        municipality_counts = [row['count'] for row in municipality_data]
+        
+        return render_template('admin/reports.html', 
+                             final_reports=final_reports, 
+                             stats=stats,
+                             municipality_labels=municipality_labels,
+                             municipality_data=municipality_counts,
+                             username=session.get('username'), 
+                             role=session.get('role'))
+    
+    except Exception as e:
+        print(f"Error in admin_reports: {str(e)}")
+        return render_template('admin/reports.html', final_reports=[], stats={}, 
+                             username=session.get('username'), role=session.get('role'))
+    finally:
+        cursor.close()
+        conn.close()
+
+# ========== NEW WORKFLOW ROUTES ==========
+
+def unlock_spes_forms(user_id, exam_id):
+    """Helper function to unlock SPES forms for requirements submission"""
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cursor = conn.cursor()
+        # Create entry in requirements_submissions table
+        cursor.execute("""
+            INSERT INTO requirements_submissions (user_id, exam_id, submission_status)
+            VALUES (%s, %s, 'incomplete')
+            ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+        """, (user_id, exam_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error unlocking SPES forms: {str(e)}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/interview-panel')
+@login_required
+@role_required(['municipal_peso'])
+def admin_interview_panel():
+    conn = get_db_connection()
+    if not conn:
+        return render_template('admin/interview-panel.html', 
+                             requirements_for_review=[], 
+                             interview_candidates=[], 
+                             stats={})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        municipality_filter = get_municipality_access_filter()
+        
+        # Fix municipality filter for our query (replace ui. with u.)
+        if municipality_filter and "ui.municipality_id" in municipality_filter:
+            municipality_filter = municipality_filter.replace("ui.municipality_id", "u.municipality_id")
+        
+        # Get requirements submissions that need review (pending_review status)
+        cursor.execute(f"""
+            SELECT 
+                rs.id as submission_id,
+                u.id as user_id,
+                u.name, u.email,
+                e.exam_id,
+                ex.title as exam_title,
+                CASE 
+                    WHEN ea.total_points > 0 THEN ROUND((ea.score / ea.total_points * 100), 2)
+                    ELSE 0
+                END as exam_score,
+                rs.submission_status,
+                rs.submitted_at,
+                rs.admin_notes,
+                rs.spes_form_path,
+                rs.certificate_of_registration_path,
+                rs.copy_of_grades_path,
+                rs.barangay_certificate_path,
+                rs.parent_id_path,
+                rs.birth_certificate_path,
+                rs.passport_photo_path,
+                u.municipality_id
+            FROM requirements_submissions rs
+            JOIN users u ON rs.user_id = u.id
+            JOIN examinees e ON u.id = e.user_id AND rs.exam_id = e.exam_id
+            JOIN exams ex ON rs.exam_id = ex.id
+            JOIN exam_attempts ea ON u.id = ea.user_id AND rs.exam_id = ea.exam_id
+            WHERE rs.submission_status = 'pending_review'
+            AND ea.passed = 'passed'
+            {municipality_filter}
+            ORDER BY rs.submitted_at ASC
+        """)
+        requirements_for_review = cursor.fetchall()
+        
+        # Get candidates who have approved requirements and are ready for interview
+        cursor.execute(f"""
+            SELECT 
+                u.id as user_id,
+                u.name, u.email,
+                TRIM(SUBSTRING_INDEX(u.name, ' ', 1)) as first_name,
+                CASE 
+                    WHEN CHAR_LENGTH(u.name) - CHAR_LENGTH(REPLACE(u.name, ' ', '')) >= 2 THEN
+                        TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(u.name, ' ', -2), ' ', 1))
+                    ELSE ''
+                END as middle_name,
+                CASE 
+                    WHEN CHAR_LENGTH(u.name) - CHAR_LENGTH(REPLACE(u.name, ' ', '')) >= 1 THEN
+                        TRIM(SUBSTRING_INDEX(u.name, ' ', -1))
+                    ELSE ''
+                END as last_name,
+                e.exam_id,
+                ex.title as exam_title,
+                CASE 
+                    WHEN ea.total_points > 0 THEN ROUND((ea.score / ea.total_points * 100), 2)
+                    ELSE 0
+                END as exam_score,
+                rs.submission_status as requirements_status,
+                rs.submitted_at as requirements_submitted_at,
+                COALESCE(ip.interview_date, NULL) as interview_date,
+                COALESCE(ip.interview_time, NULL) as interview_time,
+                COALESCE(ip.interview_status, 'requirements_approved') as interview_status,
+                ip.interview_score,
+                COALESCE(ip.final_decision, 'pending') as final_decision,
+                ip.interview_notes
+            FROM users u
+            JOIN examinees e ON u.id = e.user_id
+            JOIN exams ex ON e.exam_id = ex.id
+            JOIN exam_attempts ea ON u.id = ea.user_id AND e.exam_id = ea.exam_id
+            JOIN requirements_submissions rs ON u.id = rs.user_id AND e.exam_id = rs.exam_id
+            LEFT JOIN interview_panel ip ON u.id = ip.user_id AND e.exam_id = ip.exam_id
+            WHERE rs.submission_status = 'approved'
+            AND ea.passed = 'passed'
+            {municipality_filter}
+            ORDER BY ip.final_decision ASC, rs.submitted_at ASC
+        """)
+        interview_candidates = cursor.fetchall()
+        
+        # Get statistics
+        cursor.execute(f"""
+            SELECT 
+                COUNT(DISTINCT CASE WHEN rs.submission_status = 'pending_review' THEN u.id END) as pending_requirements_review,
+                COUNT(DISTINCT CASE WHEN rs.submission_status = 'approved' THEN u.id END) as approved_requirements,
+                COUNT(DISTINCT CASE WHEN ip.interview_status IS NULL OR ip.interview_status = 'scheduled' THEN u.id END) as pending_interviews,
+                COUNT(DISTINCT CASE WHEN ip.final_decision = 'passed' THEN u.id END) as passed_candidates,
+                COUNT(DISTINCT CASE WHEN ip.final_decision = 'failed' THEN u.id END) as failed_candidates
+            FROM users u
+            JOIN examinees e ON u.id = e.user_id
+            JOIN exam_attempts ea ON u.id = ea.user_id AND e.exam_id = ea.exam_id
+            LEFT JOIN requirements_submissions rs ON u.id = rs.user_id AND e.exam_id = rs.exam_id
+            LEFT JOIN interview_panel ip ON u.id = ip.user_id AND e.exam_id = ip.exam_id
+            WHERE ea.passed = 'passed'
+            {municipality_filter}
+        """)
+        stats = cursor.fetchone() or {}
+        
+        return render_template('admin/interview-panel.html', 
+                             requirements_for_review=requirements_for_review,
+                             interview_candidates=interview_candidates, 
+                             stats=stats)
+    
+    except Exception as e:
+        print(f"Error in admin_interview_panel: {str(e)}")
+        return render_template('admin/interview-panel.html', 
+                             requirements_for_review=[], 
+                             interview_candidates=[], 
+                             stats={})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/schedule-interview', methods=['POST'])
+@login_required
+@role_required(['municipal_peso'])
+def schedule_interview():
+    user_id = request.form.get('user_id')
+    exam_id = request.form.get('exam_id')
+    interview_date = request.form.get('interview_date')
+    interview_time = request.form.get('interview_time')
+    notes = request.form.get('notes', '')
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Get requirements submission ID
+        cursor.execute("""
+            SELECT id FROM requirements_submissions 
+            WHERE user_id = %s AND exam_id = %s AND submission_status = 'approved'
+        """, (user_id, exam_id))
+        req_submission = cursor.fetchone()
+        
+        if not req_submission:
+            return jsonify({'success': False, 'message': 'Requirements not found or not approved'})
+        
+        # Insert or update interview panel entry
+        cursor.execute("""
+            INSERT INTO interview_panel 
+            (user_id, exam_id, requirements_submission_id, interview_date, interview_time, 
+             interview_status, interview_notes, interviewed_by)
+            VALUES (%s, %s, %s, %s, %s, 'scheduled', %s, %s)
+            ON DUPLICATE KEY UPDATE
+            interview_date = VALUES(interview_date),
+            interview_time = VALUES(interview_time),
+            interview_notes = VALUES(interview_notes),
+            interview_status = 'scheduled'
+        """, (user_id, exam_id, req_submission[0], interview_date, interview_time, notes, session['user_id']))
+        
+        # Update applicant status
+        cursor.execute("""
+            UPDATE applicants SET status = 'for interview'
+            WHERE user_id = %s AND exam_id = %s
+        """, (user_id, exam_id))
+        
+        cursor.execute("""
+            UPDATE examinees SET status = 'for interview'
+            WHERE user_id = %s AND exam_id = %s
+        """, (user_id, exam_id))
+        
+        # Log workflow change
+        cursor.execute("""
+            INSERT INTO workflow_audit (user_id, exam_id, old_status, new_status, change_reason, changed_by)
+            VALUES (%s, %s, 'requirements submitted', 'for interview', 'Interview scheduled', %s)
+        """, (user_id, exam_id, session['user_id']))
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': 'Interview scheduled successfully'})
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error scheduling interview: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/save-interview-results', methods=['POST'])
+@login_required
+@role_required(['municipal_peso'])
+def save_interview_results():
+    user_id = request.form.get('user_id')
+    exam_id = request.form.get('exam_id')
+    interview_score = request.form.get('interview_score')
+    interview_status = request.form.get('interview_status')
+    interview_notes = request.form.get('interview_notes')
+    decision_reason = request.form.get('decision_reason')
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Update interview panel results
+        cursor.execute("""
+            UPDATE interview_panel 
+            SET interview_score = %s, interview_status = %s, interview_notes = %s, 
+                decision_reason = %s, interviewed_by = %s
+            WHERE user_id = %s AND exam_id = %s
+        """, (interview_score, interview_status, interview_notes, decision_reason, session['user_id'], user_id, exam_id))
+        
+        # Update status based on interview completion
+        if interview_status == 'completed':
+            new_status = 'final interview pending'
+        elif interview_status == 'no_show':
+            new_status = 'failed'
+        elif interview_status == 'cancelled':
+            new_status = 'for interview'  # Keep for rescheduling
+        else:
+            new_status = 'for interview'
+            
+        cursor.execute("""
+            UPDATE applicants SET status = %s
+            WHERE user_id = %s AND exam_id = %s
+        """, (new_status, user_id, exam_id))
+        
+        cursor.execute("""
+            UPDATE examinees SET status = %s
+            WHERE user_id = %s AND exam_id = %s
+        """, (new_status, user_id, exam_id))
+        
+        # Log workflow change
+        cursor.execute("""
+            INSERT INTO workflow_audit (user_id, exam_id, old_status, new_status, change_reason, changed_by)
+            VALUES (%s, %s, 'for interview', %s, %s, %s)
+        """, (user_id, exam_id, new_status, f'Interview {interview_status}', session['user_id']))
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': 'Interview results saved successfully'})
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error saving interview results: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/mark-final-decision', methods=['POST'])
+@login_required
+@role_required(['municipal_peso'])
+def mark_final_decision():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    exam_id = data.get('exam_id')
+    final_decision = data.get('final_decision')
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Update interview panel final decision
+        cursor.execute("""
+            UPDATE interview_panel 
+            SET final_decision = %s
+            WHERE user_id = %s AND exam_id = %s
+        """, (final_decision, user_id, exam_id))
+        
+        # Update applicant and examinee status
+        new_status = 'passed' if final_decision == 'passed' else 'failed'
+        
+        cursor.execute("""
+            UPDATE applicants SET status = %s
+            WHERE user_id = %s AND exam_id = %s
+        """, (new_status, user_id, exam_id))
+        
+        cursor.execute("""
+            UPDATE examinees SET status = %s
+            WHERE user_id = %s AND exam_id = %s
+        """, (new_status, user_id, exam_id))
+        
+        # If passed, create final report entry
+        if final_decision == 'passed':
+            # Get exam and interview scores
+            cursor.execute("""
+                SELECT ea.score as exam_score, ip.interview_score
+                FROM exam_attempts ea
+                JOIN interview_panel ip ON ea.user_id = ip.user_id AND ea.exam_id = ip.exam_id
+                WHERE ea.user_id = %s AND ea.exam_id = %s
+            """, (user_id, exam_id))
+            scores = cursor.fetchone()
+            
+            if scores:
+                exam_score = scores['exam_score'] or 0
+                interview_score = scores['interview_score'] or 0
+                total_score = (exam_score + interview_score) / 2
+                
+                # Calculate rank position (simple ranking by total score)
+                cursor.execute("""
+                    SELECT COUNT(*) + 1 as rank_position
+                    FROM final_reports fr2
+                    JOIN exam_attempts ea2 ON fr2.user_id = ea2.user_id AND fr2.exam_id = ea2.exam_id
+                    JOIN interview_panel ip2 ON fr2.user_id = ip2.user_id AND fr2.exam_id = ip2.exam_id
+                    WHERE fr2.final_status = 'passed' 
+                    AND ((ea2.score + COALESCE(ip2.interview_score, 0)) / 2) > %s
+                """, (total_score,))
+                rank_result = cursor.fetchone()
+                rank_position = rank_result['rank_position'] if rank_result else 1
+                
+                # Insert final report
+                cursor.execute("""
+                    INSERT INTO final_reports 
+                    (user_id, exam_id, interview_panel_id, final_status, exam_score, 
+                     interview_score, total_score, rank_position, generated_by)
+                    SELECT %s, %s, ip.id, %s, %s, %s, %s, %s, %s
+                    FROM interview_panel ip
+                    WHERE ip.user_id = %s AND ip.exam_id = %s
+                    ON DUPLICATE KEY UPDATE
+                    final_status = VALUES(final_status),
+                    exam_score = VALUES(exam_score),
+                    interview_score = VALUES(interview_score),
+                    total_score = VALUES(total_score),
+                    rank_position = VALUES(rank_position)
+                """, (user_id, exam_id, final_decision, exam_score, interview_score, 
+                     total_score, rank_position, session['user_id'], user_id, exam_id))
+        
+        # Log workflow change
+        cursor.execute("""
+            INSERT INTO workflow_audit (user_id, exam_id, old_status, new_status, change_reason, changed_by)
+            VALUES (%s, %s, 'final interview pending', %s, %s, %s)
+        """, (user_id, exam_id, new_status, f'Final decision: {final_decision}', session['user_id']))
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': f'Candidate marked as {final_decision} successfully'})
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error marking final decision: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/approve-requirements', methods=['POST'])
+@login_required
+@role_required(['municipal_peso'])
+def approve_requirements():
+    """Approve submitted requirements and move applicant to interview stage"""
+    data = request.get_json()
+    submission_id = data.get('submission_id')
+    admin_notes = data.get('admin_notes', '')
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get submission details and verify municipality access
+        cursor.execute("""
+            SELECT rs.user_id, rs.exam_id, u.municipality_id, u.name
+            FROM requirements_submissions rs
+            JOIN users u ON rs.user_id = u.id
+            WHERE rs.id = %s AND rs.submission_status = 'pending_review'
+        """, (submission_id,))
+        submission = cursor.fetchone()
+        
+        if not submission:
+            return jsonify({'success': False, 'message': 'Submission not found or already processed'})
+        
+        # Check municipality access
+        user_municipality = get_user_municipality_id()
+        if session.get('role') != 'provincial_peso' and submission['municipality_id'] != user_municipality:
+            return jsonify({'success': False, 'message': 'Access denied - different municipality'})
+        
+        # Update requirements submission to approved
+        cursor.execute("""
+            UPDATE requirements_submissions 
+            SET submission_status = 'approved',
+                admin_notes = %s,
+                reviewed_at = NOW(),
+                reviewed_by = %s
+            WHERE id = %s
+        """, (admin_notes, session['user_id'], submission_id))
+        
+        # Update applicant and examinee status to 'for interview'
+        cursor.execute("""
+            UPDATE applicants 
+            SET status = 'for interview'
+            WHERE user_id = %s AND exam_id = %s
+        """, (submission['user_id'], submission['exam_id']))
+        
+        cursor.execute("""
+            UPDATE examinees 
+            SET status = 'for interview'
+            WHERE user_id = %s AND exam_id = %s
+        """, (submission['user_id'], submission['exam_id']))
+        
+        # Create interview panel entry
+        cursor.execute("""
+            INSERT INTO interview_panel 
+            (user_id, exam_id, requirements_submission_id, interview_status, interviewed_by)
+            VALUES (%s, %s, %s, 'requirements_approved', %s)
+            ON DUPLICATE KEY UPDATE
+            interview_status = 'requirements_approved',
+            interviewed_by = %s,
+            updated_at = NOW()
+        """, (submission['user_id'], submission['exam_id'], submission_id, session['user_id'], session['user_id']))
+        
+        conn.commit()
+        return jsonify({
+            'success': True, 
+            'message': f'Requirements approved for {submission["name"]}. Candidate moved to interview stage.'
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error approving requirements: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/reject-requirements', methods=['POST'])
+@login_required
+@role_required(['municipal_peso'])
+def reject_requirements():
+    """Reject submitted requirements and send back for revision"""
+    data = request.get_json()
+    submission_id = data.get('submission_id')
+    admin_notes = data.get('admin_notes', '')
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get submission details and verify municipality access
+        cursor.execute("""
+            SELECT rs.user_id, rs.exam_id, u.municipality_id, u.name
+            FROM requirements_submissions rs
+            JOIN users u ON rs.user_id = u.id
+            WHERE rs.id = %s AND rs.submission_status = 'pending_review'
+        """, (submission_id,))
+        submission = cursor.fetchone()
+        
+        if not submission:
+            return jsonify({'success': False, 'message': 'Submission not found or already processed'})
+        
+        # Check municipality access
+        user_municipality = get_user_municipality_id()
+        if session.get('role') != 'provincial_peso' and submission['municipality_id'] != user_municipality:
+            return jsonify({'success': False, 'message': 'Access denied - different municipality'})
+        
+        # Update requirements submission to rejected
+        cursor.execute("""
+            UPDATE requirements_submissions 
+            SET submission_status = 'rejected',
+                admin_notes = %s,
+                reviewed_at = NOW(),
+                reviewed_by = %s
+            WHERE id = %s
+        """, (admin_notes, session['user_id'], submission_id))
+        
+        # Keep applicant and examinee status as 'pending for requirements' for resubmission
+        cursor.execute("""
+            UPDATE applicants 
+            SET status = 'pending for requirements'
+            WHERE user_id = %s AND exam_id = %s
+        """, (submission['user_id'], submission['exam_id']))
+        
+        cursor.execute("""
+            UPDATE examinees 
+            SET status = 'pending for requirements'
+            WHERE user_id = %s AND exam_id = %s
+        """, (submission['user_id'], submission['exam_id']))
+        
+        conn.commit()
+        return jsonify({
+            'success': True, 
+            'message': f'Requirements rejected for {submission["name"]}. Candidate can resubmit requirements.'
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error rejecting requirements: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/get-requirements/<int:user_id>')
+@login_required
+@role_required(['municipal_peso'])
+def get_requirements(user_id):
+    """Get requirements details for a specific user"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get user's requirements submission details
+        cursor.execute("""
+            SELECT 
+                rs.id as submission_id,
+                u.name, u.email, u.municipality_id,
+                rs.submission_status,
+                rs.submitted_at,
+                rs.admin_notes,
+                rs.spes_form_path,
+                rs.certificate_of_registration_path,
+                rs.copy_of_grades_path,
+                rs.barangay_certificate_path,
+                rs.parent_id_path,
+                rs.birth_certificate_path,
+                rs.passport_photo_path,
+                e.exam_id,
+                ex.title as exam_title,
+                ea.score as exam_score
+            FROM users u
+            JOIN requirements_submissions rs ON u.id = rs.user_id
+            JOIN examinees e ON u.id = e.user_id AND rs.exam_id = e.exam_id
+            JOIN exams ex ON rs.exam_id = ex.id
+            JOIN exam_attempts ea ON u.id = ea.user_id AND rs.exam_id = ea.exam_id
+            WHERE u.id = %s
+            ORDER BY rs.submitted_at DESC
+            LIMIT 1
+        """, (user_id,))
+        requirements = cursor.fetchone()
+        
+        if not requirements:
+            return jsonify({'success': False, 'message': 'Requirements not found'})
+        
+        # Check municipality access
+        user_municipality = get_user_municipality_id()
+        if session.get('role') != 'provincial_peso' and requirements['municipality_id'] != user_municipality:
+            return jsonify({'success': False, 'message': 'Access denied - different municipality'})
+        
+        # Generate HTML content for the modal
+        html_content = f"""
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6><strong>Applicant:</strong> {requirements['name']}</h6>
+                    <p><strong>Email:</strong> {requirements['email']}</p>
+                    <p><strong>Exam:</strong> {requirements['exam_title']}</p>
+                    <p><strong>Exam Score:</strong> {requirements['exam_score']}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status:</strong> <span class="badge bg-{'success' if requirements['submission_status'] == 'approved' else 'warning' if requirements['submission_status'] == 'pending_review' else 'danger'}">{requirements['submission_status'].replace('_', ' ').title()}</span></p>
+                    <p><strong>Submitted:</strong> {requirements['submitted_at'].strftime('%B %d, %Y at %I:%M %p') if requirements['submitted_at'] else 'Not submitted'}</p>
+                    {f'<p><strong>Admin Notes:</strong> {requirements["admin_notes"]}</p>' if requirements['admin_notes'] else ''}
+                </div>
+            </div>
+            
+            <h6><strong>Submitted Documents:</strong></h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-group list-group-flush">
+        """
+        
+        # Add document links
+        documents = [
+            ('SPES Form', requirements['spes_form_path']),
+            ('Certificate of Registration', requirements['certificate_of_registration_path']),
+            ('Copy of Grades', requirements['copy_of_grades_path']),
+            ('Barangay Certificate', requirements['barangay_certificate_path'])
+        ]
+        
+        for doc_name, doc_path in documents:
+            if doc_path:
+                html_content += f"""
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {doc_name}
+                            <a href="/download-uploaded-document/{user_id}/{doc_name.lower().replace(' ', '_')}" 
+                               class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                        </li>
+                """
+            else:
+                html_content += f"""
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {doc_name}
+                            <span class="text-muted">Not submitted</span>
+                        </li>
+                """
+        
+        html_content += """
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-group list-group-flush">
+        """
+        
+        # Add remaining documents
+        documents2 = [
+            ('Parent ID', requirements['parent_id_path']),
+            ('Birth Certificate', requirements['birth_certificate_path']),
+            ('Passport Photo', requirements['passport_photo_path'])
+        ]
+        
+        for doc_name, doc_path in documents2:
+            if doc_path:
+                html_content += f"""
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {doc_name}
+                            <a href="/download-uploaded-document/{user_id}/{doc_name.lower().replace(' ', '_')}" 
+                               class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                        </li>
+                """
+            else:
+                html_content += f"""
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {doc_name}
+                            <span class="text-muted">Not submitted</span>
+                        </li>
+                """
+        
+        html_content += """
+                    </ul>
+                </div>
+            </div>
+        </div>
+        """
+        
+        return jsonify({'success': True, 'html': html_content})
+        
+    except Exception as e:
+        print(f"Error getting requirements: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+# Route for submit requirements (to be called after exam passing)
+@app.route('/submit-requirements', methods=['POST'])
+@login_required
+def submit_requirements():
+    # This route handles the SPES forms submission after exam passing
+    # Implementation would handle file uploads and update requirements_submissions table
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Update requirements submission status
+        cursor.execute("""
+            UPDATE requirements_submissions 
+            SET submission_status = 'pending_review', submitted_at = NOW()
+            WHERE user_id = %s
+        """, (session['user_id'],))
+        
+        # Update applicant status
+        cursor.execute("""
+            UPDATE applicants SET status = 'requirements submitted'
+            WHERE user_id = %s 
+            ORDER BY submission_date DESC 
+            LIMIT 1
+        """, (session['user_id'],))
+        
+        cursor.execute("""
+            UPDATE examinees SET status = 'requirements submitted'
+            WHERE user_id = %s
+        """, (session['user_id'],))
+        
+        # Log workflow change
+        cursor.execute("""
+            INSERT INTO workflow_audit (user_id, old_status, new_status, change_reason, changed_by)
+            VALUES (%s, 'pending for requirements', 'requirements submitted', 'Requirements submitted', %s)
+        """, (session['user_id'], session['user_id']))
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': 'Requirements submitted successfully'})
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error submitting requirements: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
         
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
