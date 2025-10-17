@@ -141,12 +141,15 @@
                   ><span class="ms-3 d-none d-sm-inline">Exams</span>
                 </a>
               </li>
-              <!-- <li>
-                <a href="#" class="nav-link px-sm-0 px-2">
+              <li>
+                <a
+                  href="{{ url_for('admin_interview_panel') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
                   <i class="fs-5 bi-people"></i
-                  ><span class="ms-3 d-none d-sm-inline">Interview Panel</span>
+                  ><span class="ms-3 d-none d-sm-inline">Interviews</span>
                 </a>
-              </li> -->
+              </li>
               <li>
                 <a
                   href="{{ url_for('admin_messages') }}"
