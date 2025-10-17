@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
+    <title>DigiSPES</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
+    />
+    <style>
+      /* this is needed to make the content scrollable on larger screens */
+      @media (min-width: 576px) {
+        .h-sm-100 {
+          height: 100%;
+        }
+      }
+
+      .spes-logo-img {
+        width: 50px;
+      }
+      #logo-name {
+        margin-left: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      #sidebar {
+        box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      #card-body {
+        background-color: #006edc;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .card-link {
+        text-decoration: none;
+        padding: 0.7rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid white;
+        background-color: white;
+
+        &:hover {
+          background-color: #006edc;
+          color: white;
+          border: 1px solid white;
+        }
+      }
+      .main-container {
+        background-color: rgb(239, 243, 255);
+        padding: 1rem;
+        border-radius: 0.25rem;
+      }
+      #sidebar-active {
+        background-color: #006edc;
+        color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        padding: 0.5rem 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- sidebar boostrap 5-->
+
+    <div class="container-fluid overflow-hidden">
+      <div class="row vh-100 overflow-auto">
+        <div
+          class="col-12 col-sm-3 col-xl-2 px-sm-2 px-0 bg-white d-flex sticky-top"
+        >
+          <div
+            class="d-flex flex-sm-column flex-row flex-grow-1 align-items-center align-items-sm-start px-3 pt-2 text-dark pb-2"
+            id="sidebar"
+          >
+            <a
+              href="/"
+              class="d-flex align-items-center pb-sm-3 mb-md-0 me-md-auto text-dark text-decoration-none"
+            >
+              <span class="fs-5 mt-2"
+                ><img
+                  src="/static/images/spes-logo.png"
+                  alt=""
+                  srcset=""
+                  class="spes-logo-img"
+                /><span class="d-none d-sm-inline" id="logo-name"
+                  >SPES</span
+                ></span
+              >
+            </a>
+            <ul
+              class="nav nav-pills flex-sm-column flex-row flex-nowrap flex-shrink-1 flex-sm-grow-0 flex-grow-1 mb-sm-auto mb-0 justify-content-center align-items-center align-items-sm-start"
+              id="menu"
+            >
+              <li>
+                <a
+                  href="{{ url_for('admin_dashboard') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-speedometer2"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_announcements') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-megaphone"></i
+                  ><span class="ms-3 d-none d-sm-inline">Announcements</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_applications') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark"></i
+                  ><span class="ms-3 d-none d-sm-inline">Applicants</span>
+                </a>
+              </li>
+              <!-- students who took the exam -->
+              <li>
+                <a
+                  href="{{ url_for('admin_examinees') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Examinees</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_exams') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-pencil"></i
+                  ><span class="ms-3 d-none d-sm-inline">Exams</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_interview_panel') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Interviews</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_messages') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-envelope"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Messages</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_feedback') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-star"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Feedback</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-folder2-open"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="sidebar-active"
+                    >Reports</span
+                  >
+                </a>
+              </li>
+              <li class="dropdown d-sm-none">
+                <a
+                  href="#"
+                  class="nav-link dropdown-toggle px-sm-0 px-1"
+                  id="dropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i class="fs-5 bi-list"></i
+                  ><span class="ms-3 d-none d-sm-inline"></span>
+                </a>
+                <ul
+                  class="dropdown-menu dropdown-menu-dark text-small shadow"
+                  aria-labelledby="dropdown"
+                >
+                  <li><a class="dropdown-item" href="#">Dashboard</a></li>
+                  <li><a class="dropdown-item" href="#">Messages</a></li>
+                  <li><a class="dropdown-item" href="#">Profile</a></li>
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <div
+              class="dropdown py-sm-4 mt-sm-auto ms-auto ms-sm-0 flex-shrink-1"
+            >
+              <a
+                href="#"
+                class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+                id="dropdownUser1"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-person-circle fs-4"></i>
+                <span class="d-none d-sm-inline mx-1">Admin</span>
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-dark text-small shadow"
+                aria-labelledby="dropdownUser1"
+              >
+                <li><a class="dropdown-item" href="#">Settings</a></li>
+                <li><a class="dropdown-item" href="#">Profile</a></li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- this page will fetched and displays applicants who PASSED the examination and PASSED after submitting the last requirements which is the last SPES-FORMS in SPES-FORMS.html -->
+        <div class="col d-flex flex-column h-sm-100">
+          <main class="row overflow-auto">
+            <div class="col pt-4">
+              <h3>Final Reports</h3>
+              <hr />
+
+              <div class="main-container">
+                <div class="container py-4">
+                  <!-- Report Summary Cards -->
+                  <div class="row mb-4">
+                    <div class="col-md-3">
+                      <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                          <h4>{{ stats.total_passed or 0 }}</h4>
+                          <p>Total Passed</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                          <h4>{{ stats.total_slots or 0 }}</h4>
+                          <p>Available Slots</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="card bg-warning text-dark">
+                        <div class="card-body text-center">
+                          <h4>{{ stats.pending_provincial or 0 }}</h4>
+                          <p>Pending Provincial</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                          <h4>{{ stats.sent_provincial or 0 }}</h4>
+                          <p>Sent to Provincial</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Export Options -->
+                  <div
+                    class="d-flex justify-content-between align-items-center mb-3"
+                  >
+                    <div class="btn-group" role="group">
+                      <button
+                        class="btn btn-primary"
+                        onclick="filterReports('all')"
+                      >
+                        All Reports
+                      </button>
+                      <button
+                        class="btn btn-outline-primary"
+                        onclick="filterReports('passed')"
+                      >
+                        Passed Only
+                      </button>
+                      <button
+                        class="btn btn-outline-primary"
+                        onclick="filterReports('pending')"
+                      >
+                        Pending Provincial
+                      </button>
+                      <button
+                        class="btn btn-outline-primary"
+                        onclick="filterReports('sent')"
+                      >
+                        Sent to Provincial
+                      </button>
+                    </div>
+
+                    <div class="btn-group">
+                      <button class="btn btn-success" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel"></i> Export Excel
+                      </button>
+                      <button class="btn btn-info" onclick="exportToPDF()">
+                        <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                      </button>
+                      <button
+                        class="btn btn-warning"
+                        onclick="sendToProvincial()"
+                      >
+                        <i class="bi bi-send"></i> Send to Provincial
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Final Reports Table -->
+                  <div class="card shadow-sm">
+                    <div class="card-header">
+                      <h5 class="mb-0">Final SPES Candidates Report</h5>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-hover mb-0" id="reportsTable">
+                        <thead class="table-light">
+                          <tr>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>ID Number</th>
+                            <th>Municipality</th>
+                            <th>Exam Score</th>
+                            <th>Interview Score</th>
+                            <th>Total Score</th>
+                            <th>Status</th>
+                            <th>Date Completed</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for report in final_reports %}
+                          <tr
+                            class="report-row"
+                            data-status="{{ report.final_status }}"
+                            data-provincial="{{ 'sent' if report.sent_to_provincial else 'pending' }}"
+                          >
+                            <td>
+                              <span class="badge bg-primary"
+                                >{{ report.rank_position }}</span
+                              >
+                            </td>
+                            <td>
+                              <strong
+                                >{{ report.first_name }} {{ report.middle_name
+                                }} {{ report.last_name }}</strong
+                              ><br />
+                              <small class="text-muted"
+                                >{{ report.email }}</small
+                              >
+                            </td>
+                            <td>{{ report.id_number }}</td>
+                            <td>{{ report.municipality_name or 'N/A' }}</td>
+                            <td>
+                              <span
+                                class="badge bg-{{ 'success' if report.exam_score >= 70 else 'warning' }}"
+                              >
+                                {{ report.exam_score }}%
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                class="badge bg-{{ 'success' if report.interview_score >= 70 else 'warning' }}"
+                              >
+                                {{ report.interview_score or 'N/A' }}
+                              </span>
+                            </td>
+                            <td>
+                              <strong
+                                class="text-{{ 'success' if report.total_score >= 70 else 'warning' }}"
+                              >
+                                {{ report.total_score }}%
+                              </strong>
+                            </td>
+                            <td>
+                              <span
+                                class="badge bg-{{ 'success' if report.final_status == 'passed' else 'danger' }}"
+                              >
+                                {{ report.final_status|title }}
+                              </span>
+                              {% if report.sent_to_provincial %}
+                              <br /><small class="text-success">
+                                <i class="bi bi-check-circle"></i> Sent {{
+                                report.sent_at.strftime('%m/%d/%Y') }}
+                              </small>
+                              {% else %}
+                              <br /><small class="text-warning">
+                                <i class="bi bi-clock"></i> Pending Provincial
+                              </small>
+                              {% endif %}
+                            </td>
+                            <td>
+                              {{ report.report_generated_at.strftime('%B %d,
+                              %Y') }}
+                            </td>
+                            <td>
+                              <div class="btn-group btn-group-sm">
+                                <button
+                                  class="btn btn-outline-primary"
+                                  onclick="viewCandiateDetails({{ report.user_id }}, {{ report.exam_id }})"
+                                >
+                                  <i class="bi bi-eye"></i>
+                                </button>
+                                {% if not report.sent_to_provincial %}
+                                <button
+                                  class="btn btn-outline-warning"
+                                  onclick="markAsReviewed({{ report.id }})"
+                                >
+                                  <i class="bi bi-check"></i>
+                                </button>
+                                {% endif %}
+                                <button
+                                  class="btn btn-outline-info"
+                                  onclick="downloadCertificate({{ report.user_id }})"
+                                >
+                                  <i class="bi bi-download"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {% else %}
+                          <tr>
+                            <td colspan="10" class="text-center py-4">
+                              <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i> No final
+                                reports available. <br /><small
+                                  >Complete the interview process to generate
+                                  final reports.</small
+                                >
+                              </div>
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Report Statistics -->
+                  {% if final_reports %}
+                  <div class="row mt-4">
+                    <div class="col-md-6">
+                      <div class="card">
+                        <div class="card-header">
+                          <h6 class="mb-0">Score Distribution</h6>
+                        </div>
+                        <div class="card-body">
+                          <canvas id="scoreChart" height="200"></canvas>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="card">
+                        <div class="card-header">
+                          <h6 class="mb-0">Municipality Distribution</h6>
+                        </div>
+                        <div class="card-body">
+                          <canvas id="municipalityChart" height="200"></canvas>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </main>
+          <footer class="row bg-light py-4 mt-auto">
+            <div class="col">&copy SPES 2025 | All rights reserved.</div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <!-- Candidate Details Modal -->
+    <div class="modal fade" id="candidateDetailsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Candidate Details</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body" id="candidateDetailsContent">
+            <!-- Candidate details will be loaded here -->
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      // Filter reports
+      function filterReports(status) {
+        const rows = document.querySelectorAll('.report-row');
+        rows.forEach(row => {
+          const reportStatus = row.dataset.status;
+          const provincialStatus = row.dataset.provincial;
+
+          let show = false;
+          switch(status) {
+            case 'all':
+              show = true;
+              break;
+            case 'passed':
+              show = reportStatus === 'passed';
+              break;
+            case 'pending':
+              show = provincialStatus === 'pending';
+              break;
+            case 'sent':
+              show = provincialStatus === 'sent';
+              break;
+          }
+
+          row.style.display = show ? '' : 'none';
+        });
+
+        // Update active button
+        document.querySelectorAll('.btn-group .btn').forEach(btn => {
+          btn.classList.remove('btn-primary');
+          btn.classList.add('btn-outline-primary');
+        });
+        event.target.classList.remove('btn-outline-primary');
+        event.target.classList.add('btn-primary');
+      }
+
+      // Export functions
+      function exportToExcel() {
+        window.location.href = '/admin/export-final-report?format=excel';
+      }
+
+      function exportToPDF() {
+        window.location.href = '/admin/export-final-report?format=pdf';
+      }
+
+      function sendToProvincial() {
+        if (confirm('Send all passed candidates report to Provincial PESO? This action cannot be undone.')) {
+          fetch('/admin/send-to-provincial', {
+            method: 'POST'
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Report sent to Provincial PESO successfully!');
+              location.reload();
+            } else {
+              alert('Error: ' + data.message);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while sending the report.');
+          });
+        }
+      }
+
+      // View candidate details
+      function viewCandiateDetails(userId, examId) {
+        fetch(`/admin/get-candidate-details/${userId}/${examId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById('candidateDetailsContent').innerHTML = data.html;
+            new bootstrap.Modal(document.getElementById('candidateDetailsModal')).show();
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while loading candidate details.');
+        });
+      }
+
+      function markAsReviewed(reportId) {
+        if (confirm('Mark this report as reviewed?')) {
+          fetch('/admin/mark-report-reviewed', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ report_id: reportId })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              location.reload();
+            } else {
+              alert('Error: ' + data.message);
+            }
+          });
+        }
+      }
+
+      function downloadCertificate(userId) {
+        window.location.href = `/admin/download-certificate/${userId}`;
+      }
+
+      // Initialize charts if data exists
+      document.addEventListener('DOMContentLoaded', function() {
+        {% if final_reports %}
+        // Score Distribution Chart
+        const scoreCtx = document.getElementById('scoreChart');
+        if (scoreCtx) {
+          new Chart(scoreCtx, {
+            type: 'bar',
+            data: {
+              labels: ['90-100%', '80-89%', '70-79%', '60-69%', 'Below 60%'],
+              datasets: [{
+                label: 'Number of Candidates',
+                data: [
+                  {{ stats.score_90_100 or 0 }},
+                  {{ stats.score_80_89 or 0 }},
+                  {{ stats.score_70_79 or 0 }},
+                  {{ stats.score_60_69 or 0 }},
+                  {{ stats.score_below_60 or 0 }}
+                ],
+                backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#fd7e14', '#dc3545']
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  display: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // Municipality Distribution Chart
+        const municipalityCtx = document.getElementById('municipalityChart');
+        if (municipalityCtx) {
+          new Chart(municipalityCtx, {
+            type: 'doughnut',
+            data: {
+              labels: {{ municipality_labels|safe }},
+              datasets: [{
+                data: {{ municipality_data|safe }},
+                backgroundColor: [
+                  '#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1',
+                  '#20c997', '#fd7e14', '#e83e8c', '#6c757d', '#17a2b8'
+                ]
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'bottom'
+                }
+              }
+            }
+          });
+        }
+        {% endif %}
+      });
+    </script>
+  </body>
+</html>
