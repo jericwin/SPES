@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
+    <title>DigiSPES - Interview Panel</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"
+    />
+    <style>
+      /* this is needed to make the content scrollable on larger screens */
+      @media (min-width: 576px) {
+        .h-sm-100 {
+          height: 100%;
+        }
+      }
+
+      .spes-logo-img {
+        width: 50px;
+      }
+      #logo-name {
+        margin-left: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      #sidebar {
+        box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      #card-body {
+        background-color: #006edc;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .card-link {
+        text-decoration: none;
+        padding: 0.7rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid white;
+        background-color: white;
+
+        &:hover {
+          background-color: #006edc;
+          color: white;
+          border: 1px solid white;
+        }
+      }
+      .main-container {
+        background-color: rgb(239, 243, 255);
+        padding: 1rem;
+        border-radius: 0.25rem;
+      }
+      #sidebar-active {
+        background-color: #006edc;
+        color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        padding: 0.5rem 1rem;
+      }
+      .candidate-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #006edc;
+      }
+      .candidate-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+      }
+      .status-badge {
+        font-size: 0.8em;
+        padding: 0.4em 0.8em;
+      }
+      .score-input {
+        max-width: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- sidebar bootstrap 5-->
+
+    <div class="container-fluid overflow-hidden">
+      <div class="row vh-100 overflow-auto">
+        <div
+          class="col-12 col-sm-3 col-xl-2 px-sm-2 px-0 bg-white d-flex sticky-top"
+        >
+          <div
+            class="d-flex flex-sm-column flex-row flex-grow-1 align-items-center align-items-sm-start px-3 pt-2 text-dark pb-2"
+            id="sidebar"
+          >
+            <a
+              href="/"
+              class="d-flex align-items-center pb-sm-3 mb-md-0 me-md-auto text-dark text-decoration-none"
+            >
+              <span class="fs-5 mt-2"
+                ><img
+                  src="/static/images/spes-logo.png"
+                  alt=""
+                  srcset=""
+                  class="spes-logo-img"
+                /><span class="d-none d-sm-inline" id="logo-name"
+                  >SPES</span
+                ></span
+              >
+            </a>
+            <ul
+              class="nav nav-pills flex-sm-column flex-row flex-nowrap flex-shrink-1 flex-sm-grow-0 flex-grow-1 mb-sm-auto mb-0 justify-content-center align-items-center align-items-sm-start"
+              id="menu"
+            >
+              <li>
+                <a
+                  href="{{ url_for('admin_dashboard') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-speedometer2"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_announcements') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-megaphone"></i
+                  ><span class="ms-3 d-none d-sm-inline">Announcements</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_applications') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-file-earmark"></i
+                  ><span class="ms-3 d-none d-sm-inline">Applicants</span>
+                </a>
+              </li>
+              <!-- students who took the exam -->
+              <li>
+                <a
+                  href="{{ url_for('admin_examinees') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline">Examinees</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_exams') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-pencil"></i
+                  ><span class="ms-3 d-none d-sm-inline">Exams</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="nav-link px-sm-0 px-2">
+                  <i class="fs-5 bi-people"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="sidebar-active"
+                    >Interviews</span
+                  >
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_messages') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-envelope"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Messages</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_feedback') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-star"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Feedback</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_reports') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-folder2-open"></i
+                  ><span class="ms-3 d-none d-sm-inline" id="">Reports</span>
+                </a>
+              </li>
+              <li class="dropdown d-sm-none">
+                <a
+                  href="#"
+                  class="nav-link dropdown-toggle px-sm-0 px-1"
+                  id="dropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i class="fs-5 bi-list"></i
+                  ><span class="ms-3 d-none d-sm-inline"></span>
+                </a>
+                <ul
+                  class="dropdown-menu dropdown-menu-dark text-small shadow"
+                  aria-labelledby="dropdown"
+                >
+                  <li><a class="dropdown-item" href="#">Dashboard</a></li>
+                  <li><a class="dropdown-item" href="#">Messages</a></li>
+                  <li><a class="dropdown-item" href="#">Profile</a></li>
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <div
+              class="dropdown py-sm-4 mt-sm-auto ms-auto ms-sm-0 flex-shrink-1"
+            >
+              <a
+                href="#"
+                class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+                id="dropdownUser1"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-person-circle fs-4"></i>
+                <span class="d-none d-sm-inline mx-1">Admin</span>
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-dark text-small shadow"
+                aria-labelledby="dropdownUser1"
+              >
+                <li><a class="dropdown-item" href="#">Settings</a></li>
+                <li><a class="dropdown-item" href="#">Profile</a></li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('logout') }}"
+                    >Sign out</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="col d-flex flex-column h-sm-100">
+          <main class="row overflow-auto">
+            <div class="col pt-4">
+              <h3>Interview Panel Management</h3>
+              <hr />
+
+              <div class="main-container">
+                <div class="container py-4">
+                  <!-- Filter Tabs -->
+                  <div
+                    class="d-flex flex-wrap justify-content-between align-items-center mb-3"
+                  >
+                    <div class="btn-group flex-wrap" role="group">
+                      <button
+                        class="btn btn-primary mb-2"
+                        onclick="filterInterviews('all')"
+                      >
+                        All Candidates
+                      </button>
+                      <button
+                        class="btn btn-outline-primary mb-2"
+                        onclick="filterInterviews('requirements_submitted')"
+                      >
+                        Requirements Submitted
+                      </button>
+                      <button
+                        class="btn btn-outline-primary mb-2"
+                        onclick="filterInterviews('scheduled')"
+                      >
+                        Scheduled
+                      </button>
+                      <button
+                        class="btn btn-outline-primary mb-2"
+                        onclick="filterInterviews('completed')"
+                      >
+                        Completed
+                      </button>
+                      <button
+                        class="btn btn-outline-primary mb-2"
+                        onclick="filterInterviews('pending')"
+                      >
+                        Pending Decision
+                      </button>
+                      <button
+                        class="btn btn-outline-success mb-2"
+                        onclick="filterInterviews('passed')"
+                      >
+                        Passed
+                      </button>
+                      <button
+                        class="btn btn-outline-danger mb-2"
+                        onclick="filterInterviews('failed')"
+                      >
+                        Failed
+                      </button>
+                    </div>
+
+                    <div class="mb-2">
+                      <button
+                        class="btn btn-success"
+                        onclick="generateFinalReport()"
+                      >
+                        <i class="bi bi-file-earmark-text"></i> Generate Final
+                        Report
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Statistics Cards -->
+                  <div class="row mb-4">
+                    <div class="col-md-2">
+                      <div class="card bg-warning text-dark">
+                        <div class="card-body text-center">
+                          <h4 id="pendingRequirementsCount">
+                            {{ stats.pending_requirements_review or 0 }}
+                          </h4>
+                          <p>Pending Review</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                          <h4 id="approvedRequirementsCount">
+                            {{ stats.approved_requirements or 0 }}
+                          </h4>
+                          <p>Approved Requirements</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="card bg-secondary text-white">
+                        <div class="card-body text-center">
+                          <h4 id="pendingInterviewsCount">
+                            {{ stats.pending_interviews or 0 }}
+                          </h4>
+                          <p>Pending Interviews</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                          <h4 id="passedCandidatesCount">
+                            {{ stats.passed_candidates or 0 }}
+                          </h4>
+                          <p>Passed</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="card bg-danger text-white">
+                        <div class="card-body text-center">
+                          <h4 id="failedCandidatesCount">
+                            {{ stats.failed_candidates or 0 }}
+                          </h4>
+                          <p>Failed</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Requirements Review Section -->
+                  {% if requirements_for_review %}
+                  <div class="row mb-4">
+                    <div class="col-12">
+                      <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">
+                          <h5 class="mb-0">
+                            <i class="bi bi-file-earmark-check"></i>
+                            Requirements Pending Review
+                            <span class="badge bg-dark ms-2"
+                              >{{ requirements_for_review|length }}</span
+                            >
+                          </h5>
+                        </div>
+                        <div class="card-body">
+                          <div class="table-responsive">
+                            <table class="table table-hover">
+                              <thead>
+                                <tr>
+                                  <th>Applicant</th>
+                                  <th>Exam</th>
+                                  <th>Exam Score</th>
+                                  <th>Submitted</th>
+                                  <th>Documents</th>
+                                  <th>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {% for submission in requirements_for_review %}
+                                <tr
+                                  id="submission-{{ submission.submission_id }}"
+                                >
+                                  <td>
+                                    <strong>{{ submission.name }}</strong><br />
+                                    <small class="text-muted"
+                                      >{{ submission.email }}</small
+                                    >
+                                  </td>
+                                  <td>
+                                    {{ submission.exam_title }}<br />
+                                    <small class="text-muted"
+                                      >Exam ID: {{ submission.exam_id }}</small
+                                    >
+                                  </td>
+                                  <td>
+                                    <span class="badge bg-primary"
+                                      >{{ submission.exam_score }}%</span
+                                    >
+                                  </td>
+                                  <td>
+                                    <small
+                                      >{{
+                                      submission.submitted_at.strftime('%Y-%m-%d
+                                      %H:%M') if submission.submitted_at else
+                                      'Not submitted' }}</small
+                                    >
+                                  </td>
+                                  <td>
+                                    <div
+                                      class="btn-group-vertical btn-group-sm"
+                                      role="group"
+                                    >
+                                      {% if submission.spes_form_path %}
+                                      <button
+                                        class="btn btn-outline-primary btn-sm"
+                                        onclick="viewDocument('{{ submission.spes_form_path }}', 'SPES Form')"
+                                      >
+                                        <i class="bi bi-file-text"></i> SPES
+                                        Form
+                                      </button>
+                                      {% endif %} {% if
+                                      submission.certificate_of_registration_path
+                                      %}
+                                      <button
+                                        class="btn btn-outline-primary btn-sm"
+                                        onclick="viewDocument('{{ submission.certificate_of_registration_path }}', 'Certificate of Registration')"
+                                      >
+                                        <i class="bi bi-file-text"></i> COR
+                                      </button>
+                                      {% endif %} {% if
+                                      submission.copy_of_grades_path %}
+                                      <button
+                                        class="btn btn-outline-primary btn-sm"
+                                        onclick="viewDocument('{{ submission.copy_of_grades_path }}', 'Copy of Grades')"
+                                      >
+                                        <i class="bi bi-file-text"></i> Grades
+                                      </button>
+                                      {% endif %} {% if
+                                      submission.barangay_certificate_path %}
+                                      <button
+                                        class="btn btn-outline-primary btn-sm"
+                                        onclick="viewDocument('{{ submission.barangay_certificate_path }}', 'Barangay Certificate')"
+                                      >
+                                        <i class="bi bi-file-text"></i> Barangay
+                                        Cert
+                                      </button>
+                                      {% endif %} {% if
+                                      submission.parent_id_path %}
+                                      <button
+                                        class="btn btn-outline-primary btn-sm"
+                                        onclick="viewDocument('{{ submission.parent_id_path }}', 'Parent ID')"
+                                      >
+                                        <i class="bi bi-file-text"></i> Parent
+                                        ID
+                                      </button>
+                                      {% endif %} {% if
+                                      submission.birth_certificate_path %}
+                                      <button
+                                        class="btn btn-outline-primary btn-sm"
+                                        onclick="viewDocument('{{ submission.birth_certificate_path }}', 'Birth Certificate')"
+                                      >
+                                        <i class="bi bi-file-text"></i> Birth
+                                        Cert
+                                      </button>
+                                      {% endif %} {% if
+                                      submission.passport_photo_path %}
+                                      <button
+                                        class="btn btn-outline-primary btn-sm"
+                                        onclick="viewDocument('{{ submission.passport_photo_path }}', 'Passport Photo')"
+                                      >
+                                        <i class="bi bi-file-image"></i> Photo
+                                      </button>
+                                      {% endif %}
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div
+                                      class="btn-group-vertical"
+                                      role="group"
+                                    >
+                                      <button
+                                        class="btn btn-success btn-sm"
+                                        onclick="reviewRequirements({{ submission.submission_id }}, 'approve', '{{ submission.name }}')"
+                                      >
+                                        <i class="bi bi-check-circle"></i>
+                                        Approve
+                                      </button>
+                                      <button
+                                        class="btn btn-danger btn-sm"
+                                        onclick="reviewRequirements({{ submission.submission_id }}, 'reject', '{{ submission.name }}')"
+                                      >
+                                        <i class="bi bi-x-circle"></i> Reject
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                {% endfor %}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- Candidates List -->
+                  <div class="row" id="candidatesContainer">
+                    {% for candidate in interview_candidates %}
+                    <div
+                      class="col-md-6 mb-3 candidate-item"
+                      data-status="{{ candidate.interview_status }}"
+                      data-decision="{{ candidate.final_decision }}"
+                    >
+                      <div class="card candidate-card">
+                        <div
+                          class="card-header d-flex justify-content-between align-items-center"
+                        >
+                          <h6 class="mb-0">
+                            {% if candidate.middle_name and candidate.last_name
+                            %} {{ candidate.first_name }} {{
+                            candidate.middle_name }} {{ candidate.last_name }}
+                            {% elif candidate.last_name and candidate.last_name
+                            != candidate.first_name %} {{ candidate.first_name
+                            }} {{ candidate.last_name }} {% else %} {{
+                            candidate.name }} {% endif %}
+                          </h6>
+                          <span
+                            class="badge status-badge {% if candidate.final_decision == 'passed' %}bg-success {% elif candidate.final_decision == 'failed' %}bg-danger {% elif candidate.interview_status == 'completed' %}bg-warning {% elif candidate.interview_status == 'scheduled' %}bg-info {% else %}bg-secondary{% endif %}"
+                          >
+                            {% if candidate.final_decision == 'passed' %}Passed
+                            {% elif candidate.final_decision == 'failed'
+                            %}Failed {% elif candidate.interview_status ==
+                            'completed' %}Interview Done {% elif
+                            candidate.interview_status == 'scheduled'
+                            %}Scheduled {% else %}Requirements Submitted{% endif
+                            %}
+                          </span>
+                        </div>
+                        <div class="card-body">
+                          <div class="row mb-2">
+                            <div class="col-sm-6">
+                              <small class="text-muted">Exam Score:</small
+                              ><br />
+                              <strong>{{ candidate.exam_score }}%</strong>
+                            </div>
+                            <div class="col-sm-6">
+                              <small class="text-muted"
+                                >Requirements Status:</small
+                              ><br />
+                              <span
+                                class="badge bg-{{ 'success' if candidate.requirements_status == 'approved' else 'warning' }}"
+                              >
+                                {{ candidate.requirements_status|title }}
+                              </span>
+                            </div>
+                          </div>
+
+                          {% if candidate.interview_date %}
+                          <div class="row mb-2">
+                            <div class="col-sm-6">
+                              <small class="text-muted">Interview Date:</small
+                              ><br />
+                              <strong
+                                >{{ candidate.interview_date.strftime('%B %d,
+                                %Y') }}</strong
+                              >
+                            </div>
+                            <div class="col-sm-6">
+                              <small class="text-muted">Interview Time:</small
+                              ><br />
+                              <strong
+                                >{{ candidate.interview_time.strftime('%I:%M
+                                %p') if candidate.interview_time else 'TBD'
+                                }}</strong
+                              >
+                            </div>
+                          </div>
+                          {% endif %} {% if candidate.interview_score %}
+                          <div class="row mb-2">
+                            <div class="col-sm-6">
+                              <small class="text-muted">Interview Score:</small
+                              ><br />
+                              <strong
+                                >{{ candidate.interview_score }}/100</strong
+                              >
+                            </div>
+                          </div>
+                          {% endif %}
+
+                          <div class="d-flex gap-2 flex-wrap">
+                            <button
+                              class="btn btn-sm btn-outline-primary"
+                              onclick="viewRequirements({{ candidate.user_id }})"
+                            >
+                              <i class="bi bi-file-text"></i> View Requirements
+                            </button>
+
+                            {% if candidate.interview_status ==
+                            'requirements_submitted' %}
+                            <button
+                              class="btn btn-sm btn-primary"
+                              onclick="scheduleInterview({{ candidate.user_id }}, {{ candidate.exam_id }})"
+                            >
+                              <i class="bi bi-calendar-plus"></i> Schedule
+                              Interview
+                            </button>
+                            {% endif %} {% if candidate.interview_status ==
+                            'scheduled' or candidate.interview_status ==
+                            'completed' %}
+                            <button
+                              class="btn btn-sm btn-info"
+                              onclick="conductInterview({{ candidate.user_id }}, {{ candidate.exam_id }})"
+                            >
+                              <i class="bi bi-person-check"></i>
+                              {% if candidate.interview_status == 'scheduled'
+                              %}Conduct{% else %}Edit{% endif %} Interview
+                            </button>
+                            {% endif %} {% if candidate.interview_status ==
+                            'completed' and candidate.final_decision ==
+                            'pending' %}
+                            <div class="btn-group">
+                              <button
+                                class="btn btn-sm btn-success"
+                                onclick="markFinalDecision({{ candidate.user_id }}, {{ candidate.exam_id }}, 'passed')"
+                              >
+                                <i class="bi bi-check-circle"></i> Pass
+                              </button>
+                              <button
+                                class="btn btn-sm btn-danger"
+                                onclick="markFinalDecision({{ candidate.user_id }}, {{ candidate.exam_id }}, 'failed')"
+                              >
+                                <i class="bi bi-x-circle"></i> Fail
+                              </button>
+                            </div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12">
+                      <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle"></i> No candidates found
+                        for interview panel.
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+          <footer class="row bg-light py-4 mt-auto">
+            <div class="col">&copy SPES 2025 | All rights reserved.</div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule Interview Modal -->
+    <div class="modal fade" id="scheduleInterviewModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Schedule Interview</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="scheduleInterviewForm">
+              <input type="hidden" id="scheduleUserId" name="user_id" />
+              <input type="hidden" id="scheduleExamId" name="exam_id" />
+
+              <div class="mb-3">
+                <label class="form-label">Interview Date</label>
+                <input
+                  type="date"
+                  class="form-control"
+                  id="interviewDate"
+                  name="interview_date"
+                  required
+                />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Interview Time</label>
+                <input
+                  type="time"
+                  class="form-control"
+                  id="interviewTime"
+                  name="interview_time"
+                  required
+                />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Notes (Optional)</label>
+                <textarea
+                  class="form-control"
+                  id="interviewNotes"
+                  name="notes"
+                  rows="3"
+                ></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveInterviewSchedule()"
+            >
+              Schedule
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conduct Interview Modal -->
+    <div class="modal fade" id="conductInterviewModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Conduct Interview</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="conductInterviewForm">
+              <input type="hidden" id="conductUserId" name="user_id" />
+              <input type="hidden" id="conductExamId" name="exam_id" />
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Interview Score (0-100)</label>
+                  <input
+                    type="number"
+                    class="form-control score-input"
+                    id="interviewScore"
+                    name="interview_score"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Interview Status</label>
+                  <select
+                    class="form-select"
+                    id="interviewStatus"
+                    name="interview_status"
+                    required
+                  >
+                    <option value="completed">Completed</option>
+                    <option value="no_show">No Show</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Interview Notes</label>
+                <textarea
+                  class="form-control"
+                  id="conductInterviewNotes"
+                  name="interview_notes"
+                  rows="4"
+                  required
+                ></textarea>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Decision Reason</label>
+                <textarea
+                  class="form-control"
+                  id="decisionReason"
+                  name="decision_reason"
+                  rows="3"
+                ></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveInterviewResults()"
+            >
+              Save Results
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Requirements Modal -->
+    <div class="modal fade" id="requirementsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Requirements Submitted</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body" id="requirementsContent">
+            <!-- Requirements content will be loaded here -->
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Filter functions
+      function filterInterviews(status) {
+        const candidates = document.querySelectorAll(".candidate-item");
+        candidates.forEach((candidate) => {
+          const candidateStatus = candidate.dataset.status;
+          const candidateDecision = candidate.dataset.decision;
+
+          let show = false;
+
+          switch (status) {
+            case "all":
+              show = true;
+              break;
+            case "requirements_submitted":
+              show =
+                candidateStatus === "requirements_submitted" ||
+                candidateStatus === "";
+              break;
+            case "scheduled":
+              show = candidateStatus === "scheduled";
+              break;
+            case "completed":
+              show = candidateStatus === "completed";
+              break;
+            case "pending":
+              show =
+                candidateStatus === "completed" &&
+                candidateDecision === "pending";
+              break;
+            case "passed":
+              show = candidateDecision === "passed";
+              break;
+            case "failed":
+              show = candidateDecision === "failed";
+              break;
+          }
+
+          candidate.style.display = show ? "" : "none";
+        });
+
+        // Update active button
+        document.querySelectorAll(".btn-group .btn").forEach((btn) => {
+          btn.classList.remove("btn-primary");
+          btn.classList.add("btn-outline-primary");
+        });
+        event.target.classList.remove(
+          "btn-outline-primary",
+          "btn-outline-success",
+          "btn-outline-danger"
+        );
+        event.target.classList.add("btn-primary");
+      }
+
+      // Requirements Review Functions
+      function reviewRequirements(submissionId, action, applicantName) {
+        const message =
+          action === "approve"
+            ? `Are you sure you want to APPROVE the requirements for ${applicantName}? This will move them to the interview stage.`
+            : `Are you sure you want to REJECT the requirements for ${applicantName}? They will need to resubmit their requirements.`;
+
+        if (!confirm(message)) {
+          return;
+        }
+
+        // Show prompt for admin notes
+        const adminNotes = prompt(
+          `Please enter notes for this ${action} (optional):`
+        );
+
+        const endpoint =
+          action === "approve"
+            ? "/admin/approve-requirements"
+            : "/admin/reject-requirements";
+
+        fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            submission_id: submissionId,
+            admin_notes: adminNotes || "",
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              alert(data.message);
+              // Remove the row from the requirements review table
+              const row = document.getElementById(`submission-${submissionId}`);
+              if (row) {
+                row.remove();
+              }
+              // Refresh the page to update statistics and candidate lists
+              location.reload();
+            } else {
+              alert("Error: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert(
+              "An error occurred while processing the requirements review."
+            );
+          });
+      }
+
+      function viewDocument(documentPath, documentType) {
+        if (!documentPath) {
+          alert("Document not available");
+          return;
+        }
+
+        // Open document in new tab/window
+        window.open(documentPath, "_blank");
+      }
+
+      // Schedule interview
+      function scheduleInterview(userId, examId) {
+        document.getElementById("scheduleUserId").value = userId;
+        document.getElementById("scheduleExamId").value = examId;
+
+        // Set minimum date to today
+        const today = new Date().toISOString().split("T")[0];
+        document.getElementById("interviewDate").min = today;
+
+        new bootstrap.Modal(
+          document.getElementById("scheduleInterviewModal")
+        ).show();
+      }
+
+      function saveInterviewSchedule() {
+        const form = document.getElementById("scheduleInterviewForm");
+        const formData = new FormData(form);
+
+        fetch("/admin/schedule-interview", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              location.reload();
+            } else {
+              alert("Error: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("An error occurred while scheduling the interview.");
+          });
+      }
+
+      // Conduct interview
+      function conductInterview(userId, examId) {
+        document.getElementById("conductUserId").value = userId;
+        document.getElementById("conductExamId").value = examId;
+
+        // Load existing data if editing
+        fetch(`/admin/get-interview-data/${userId}/${examId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success && data.interview) {
+              document.getElementById("interviewScore").value =
+                data.interview.interview_score || "";
+              document.getElementById("interviewStatus").value =
+                data.interview.interview_status || "completed";
+              document.getElementById("conductInterviewNotes").value =
+                data.interview.interview_notes || "";
+              document.getElementById("decisionReason").value =
+                data.interview.decision_reason || "";
+            }
+          });
+
+        new bootstrap.Modal(
+          document.getElementById("conductInterviewModal")
+        ).show();
+      }
+
+      function saveInterviewResults() {
+        const form = document.getElementById("conductInterviewForm");
+        const formData = new FormData(form);
+
+        fetch("/admin/save-interview-results", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              location.reload();
+            } else {
+              alert("Error: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("An error occurred while saving interview results.");
+          });
+      }
+
+      // Mark final decision
+      function markFinalDecision(userId, examId, decision) {
+        if (
+          confirm(
+            `Are you sure you want to mark this candidate as ${decision}?`
+          )
+        ) {
+          fetch("/admin/mark-final-decision", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              user_id: userId,
+              exam_id: examId,
+              final_decision: decision,
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                location.reload();
+              } else {
+                alert("Error: " + data.message);
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while updating the final decision.");
+            });
+        }
+      }
+
+      // View requirements
+      function viewRequirements(userId) {
+        fetch(`/admin/get-requirements/${userId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              document.getElementById("requirementsContent").innerHTML =
+                data.html;
+              new bootstrap.Modal(
+                document.getElementById("requirementsModal")
+              ).show();
+            } else {
+              alert("Error: " + data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("An error occurred while loading requirements.");
+          });
+      }
+
+      // Generate final report
+      function generateFinalReport() {
+        if (
+          confirm(
+            "Generate final report for all passed candidates? This will create the report to be sent to provincial PESO."
+          )
+        ) {
+          fetch("/admin/generate-final-report", {
+            method: "POST",
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                alert("Final report generated successfully!");
+                // Optionally redirect to reports page
+                window.location.href = "/admin/reports";
+              } else {
+                alert("Error: " + data.message);
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while generating the final report.");
+            });
+        }
+      }
+    </script>
+  </body>
+</html>
