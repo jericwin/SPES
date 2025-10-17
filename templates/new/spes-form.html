@@ -709,11 +709,14 @@
                       <h4 class="mb-2">Access Restricted</h4>
                       <p class="mb-0">
                         You can only access and submit these forms after passing
-                        the exam.<br />
+                        the exam and receiving "pending for requirements"
+                        status.<br />
                       </p>
                       <p class="text-muted mt-2">
-                        If you believe this is a mistake, please contact support
-                        or your administrator.
+                        {% if application_status %} Your current status:
+                        <strong>{{ application_status }}</strong><br />
+                        {% endif %} If you believe this is a mistake, please
+                        contact support or your administrator.
                       </p>
                     </div>
                   </div>
@@ -721,8 +724,7 @@
                   <h4 class="mb-4">Upload Completed Forms</h4>
                   <p class="text-muted mb-4">
                     Upload your completed forms here. Make sure all required
-                    fields are filled out. Only .docx and .pdf files are
-                    accepted, with a maximum size of 5MB per file.
+                    fields are filled out. Only DOCX, PDF, JPG, JPEG, PNG allowed.
                   </p>
 
                   <form
@@ -1814,6 +1816,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+      // Existing files data from backend
+      const existingFiles = {{ existing_files|tojson }};
+
       // Function to preview template in modal
       function previewTemplate(formType) {
         const previewFrame = document.getElementById("previewFrame");
@@ -1929,6 +1934,57 @@
             `;
           }
         });
+      });
+
+      // Display existing files on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        if (existingFiles) {
+          const fileMapping = {
+            'application_form': 'applicationForm',
+            'employment_contract': 'employmentContract',
+            'oath_of_undertaking': 'oathOfUndertaking',
+            'school_certification': 'schoolCertification',
+            'cor_or_coe': 'corOrCoe',
+            'cog': 'cog',
+            'barangay_indigency': 'barangayIndigency',
+            'psa_birth_certificate': 'psaBirthCertificate'
+          };
+
+          Object.keys(fileMapping).forEach(dbField => {
+            const formField = fileMapping[dbField];
+            const filename = existingFiles[dbField];
+
+            if (filename) {
+              const statusDiv = document.getElementById(formField + 'Status');
+              const infoDiv = document.getElementById(formField + 'Info');
+              const inputElement = document.querySelector(`input[name="${formField}"]`);
+
+              if (statusDiv && infoDiv) {
+                statusDiv.className = "upload-status success";
+                statusDiv.textContent = "File already uploaded";
+
+                infoDiv.innerHTML = `
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <i class="bi bi-file-earmark-check text-success"></i>
+                      <span>${filename}</span>
+                    </div>
+                    <a href="/download-uploaded-document/{{ session.user_id }}/${dbField}"
+                       class="btn btn-sm btn-outline-primary"
+                       target="_blank">
+                      <i class="bi bi-download"></i> Download
+                    </a>
+                  </div>
+                `;
+
+                // Make the file input optional if file exists
+                if (inputElement) {
+                  inputElement.required = false;
+                }
+              }
+            }
+          });
+        }
       });
 
       // Handle form submission
