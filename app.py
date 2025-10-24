@@ -4,13 +4,13 @@ import hashlib
 import re
 import os
 import uuid
+import shutil
+import subprocess
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import io
 from functools import wraps
-from docx2pdf import convert
 import tempfile
-import pythoncom
 import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
 # import numpy as np
@@ -26,6 +26,16 @@ import requests
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from dotenv import load_dotenv
+
+try:
+    import pythoncom
+except ImportError:
+    pythoncom = None
+
+try:
+    from docx2pdf import convert as docx2pdf_convert
+except ImportError:
+    docx2pdf_convert = None
 
 # Load environment variables from .env file
 load_dotenv()
@@ -48,6 +58,44 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Track active chat timers and sockets
 active_chats = {}  # key: room, value: Timer
 user_sid_map = {}  # key: user_id, value: sid
+
+
+def convert_docx_to_pdf(docx_path: str, pdf_path: str) -> None:
+    """Convert a DOCX file to PDF using the available platform tools."""
+    if os.name == 'nt':
+        if pythoncom is None or docx2pdf_convert is None:
+            raise RuntimeError('DOCX to PDF conversion is unavailable on this platform.')
+        pythoncom.CoInitialize()
+        try:
+            docx2pdf_convert(docx_path, pdf_path)
+        finally:
+            pythoncom.CoUninitialize()
+    else:
+        soffice_path = shutil.which('soffice')
+        if not soffice_path:
+            raise RuntimeError('LibreOffice (soffice) is not installed in the container.')
+        output_dir = os.path.dirname(pdf_path)
+        cmd = [
+            soffice_path,
+            '--headless',
+            '--nologo',
+            '--nolockcheck',
+            '--convert-to',
+            'pdf',
+            docx_path,
+            '--outdir',
+            output_dir,
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            stderr = result.stderr.decode().strip() if result.stderr else ''
+            stdout = result.stdout.decode().strip() if result.stdout else ''
+            raise RuntimeError(f'LibreOffice conversion failed: {stderr or stdout}')
+        generated_pdf = os.path.join(output_dir, os.path.splitext(os.path.basename(docx_path))[0] + '.pdf')
+        if generated_pdf != pdf_path and os.path.exists(generated_pdf):
+            os.replace(generated_pdf, pdf_path)
+        elif not os.path.exists(pdf_path):
+            raise RuntimeError('Converted PDF file was not produced.')
 
 # Helper to close chat room
 def close_chat(room, reason):
@@ -897,7 +945,7 @@ def update_announcement():
 
         if not all([announcement_id, title, description, target_audience, announcement_type]):
             return jsonify({'success': False, 'message': 'Please fill in all required fields'})
-
+        
         conn = get_db_connection()
         if conn:
             try:
@@ -3198,15 +3246,13 @@ def preview_document(document_type):
         return jsonify({'success': False, 'message': 'Invalid document type'})
         
     try:
-        pythoncom.CoInitialize()  # Initialize COM for this thread
-        
         # Create temporary directory for conversion
         with tempfile.TemporaryDirectory() as temp_dir:
             docx_path = os.path.join('static/spes-forms', templates[document_type])
             pdf_path = os.path.join(temp_dir, f'{document_type}.pdf')
             
             # Convert DOCX to PDF
-            convert(docx_path, pdf_path)
+            convert_docx_to_pdf(docx_path, pdf_path)
             
             # Read the PDF file
             with open(pdf_path, 'rb') as f:
@@ -3223,11 +3269,6 @@ def preview_document(document_type):
     except Exception as e:
         print(f"Error converting document: {e}")
         return jsonify({'success': False, 'message': 'Error previewing document'})
-    finally:
-        try:
-            pythoncom.CoUninitialize()  # Clean up COM
-        except:
-            pass
 
 # Define keywords for document validation
 COR_KEYWORDS = [
