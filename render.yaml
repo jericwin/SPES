@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: digispes
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    buildCommand: ""
+    startCommand: ""
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"
