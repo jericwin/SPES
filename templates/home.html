@@ -177,6 +177,9 @@
         background-color: #3a5ea8;
         color: white;
       }
+      .password-progress {
+        height: 6px;
+      }
       .form-control,
       .form-select {
         border-radius: 10px;
@@ -372,25 +375,16 @@
                       <!-- Gmail Login Section -->
                       <div class="text-center mb-3">
                         <hr class="my-3" />
-                        <p class="text-muted small">Or login with Gmail</p>
+                        <p class="text-muted small">Or sign in with Google</p>
                       </div>
 
-                      <div class="d-grid gap-2">
+                      <div class="d-grid">
                         <button
                           type="button"
-                          class="btn btn-outline-danger w-100 py-2 mb-2"
-                          onclick="loginWithGmail('new')"
+                          class="btn btn-outline-danger w-100 py-2 btn-google-action"
+                          onclick="initiateGoogleSignIn('login')"
                         >
-                          <i class="fab fa-google me-2"></i>Login with Gmail
-                          (New Applicant)
-                        </button>
-                        <button
-                          type="button"
-                          class="btn btn-outline-danger w-100 py-2"
-                          onclick="loginWithGmail('old')"
-                        >
-                          <i class="fab fa-google me-2"></i>Login with Gmail
-                          (Old Applicant)
+                          <i class="fab fa-google me-2"></i>Continue with Google
                         </button>
                       </div>
                     </form>
@@ -418,6 +412,23 @@
                         <label for="applicantType"
                           ><i class="fas fa-user-tag me-2"></i>Applicant
                           Type</label
+                        >
+                      </div>
+                      <div class="form-floating mb-3">
+                        <select
+                          class="form-select"
+                          id="educationLevel"
+                          name="educationLevel"
+                          aria-label="Education Level"
+                          required
+                        >
+                          <option value="">Select Education Level</option>
+                          <option value="highschool">High School</option>
+                          <option value="college">College</option>
+                        </select>
+                        <label for="educationLevel"
+                          ><i class="fas fa-graduation-cap me-2"></i>Education
+                          Level</label
                         >
                       </div>
                       <div class="form-floating mb-3">
@@ -470,6 +481,20 @@
                           onclick="togglePasswordVisibility('passwordRegister', this)"
                         ></i>
                       </div>
+                      <div class="mb-3">
+                        <div class="progress password-progress">
+                          <div
+                            id="passwordStrengthBar"
+                            class="progress-bar bg-danger"
+                            role="progressbar"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                          ></div>
+                        </div>
+                        <small id="passwordStrengthText" class="text-muted"
+                          >Enter a password to see its strength.</small
+                        >
+                      </div>
                       <div class="form-floating mb-4 position-relative">
                         <input
                           type="password"
@@ -495,6 +520,10 @@
                           onclick="togglePasswordVisibility('confirmPassword', this)"
                         ></i>
                       </div>
+                      <small
+                        id="passwordMatchText"
+                        class="form-text d-none"
+                      ></small>
                       <button
                         type="submit"
                         class="btn btn-primary w-100 py-2 mb-3"
@@ -506,25 +535,16 @@
                       <!-- Gmail Registration Section -->
                       <div class="text-center mb-3">
                         <hr class="my-3" />
-                        <p class="text-muted small">Or register with Gmail</p>
+                        <p class="text-muted small">Or sign up with Google</p>
                       </div>
 
-                      <div class="d-grid gap-2">
+                      <div class="d-grid">
                         <button
                           type="button"
-                          class="btn btn-outline-danger w-100 py-2 mb-2"
-                          onclick="registerWithGmail('new')"
+                          class="btn btn-outline-danger w-100 py-2 btn-google-action"
+                          onclick="openGoogleRegisterModal()"
                         >
-                          <i class="fab fa-google me-2"></i>Register with Gmail
-                          (New Applicant)
-                        </button>
-                        <button
-                          type="button"
-                          class="btn btn-outline-danger w-100 py-2"
-                          onclick="registerWithGmail('old')"
-                        >
-                          <i class="fab fa-google me-2"></i>Register with Gmail
-                          (Old Applicant)
+                          <i class="fab fa-google me-2"></i>Sign up with Google
                         </button>
                       </div>
                     </form>
@@ -606,6 +626,108 @@
           </div>
         </div>
 
+        <!-- Google Registration Preferences Modal -->
+        <div
+          class="modal fade"
+          id="googleRegisterModal"
+          tabindex="-1"
+          aria-labelledby="googleRegisterModalLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="googleRegisterModalLabel">
+                  Complete Your Registration
+                </h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div class="modal-body">
+                <p class="small text-muted mb-3">
+                  Choose your applicant type and education level before
+                  continuing with Google.
+                </p>
+                <div class="mb-4">
+                  <label class="form-label fw-semibold d-block"
+                    >Applicant Type</label
+                  >
+                  <div
+                    class="btn-group"
+                    role="group"
+                    aria-label="Applicant type"
+                  >
+                    <input
+                      type="radio"
+                      class="btn-check"
+                      name="googleApplicantType"
+                      id="googleApplicantNew"
+                      value="new"
+                      autocomplete="off"
+                    />
+                    <label
+                      class="btn btn-outline-primary"
+                      for="googleApplicantNew"
+                      >New Applicant</label
+                    >
+
+                    <input
+                      type="radio"
+                      class="btn-check"
+                      name="googleApplicantType"
+                      id="googleApplicantOld"
+                      value="old"
+                      autocomplete="off"
+                    />
+                    <label
+                      class="btn btn-outline-primary"
+                      for="googleApplicantOld"
+                      >Old Applicant</label
+                    >
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label
+                    class="form-label fw-semibold"
+                    for="googleEducationLevel"
+                    >Education Level</label
+                  >
+                  <select
+                    class="form-select"
+                    id="googleEducationLevel"
+                    aria-label="Education Level"
+                  >
+                    <option value="">Select education level</option>
+                    <option value="highschool">High School</option>
+                    <option value="college">College</option>
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  data-bs-dismiss="modal"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="confirmGoogleRegister()"
+                >
+                  Continue with Google
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <script>
           function togglePasswordVisibility(inputId, icon) {
             const input = document.getElementById(inputId);
@@ -619,6 +741,122 @@
               icon.classList.add("fa-eye");
             }
           }
+
+          document.addEventListener("DOMContentLoaded", function () {
+            const passwordInput = document.getElementById("passwordRegister");
+            const confirmInput = document.getElementById("confirmPassword");
+            const strengthBar = document.getElementById("passwordStrengthBar");
+            const strengthText = document.getElementById(
+              "passwordStrengthText"
+            );
+            const matchText = document.getElementById("passwordMatchText");
+
+            function calculateStrength(value) {
+              let score = 0;
+              if (value.length >= 8) score += 1;
+              if (value.length >= 12) score += 1;
+              if (/[A-Z]/.test(value)) score += 1;
+              if (/[a-z]/.test(value)) score += 1;
+              if (/\d/.test(value)) score += 1;
+              if (/[^A-Za-z0-9]/.test(value)) score += 1;
+              return score;
+            }
+
+            function updatePasswordStrength(value) {
+              if (!strengthBar || !strengthText) {
+                return;
+              }
+
+              if (!value) {
+                strengthBar.style.width = "0%";
+                strengthBar.className = "progress-bar bg-danger";
+                strengthBar.setAttribute("aria-valuenow", "0");
+                strengthText.textContent =
+                  "Enter a password to see its strength.";
+                return;
+              }
+
+              const score = calculateStrength(value);
+              let info = {
+                percent: 40,
+                className: "bg-danger",
+                message: "Weak password. Add numbers, mixed case, or symbols.",
+              };
+
+              if (score <= 2) {
+                info = {
+                  percent: 40,
+                  className: "bg-danger",
+                  message:
+                    "Weak password. Add numbers, mixed case, or symbols.",
+                };
+              } else if (score === 3) {
+                info = {
+                  percent: 60,
+                  className: "bg-warning",
+                  message:
+                    "Fair password. Add more variety for a stronger password.",
+                };
+              } else if (score === 4) {
+                info = {
+                  percent: 80,
+                  className: "bg-info",
+                  message:
+                    "Good password. A bit more length or symbols would help.",
+                };
+              } else {
+                info = {
+                  percent: 100,
+                  className: "bg-success",
+                  message: "Strong password!",
+                };
+              }
+
+              strengthBar.style.width = `${info.percent}%`;
+              strengthBar.className = `progress-bar ${info.className}`;
+              strengthBar.setAttribute("aria-valuenow", String(info.percent));
+              strengthText.textContent = info.message;
+            }
+
+            function updatePasswordMatch() {
+              if (!matchText) {
+                return;
+              }
+
+              const passwordValue = passwordInput ? passwordInput.value : "";
+              const confirmValue = confirmInput ? confirmInput.value : "";
+
+              if (!passwordValue && !confirmValue) {
+                matchText.classList.add("d-none");
+                matchText.textContent = "";
+                matchText.classList.remove("text-danger", "text-success");
+                return;
+              }
+
+              matchText.classList.remove("d-none");
+              if (passwordValue === confirmValue) {
+                matchText.textContent = "Passwords match.";
+                matchText.classList.remove("text-danger");
+                matchText.classList.add("text-success");
+              } else {
+                matchText.textContent = "Passwords do not match yet.";
+                matchText.classList.remove("text-success");
+                matchText.classList.add("text-danger");
+              }
+            }
+
+            if (passwordInput) {
+              updatePasswordStrength(passwordInput.value);
+              passwordInput.addEventListener("input", function (event) {
+                updatePasswordStrength(event.target.value);
+                updatePasswordMatch();
+              });
+            }
+
+            if (confirmInput) {
+              confirmInput.addEventListener("input", updatePasswordMatch);
+            }
+          });
         </script>
         <!--  -->
       </div>
@@ -743,14 +981,146 @@
       }
 
       // Handle the credential response from Google
+      let googleSigninFlow = "login";
+      let googleApplicantType = null;
+      let googleEducationLevel = null;
+      let googleRegisterModalInstance = null;
+
+      function ensureGoogleModalInstance() {
+        if (!googleRegisterModalInstance) {
+          const modalElement = document.getElementById("googleRegisterModal");
+          if (!modalElement) {
+            return null;
+          }
+          googleRegisterModalInstance = new bootstrap.Modal(modalElement, {
+            backdrop: "static",
+          });
+
+          modalElement.addEventListener("hidden.bs.modal", () => {
+            document
+              .querySelectorAll('input[name="googleApplicantType"]')
+              .forEach((input) => {
+                input.checked = false;
+              });
+            const educationSelect = document.getElementById(
+              "googleEducationLevel"
+            );
+            if (educationSelect) {
+              educationSelect.value = "";
+            }
+          });
+        }
+        return googleRegisterModalInstance;
+      }
+
+      function openGoogleRegisterModal() {
+        googleSigninFlow = "register";
+        googleApplicantType = null;
+        googleEducationLevel = null;
+        const modal = ensureGoogleModalInstance();
+        if (!modal) {
+          showMessage("Unable to open registration dialog.", "error");
+          return;
+        }
+        const defaultRadio = document.getElementById("googleApplicantNew");
+        if (defaultRadio) {
+          defaultRadio.checked = true;
+          googleApplicantType = defaultRadio.value;
+        }
+        const educationSelect = document.getElementById("googleEducationLevel");
+        if (educationSelect) {
+          educationSelect.value = "";
+        }
+        modal.show();
+      }
+
+      function confirmGoogleRegister() {
+        const selectedApplicant = document.querySelector(
+          'input[name="googleApplicantType"]:checked'
+        );
+        const educationSelect = document.getElementById("googleEducationLevel");
+
+        if (!selectedApplicant) {
+          showMessage("Please choose your applicant type.", "warning");
+          return;
+        }
+
+        if (!educationSelect || !educationSelect.value) {
+          showMessage("Please select your education level.", "warning");
+          return;
+        }
+
+        googleSigninFlow = "register";
+        googleApplicantType = selectedApplicant.value;
+        googleEducationLevel = educationSelect.value;
+
+        const modal = ensureGoogleModalInstance();
+        if (modal) {
+          modal.hide();
+        }
+
+        triggerGoogleSignIn();
+      }
+
+      function initiateGoogleSignIn(flow) {
+        googleSigninFlow = flow === "register" ? "register" : "login";
+        if (googleSigninFlow === "login") {
+          googleApplicantType = null;
+          googleEducationLevel = null;
+          triggerGoogleSignIn();
+        }
+      }
+
+      function triggerGoogleSignIn() {
+        const actionMessage =
+          googleSigninFlow === "register"
+            ? "Opening Google to finish your registration..."
+            : "Opening Google sign-in...";
+        showMessage(actionMessage, "info");
+
+        if (
+          typeof google === "undefined" ||
+          !google.accounts ||
+          !google.accounts.id
+        ) {
+          showMessage(
+            "Google OAuth not loaded. Please refresh the page and try again.",
+            "error"
+          );
+          return;
+        }
+
+        if (
+          !GOOGLE_CLIENT_ID ||
+          GOOGLE_CLIENT_ID === "your-google-client-id-here"
+        ) {
+          console.error("Invalid Google Client ID:", GOOGLE_CLIENT_ID);
+          showMessage(
+            "Google OAuth not configured. Please contact administrator.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          const gBtn = document.querySelector('#gsi_btn div[role="button"]');
+          if (gBtn) {
+            gBtn.click();
+          } else {
+            google.accounts.id.prompt();
+          }
+        } catch (error) {
+          console.error("Error launching Google sign-in:", error);
+          showMessage(
+            "Failed to open Google authentication. Please try again.",
+            "error"
+          );
+        }
+      }
+
       function handleCredentialResponse(response) {
-        // This will be called after user selects Gmail account
         const token = response.credential;
 
-        // Determine applicant type from the button that was clicked
-        const applicantType = window.currentApplicantType || "new";
-
-        // Send token to server for verification
         fetch("/gmail-login", {
           method: "POST",
           headers: {
@@ -758,124 +1128,46 @@
           },
           body: JSON.stringify({
             token: token,
-            applicantType: applicantType,
+            flowType: googleSigninFlow,
+            applicantType: googleApplicantType,
+            educationLevel: googleEducationLevel,
           }),
         })
           .then((response) => response.json())
           .then((data) => {
             if (data.success) {
-              // Show success message
-              showMessage(data.message, "success");
-
-              // Redirect to appropriate dashboard
+              showMessage(data.message || "Success", "success");
+              googleSigninFlow = "login";
+              googleApplicantType = null;
+              googleEducationLevel = null;
               setTimeout(() => {
-                window.location.href = data.redirect;
-              }, 1000);
-            } else {
-              showMessage(data.message, "error");
+                window.location.href = data.redirect || "/";
+              }, 800);
+              return;
             }
+
+            if (data.needsRegistration) {
+              showMessage(
+                data.message ||
+                  "We couldn't find an account for this email. Please register first.",
+                "warning"
+              );
+              openGoogleRegisterModal();
+              return;
+            }
+
+            showMessage(
+              data.message || "Google authentication failed.",
+              "error"
+            );
           })
           .catch((error) => {
             console.error("Error:", error);
-            showMessage("Login failed. Please try again.", "error");
+            showMessage(
+              "Google authentication failed. Please try again.",
+              "error"
+            );
           });
-      }
-
-      // Login with Gmail
-      function loginWithGmail(applicantType) {
-        console.log("Gmail login clicked for:", applicantType);
-
-        // Show loading message
-        showMessage("Opening Gmail login...", "info");
-
-        // Check if Google OAuth is initialized
-        if (
-          typeof google === "undefined" ||
-          !google.accounts ||
-          !google.accounts.id
-        ) {
-          showMessage(
-            "Google OAuth not loaded. Please refresh the page and try again.",
-            "error"
-          );
-          return;
-        }
-
-        // Check if Client ID is valid
-        if (
-          !GOOGLE_CLIENT_ID ||
-          GOOGLE_CLIENT_ID === "your-google-client-id-here"
-        ) {
-          console.error("Invalid Google Client ID:", GOOGLE_CLIENT_ID);
-          showMessage(
-            "Google OAuth not configured. Please contact administrator.",
-            "error"
-          );
-          return;
-        }
-
-        try {
-          window.currentApplicantType = applicantType;
-          const gBtn = document.querySelector('#gsi_btn div[role="button"]');
-          if (gBtn) {
-            gBtn.click();
-          } else {
-            google.accounts.id.prompt();
-          }
-        } catch (error) {
-          console.error("Error with Gmail login:", error);
-          showMessage("Failed to open Gmail login. Please try again.", "error");
-        }
-      }
-
-      // Register with Gmail (same as login for new users)
-      function registerWithGmail(applicantType) {
-        console.log("Gmail registration clicked for:", applicantType);
-
-        // Show loading message
-        showMessage("Opening Gmail registration...", "info");
-
-        // Check if Google OAuth is initialized
-        if (
-          typeof google === "undefined" ||
-          !google.accounts ||
-          !google.accounts.id
-        ) {
-          showMessage(
-            "Google OAuth not loaded. Please refresh the page and try again.",
-            "error"
-          );
-          return;
-        }
-
-        // Check if Client ID is valid
-        if (
-          !GOOGLE_CLIENT_ID ||
-          GOOGLE_CLIENT_ID === "your-google-client-id-here"
-        ) {
-          console.error("Invalid Google Client ID:", GOOGLE_CLIENT_ID);
-          showMessage(
-            "Google OAuth not configured. Please contact administrator.",
-            "error"
-          );
-          return;
-        }
-
-        try {
-          window.currentApplicantType = applicantType;
-          const gBtn = document.querySelector('#gsi_btn div[role="button"]');
-          if (gBtn) {
-            gBtn.click();
-          } else {
-            google.accounts.id.prompt();
-          }
-        } catch (error) {
-          console.error("Error with Gmail registration:", error);
-          showMessage(
-            "Failed to open Gmail registration. Please try again.",
-            "error"
-          );
-        }
       }
 
       // Show message function
@@ -921,15 +1213,11 @@
         initializeGoogleAuth();
 
         // Add click event listeners for debugging
-        document
-          .querySelectorAll(
-            'button[onclick*="loginWithGmail"], button[onclick*="registerWithGmail"]'
-          )
-          .forEach((button) => {
-            button.addEventListener("click", function () {
-              console.log("Gmail button clicked:", this.textContent.trim());
-            });
+        document.querySelectorAll(".btn-google-action").forEach((button) => {
+          button.addEventListener("click", function () {
+            console.log("Gmail button clicked:", this.textContent.trim());
           });
+        });
       };
     </script>
   </body>
