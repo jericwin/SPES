@@ -897,6 +897,7 @@ def delete_announcement(announcement_id):
     try:
         conn = get_db_connection()
         if conn:
+            cursor = None
             try:
                 cursor = conn.cursor(dictionary=True)
                 
@@ -924,7 +925,8 @@ def delete_announcement(announcement_id):
                 print(f"Database error: {str(e)}")
                 return jsonify({'success': False, 'message': f'Database error: {str(e)}'})
             finally:
-                cursor.close()
+                if cursor:
+                    cursor.close()
                 conn.close()
 
     except Exception as e:
@@ -1205,13 +1207,18 @@ def verify_google_token(token):
 @app.route('/register', methods=['POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
+        username = request.form['username'].strip()
+        email = request.form['email'].strip()
         password = request.form['password']
         confirm_password = request.form['confirmPassword']
         applicant_type = request.form['applicantType']
+        education_level = request.form.get('educationLevel', '').strip().lower()
         
         # Validation
+        if not username:
+            flash('Please enter a username', 'error')
+            return redirect(url_for('home'))
+
         if not is_valid_email(email):
             flash('Please enter a valid email address', 'error')
             return redirect(url_for('home'))
@@ -1224,23 +1231,38 @@ def register():
             flash('Password must be at least 6 characters long', 'error')
             return redirect(url_for('home'))
         
+        if applicant_type not in {'new', 'old'}:
+            flash('Please select a valid applicant type', 'error')
+            return redirect(url_for('home'))
+
+        if education_level not in {'highschool', 'college'}:
+            flash('Please select your education level', 'error')
+            return redirect(url_for('home'))
+        
         # Hash the password
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
         conn = get_db_connection()
         if conn:
+            cursor = None
             try:
-                cursor = conn.cursor()
+                cursor = conn.cursor(dictionary=True, buffered=True)
                 # Check if email already exists
-                cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+                cursor.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(%s)", (email,))
                 if cursor.fetchone():
                     flash('Email already registered', 'error')
                     return redirect(url_for('home'))
                 
+                # Check if username already exists (case insensitive)
+                cursor.execute("SELECT id FROM users WHERE LOWER(name) = LOWER(%s)", (username,))
+                if cursor.fetchone():
+                    flash('Username already taken. Please choose another.', 'error')
+                    return redirect(url_for('home'))
+                
                 # Insert into users table
                 cursor.execute(
-                    "INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, %s)",
-                    (username, email, password_hash, applicant_type)
+                    "INSERT INTO users (name, email, password_hash, role, education_level) VALUES (%s, %s, %s, %s, %s)",
+                    (username, email, password_hash, applicant_type, education_level)
                 )
                 conn.commit()
                 flash('Registration successful! Please login.', 'success')
@@ -1249,8 +1271,15 @@ def register():
                 flash('Registration failed. Please try again.', 'error')
                 print(f"Error: {e}")
             finally:
-                cursor.close()
+                try:
+                    if cursor:
+                        cursor.close()
+                except Exception:
+                    pass
                 conn.close()
+        else:
+            flash('Unable to connect to the database. Please try again later.', 'error')
+            return redirect(url_for('home'))
     return redirect(url_for('home'))
 
 @app.route('/login', methods=['POST'])
@@ -1269,10 +1298,11 @@ def login():
         
         conn = get_db_connection()
         if conn:
+            cursor = None
             try:
-                cursor = conn.cursor(dictionary=True)
+                cursor = conn.cursor(dictionary=True, buffered=True)
                 cursor.execute(
-                    "SELECT * FROM users WHERE name = %s AND password_hash = %s",
+                    "SELECT * FROM users WHERE LOWER(name) = LOWER(%s) AND password_hash = %s LIMIT 1",
                     (username, password_hash)
                 )
                 user = cursor.fetchone()
@@ -1300,7 +1330,11 @@ def login():
                 flash('Login failed. Please try again.', 'error')
                 print(f"Error: {e}")
             finally:
-                cursor.close()
+                try:
+                    if cursor:
+                        cursor.close()
+                except Exception:
+                    pass
                 conn.close()
     return redirect(url_for('home'))
 
@@ -1320,7 +1354,9 @@ def gmail_login():
     try:
         data = request.get_json()
         token = data.get('token')
-        applicant_type = data.get('applicantType', 'new')  # Default to 'new' if not specified
+        flow_type = (data.get('flowType') or 'login').lower()
+        applicant_type = (data.get('applicantType') or 'new').lower()
+        education_level = (data.get('educationLevel') or '').lower()
         
         if not token:
             resp = jsonify({'success': False, 'message': 'No token provided'})
@@ -1348,6 +1384,7 @@ def gmail_login():
         
         conn = get_db_connection()
         if conn:
+            cursor = None
             try:
                 cursor = conn.cursor(dictionary=True)
                 
@@ -1357,10 +1394,21 @@ def gmail_login():
                 
                 if user:
                     # User exists, log them in
+                    if flow_type == 'register' and education_level in {'highschool', 'college'} and not user.get('education_level'):
+                        try:
+                            cursor.execute(
+                                "UPDATE users SET education_level = %s WHERE id = %s",
+                                (education_level, user['id'])
+                            )
+                            conn.commit()
+                            user['education_level'] = education_level
+                        except Exception as update_error:
+                            print(f"Failed to update education level: {update_error}")
                     session['user_id'] = user['id']
                     session['username'] = user['name']
                     session['role'] = user['role']
                     session['email'] = user['email']
+                    session['education_level'] = user.get('education_level')
                     
                     # Generate and store ID number if not exists
                     if not user.get('id_number'):
@@ -1372,7 +1420,7 @@ def gmail_login():
                         session['id_number'] = user['id_number']
                     
                     resp = jsonify({
-                        'success': True, 
+                        'success': True,
                         'message': 'Login successful',
                         'redirect': get_redirect_url(user['role'])
                     })
@@ -1380,25 +1428,49 @@ def gmail_login():
                     resp.headers['Vary'] = 'Origin'
                     return resp
                 else:
+                    # User does not exist yet
+                    if flow_type != 'register':
+                        resp = jsonify({
+                            'success': False,
+                            'message': 'No account found for this Google email. Please register first.',
+                            'needsRegistration': True
+                        })
+                        resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                        resp.headers['Vary'] = 'Origin'
+                        return resp
+
+                    if applicant_type not in {'new', 'old'}:
+                        resp = jsonify({'success': False, 'message': 'Invalid applicant type provided.'})
+                        resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                        resp.headers['Vary'] = 'Origin'
+                        return resp
+
+                    if education_level not in {'highschool', 'college'}:
+                        resp = jsonify({'success': False, 'message': 'Please select your education level.'})
+                        resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                        resp.headers['Vary'] = 'Origin'
+                        return resp
+
                     # New user, create account
                     id_number = generate_id_from_gmail(email)
-                    
+
                     cursor.execute(
-                        "INSERT INTO users (name, email, password_hash, role, id_number) VALUES (%s, %s, %s, %s, %s)",
-                        (name, email, 'gmail_oauth', applicant_type, id_number)
+                        "INSERT INTO users (name, email, password_hash, role, id_number, education_level) VALUES (%s, %s, %s, %s, %s, %s)",
+                        (name, email, 'gmail_oauth', applicant_type, id_number, education_level)
                     )
                     user_id = cursor.lastrowid
                     conn.commit()
-                    
+
                     # Set session
                     session['user_id'] = user_id
                     session['username'] = name
                     session['role'] = applicant_type
                     session['email'] = email
                     session['id_number'] = id_number
-                    
+                    session['education_level'] = education_level
+
                     resp = jsonify({
-                        'success': True, 
+                        'success': True,
                         'message': 'Account created and login successful',
                         'redirect': get_redirect_url(applicant_type)
                     })
@@ -1413,7 +1485,8 @@ def gmail_login():
                 resp.headers['Vary'] = 'Origin'
                 return resp
             finally:
-                cursor.close()
+                if cursor:
+                    cursor.close()
                 conn.close()
         else:
             resp = jsonify({'success': False, 'message': 'Database connection failed'})
