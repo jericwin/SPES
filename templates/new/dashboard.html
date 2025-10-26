@@ -82,6 +82,15 @@
         #cfa-text {
           font-size: 1rem !important;
         }
+        #menu > li {
+          display: none;
+        }
+        #menu > li.mobile-toggle {
+          display: block;
+        }
+        #menu .nav-icon {
+          display: none;
+        }
       }
       /* tablet */
       @media (min-width: 576px) and (max-width: 768px) {
@@ -159,7 +168,7 @@
             id="sidebar"
           >
             <a
-              href="/"
+              href="#"
               class="d-flex align-items-center pb-sm-3 mb-md-0 me-md-auto text-dark text-decoration-none"
             >
               <span class="fs-5 mt-2"
@@ -179,11 +188,10 @@
             >
               <li>
                 <a
-                  href="#"
-                  data-bs-toggle="collapse"
+                  href="{{ url_for('new_applicants_dashboard') }}"
                   class="nav-link px-sm-0 px-2"
                 >
-                  <i class="fs-5 bi-speedometer2"></i
+                  <i class="nav-icon fs-5 bi-speedometer2"></i
                   ><span class="ms-3 d-none d-sm-inline" id="sidebar-active"
                     >Dashboard</span
                   >
@@ -194,7 +202,7 @@
                   href="{{ url_for('new_applicants_forms') }}"
                   class="nav-link px-sm-0 px-2"
                 >
-                  <i class="fs-5 bi-file-earmark-text"></i
+                  <i class="nav-icon fs-5 bi-file-earmark-text"></i
                   ><span class="ms-3 d-none d-sm-inline">Forms</span>
                 </a>
               </li>
@@ -203,7 +211,7 @@
                   href="{{ url_for('new_applicants_notifications') }}"
                   class="nav-link px-sm-0 px-2"
                 >
-                  <i class="fs-5 bi-bell"></i
+                  <i class="nav-icon fs-5 bi-bell"></i
                   ><span class="ms-3 d-none d-sm-inline">Notifications</span>
                 </a>
               </li>
@@ -212,7 +220,7 @@
                   href="{{ url_for('new_applicants_messages') }}"
                   class="nav-link px-sm-0 px-2"
                 >
-                  <i class="fs-5 bi-envelope"></i
+                  <i class="nav-icon fs-5 bi-envelope"></i
                   ><span class="ms-3 d-none d-sm-inline">Messages</span>
                 </a>
               </li>
@@ -221,12 +229,12 @@
                   href="{{ url_for('feedback') }}"
                   class="nav-link px-sm-0 px-2"
                 >
-                  <i class="fs-5 bi-star"></i
+                  <i class="nav-icon fs-5 bi-star"></i
                   ><span class="ms-3 d-none d-sm-inline">Feedback</span>
                 </a>
               </li>
 
-              <li class="dropdown d-sm-none">
+              <li class="dropdown d-sm-none mobile-toggle">
                 <a
                   href="#"
                   class="nav-link dropdown-toggle px-sm-0 px-1"
@@ -241,13 +249,47 @@
                   class="dropdown-menu dropdown-menu-dark text-small shadow"
                   aria-labelledby="dropdown"
                 >
-                  <li><a class="dropdown-item" href="#">Dashboard</a></li>
-                  <li><a class="dropdown-item" href="#">Messages</a></li>
-                  <li><a class="dropdown-item" href="#">Profile</a></li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="{{ url_for('new_applicants_dashboard') }}"
+                      >Dashboard</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="{{ url_for('new_applicants_forms') }}"
+                      >Forms</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="{{ url_for('new_applicants_notifications') }}"
+                      >Notifications</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="{{ url_for('new_applicants_messages') }}"
+                      >Messages</a
+                    >
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('feedback') }}"
+                      >Feedback</a
+                    >
+                  </li>
                   <li>
                     <hr class="dropdown-divider" />
                   </li>
-                  <li><a class="dropdown-item" href="#">Sign out</a></li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}"
+                      >Sign out</a
+                    >
+                  </li>
                 </ul>
               </li>
             </ul>
