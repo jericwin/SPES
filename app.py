@@ -1213,6 +1213,7 @@ def register():
         confirm_password = request.form['confirmPassword']
         applicant_type = request.form['applicantType']
         education_level = request.form.get('educationLevel', '').strip().lower()
+        agreed_terms = request.form.get('agree_terms')
         
         # Validation
         if not username:
@@ -1237,6 +1238,10 @@ def register():
 
         if education_level not in {'highschool', 'college'}:
             flash('Please select your education level', 'error')
+            return redirect(url_for('home'))
+
+        if agreed_terms != 'on':
+            flash('You must agree to the Terms and Conditions to continue.', 'error')
             return redirect(url_for('home'))
         
         # Hash the password
@@ -3307,40 +3312,44 @@ def download_uploaded_document(user_id, document_type):
 def preview_document(document_type):
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Please login first'})
-        
-    templates = {
+
+    # Map logical document names to static docx resources
+    docx_templates = {
         'APPLICATION-FORM': 'APPLICATION-FORM.docx',
         'SCHOOL-CERTIFICATION': 'SCHOOL-CERTIFICATION.docx',
         'SPES-EMPLOYMENT-CONTRACT': 'SPES-EMPLOYMENT-CONTRACT.docx',
         'OATH-OF-UNDERTAKING': 'OATH-OF-UNDERTAKING.docx'
     }
-    
-    if document_type not in templates:
+
+    if document_type not in docx_templates:
         return jsonify({'success': False, 'message': 'Invalid document type'})
-        
+
+    # Prefer a light-weight static PDF preview if one exists
+    pdf_preview_dir = os.path.join('static', 'spes-forms', 'previews')
+    pdf_path = os.path.join(pdf_preview_dir, f'{document_type}.pdf')
+
     try:
-        # Create temporary directory for conversion
-        with tempfile.TemporaryDirectory() as temp_dir:
-            docx_path = os.path.join('static/spes-forms', templates[document_type])
-            pdf_path = os.path.join(temp_dir, f'{document_type}.pdf')
-            
-            # Convert DOCX to PDF
-            convert_docx_to_pdf(docx_path, pdf_path)
-            
-            # Read the PDF file
-            with open(pdf_path, 'rb') as f:
-                pdf_data = f.read()
-                
-            # Return PDF with appropriate headers
-            return Response(
-                pdf_data,
+        if os.path.exists(pdf_path):
+            return send_file(
+                pdf_path,
                 mimetype='application/pdf',
-                headers={
-                    'Content-Disposition': f'inline; filename={document_type}.pdf'
-                }
+                as_attachment=False,
+                download_name=f'{document_type}.pdf'
             )
+
+        # Fall back to serving the DOCX directly for download when no cached preview exists.
+        docx_path = os.path.join('static', 'spes-forms', docx_templates[document_type])
+        if os.path.exists(docx_path):
+            return send_file(
+                docx_path,
+                mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                as_attachment=True,
+                download_name=docx_templates[document_type]
+            )
+
+        return jsonify({'success': False, 'message': 'Template file not found on the server.'})
     except Exception as e:
-        print(f"Error converting document: {e}")
+        print(f"Error serving document preview: {e}")
         return jsonify({'success': False, 'message': 'Error previewing document'})
 
 # Define keywords for document validation
