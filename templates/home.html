@@ -607,39 +607,6 @@
               >
                 <form action="{{ url_for('register') }}" method="POST">
                   <div class="form-floating mb-3">
-                    <select
-                      class="form-select"
-                      id="applicantType"
-                      name="applicantType"
-                      aria-label="Applicant Type"
-                      required
-                    >
-                      <option value="">Select Applicant Type</option>
-                      <option value="new">New Applicant</option>
-                      <option value="old">Old Applicant</option>
-                    </select>
-                    <label for="applicantType"
-                      ><i class="fas fa-user-tag me-2"></i>Applicant Type</label
-                    >
-                  </div>
-                  <div class="form-floating mb-3">
-                    <select
-                      class="form-select"
-                      id="educationLevel"
-                      name="educationLevel"
-                      aria-label="Education Level"
-                      required
-                    >
-                      <option value="">Select Education Level</option>
-                      <option value="highschool">High School</option>
-                      <option value="college">College</option>
-                    </select>
-                    <label for="educationLevel"
-                      ><i class="fas fa-graduation-cap me-2"></i>Education
-                      Level</label
-                    >
-                  </div>
-                  <div class="form-floating mb-3">
                     <input
                       type="text"
                       class="form-control"
@@ -726,11 +693,68 @@
                       "
                       onclick="togglePasswordVisibility('confirmPassword', this)"
                     ></i>
+                    <small
+                      id="passwordMatchText"
+                      class="form-text d-none"
+                    ></small>
                   </div>
-                  <small
-                    id="passwordMatchText"
-                    class="form-text d-none"
-                  ></small>
+
+                  <div class="form-floating mb-3">
+                    <select
+                      class="form-select"
+                      id="applicantType"
+                      name="applicantType"
+                      aria-label="Applicant Type"
+                      required
+                    >
+                      <option value="">Select Applicant Type</option>
+                      <option value="new">New Applicant</option>
+                      <option value="old">Old Applicant</option>
+                    </select>
+                    <label for="applicantType"
+                      ><i class="fas fa-user-tag me-2"></i>Applicant Type</label
+                    >
+                  </div>
+                  <div class="form-floating mb-3">
+                    <select
+                      class="form-select"
+                      id="educationLevel"
+                      name="educationLevel"
+                      aria-label="Education Level"
+                      required
+                    >
+                      <option value="">Select Education Level</option>
+                      <option value="highschool">High School</option>
+                      <option value="college">College</option>
+                    </select>
+                    <label for="educationLevel"
+                      ><i class="fas fa-graduation-cap me-2"></i>Education
+                      Level</label
+                    >
+                  </div>
+
+                  <div class="form-floating mb-3">
+                    <select
+                      class="form-select"
+                      id="municipalityId"
+                      name="municipality_id"
+                      aria-label="Municipality"
+                      required
+                    >
+                      <option value="">Select Municipality</option>
+                      {% for municipality in municipalities %}
+                      <option value="{{ municipality.id }}">
+                        {{ municipality.name }}{% if municipality.province %},
+                        {{ municipality.province }}{% endif %}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <label for="municipalityId"
+                      ><i class="fas fa-map-marker-alt me-2"></i
+                      >Municipality</label
+                    >
+                  </div>
+
                   <div class="mb-3 text-muted small">
                     By continuing, I acknowledge that I have reviewed the
                     <a
@@ -923,6 +947,25 @@
                 <option value="">Select education level</option>
                 <option value="highschool">High School</option>
                 <option value="college">College</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="googleMunicipality"
+                >Municipality</label
+              >
+              <select
+                class="form-select"
+                id="googleMunicipality"
+                aria-label="Municipality"
+              >
+                <option value="">Select municipality</option>
+                {% for municipality in municipalities %}
+                <option value="{{ municipality.id }}">
+                  {{ municipality.name }}{% if municipality.province %}, {{
+                  municipality.province }}{% endif %}
+                </option>
+                {% endfor %}
               </select>
             </div>
           </div>
@@ -1333,6 +1376,7 @@
       let googleSigninFlow = "login";
       let googleApplicantType = null;
       let googleEducationLevel = null;
+      let googleMunicipalityId = null;
       let googleRegisterModalInstance = null;
 
       function ensureGoogleModalInstance() {
@@ -1357,6 +1401,12 @@
             if (educationSelect) {
               educationSelect.value = "";
             }
+            const municipalitySelect =
+              document.getElementById("googleMunicipality");
+            if (municipalitySelect) {
+              municipalitySelect.value = "";
+            }
+            googleMunicipalityId = null;
           });
         }
         return googleRegisterModalInstance;
@@ -1380,6 +1430,12 @@
         if (educationSelect) {
           educationSelect.value = "";
         }
+        const municipalitySelect =
+          document.getElementById("googleMunicipality");
+        if (municipalitySelect) {
+          municipalitySelect.value = "";
+        }
+        googleMunicipalityId = null;
         modal.show();
       }
 
@@ -1388,6 +1444,8 @@
           'input[name="googleApplicantType"]:checked'
         );
         const educationSelect = document.getElementById("googleEducationLevel");
+        const municipalitySelect =
+          document.getElementById("googleMunicipality");
 
         if (!selectedApplicant) {
           showMessage("Please choose your applicant type.", "warning");
@@ -1399,9 +1457,15 @@
           return;
         }
 
+        if (!municipalitySelect || !municipalitySelect.value) {
+          showMessage("Please select your municipality.", "warning");
+          return;
+        }
+
         googleSigninFlow = "register";
         googleApplicantType = selectedApplicant.value;
         googleEducationLevel = educationSelect.value;
+        googleMunicipalityId = municipalitySelect.value;
 
         const modal = ensureGoogleModalInstance();
         if (modal) {
@@ -1416,6 +1480,7 @@
         if (googleSigninFlow === "login") {
           googleApplicantType = null;
           googleEducationLevel = null;
+          googleMunicipalityId = null;
           triggerGoogleSignIn();
         }
       }
@@ -1480,6 +1545,7 @@
             flowType: googleSigninFlow,
             applicantType: googleApplicantType,
             educationLevel: googleEducationLevel,
+            municipalityId: googleMunicipalityId,
           }),
         })
           .then((response) => response.json())
@@ -1489,6 +1555,7 @@
               googleSigninFlow = "login";
               googleApplicantType = null;
               googleEducationLevel = null;
+              googleMunicipalityId = null;
               setTimeout(() => {
                 window.location.href = data.redirect || "/";
               }, 800);
