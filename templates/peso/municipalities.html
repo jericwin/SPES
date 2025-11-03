@@ -1,93 +1,34 @@
-{% extends "admin/base.html" %} {% block content %}
-<div class="container mt-4">
-  <h2>Manage Municipalities</h2>
-
-  <!-- Add Municipality Form -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h5 class="card-title mb-0">Add New Municipality</h5>
-    </div>
-    <div class="card-body">
-      <form action="{{ url_for('manage_municipalities') }}" method="POST">
-        <div class="row">
-          <div class="col-md-5">
-            <div class="form-group">
-              <label for="name">Municipality Name</label>
-              <input
-                type="text"
-                class="form-control"
-                id="name"
-                name="name"
-                required
-              />
-            </div>
-          </div>
-          <div class="col-md-5">
-            <div class="form-group">
-              <label for="province">Province</label>
-              <input
-                type="text"
-                class="form-control"
-                id="province"
-                name="province"
-                required
-              />
-            </div>
-          </div>
-          <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100">
-              Add Municipality
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Municipalities List -->
-  <div class="card">
-    <div class="card-header">
-      <h5 class="card-title mb-0">Existing Municipalities</h5>
-    </div>
-    <div class="card-body">
-      {% if municipalities %}
-      <div class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>Municipality</th>
-              <th>Province</th>
-              <th>Created By</th>
-              <th>Created At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for municipality in municipalities %}
-            <tr>
-              <td>{{ municipality.name }}</td>
-              <td>{{ municipality.province }}</td>
-              <td>{{ municipality.created_by_name }}</td>
-              <td>
-                {{ municipality.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
-              </td>
-              <td>
-                <a
-                  href="{{ url_for('view_municipality', id=municipality.id) }}"
-                  class="btn btn-sm btn-info"
-                >
-                  <i class="bi bi-eye"></i> View
-                </a>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <p class="text-center">No municipalities found.</p>
-      {% endif %}
-    </div>
-  </div>
-</div>
-{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="refresh"
+      content="0; URL='{{ url_for('peso_dashboard') }}'"
+    />
+    <title>Redirecting…</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f8f9fa;
+        color: #333;
+      }
+      a {
+        color: #0d6efd;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      Redirecting to the
+      <a href="{{ url_for('peso_dashboard') }}">PESO dashboard</a> where
+      municipality management now lives.
+    </p>
+  </body>
+</html>
