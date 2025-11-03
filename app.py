@@ -32,9 +32,9 @@ from fuzzywuzzy import fuzz
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
-import openai
+# import openai
 
-import difflib
+# import difflib
 # FAQS
 
 try:
@@ -218,80 +218,171 @@ def test_db_connection():
 @role_required(['provincial_peso'])
 def manage_municipalities():
     if request.method == 'POST':
-        name = request.form.get('name')
-        province = request.form.get('province')
-        
+        name = request.form.get('name', '').strip()
+        province = request.form.get('province', '').strip()
+
         if not name or not province:
             flash('Municipality name and province are required', 'error')
-            return redirect(url_for('manage_municipalities'))
-        
+            return redirect(url_for('peso_dashboard'))
+
         conn = get_db_connection()
         if conn:
             try:
                 cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO municipalities (name, province, created_by)
-                    VALUES (%s, %s, %s)
-                """, (name, province, session['user_id']))
+                cursor.execute(
+                    "INSERT INTO municipalities (name, province, created_by) VALUES (%s, %s, %s)",
+                    (name, province, session['user_id']),
+                )
                 conn.commit()
                 flash('Municipality added successfully', 'success')
             except Exception as e:
-                flash(f'Error adding municipality: {str(e)}', 'error')
+                print(f"Error adding municipality: {e}")
+                flash('Error adding municipality. Please try again.', 'error')
             finally:
-                cursor.close()
-                conn.close()
-        return redirect(url_for('manage_municipalities'))
-    
-    # GET request - show municipalities list
+                try:
+                    if 'cursor' in locals() and cursor:
+                        cursor.close()
+                finally:
+                    conn.close()
+
+        return redirect(url_for('peso_dashboard'))
+
+    return redirect(url_for('peso_dashboard'))
+
+
+@app.route('/peso/update-municipality/<int:municipality_id>', methods=['POST'])
+@login_required
+@role_required(['provincial_peso'])
+def update_municipality(municipality_id):
+    name = request.form.get('name', '').strip()
+    province = request.form.get('province', '').strip()
+
+    if not name or not province:
+        flash('Municipality name and province are required', 'error')
+        return redirect(url_for('peso_dashboard'))
+
     conn = get_db_connection()
-    municipalities = []
-    if conn:
+    if not conn:
+        flash('Database connection failed', 'error')
+        return redirect(url_for('peso_dashboard'))
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE municipalities SET name = %s, province = %s WHERE id = %s",
+            (name, province, municipality_id),
+        )
+        conn.commit()
+        flash('Municipality updated successfully', 'success')
+    except Exception as e:
+        print(f"Error updating municipality: {e}")
+        flash('Error updating municipality. Please try again.', 'error')
+    finally:
         try:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT m.*, u.name as created_by_name
-                FROM municipalities m
-                LEFT JOIN users u ON u.id = m.created_by
-                ORDER BY m.province, m.name
-            """)
-            municipalities = cursor.fetchall()
+            if 'cursor' in locals() and cursor:
+                cursor.close()
         finally:
-            cursor.close()
             conn.close()
-    
-    return render_template('peso/municipalities.html', 
-                         municipalities=municipalities)
+
+    return redirect(url_for('peso_dashboard'))
+
+
+@app.route('/peso/delete-municipality/<int:municipality_id>', methods=['POST'])
+@login_required
+@role_required(['provincial_peso'])
+def delete_municipality(municipality_id):
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection failed', 'error')
+        return redirect(url_for('peso_dashboard'))
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT COUNT(*) AS cnt FROM users WHERE municipality_id = %s",
+            (municipality_id,),
+        )
+        usage = cursor.fetchone()
+        if usage and usage['cnt']:
+            flash('Cannot delete municipality with linked user accounts.', 'error')
+            return redirect(url_for('peso_dashboard'))
+
+        cursor.execute("DELETE FROM municipalities WHERE id = %s", (municipality_id,))
+        conn.commit()
+        flash('Municipality deleted successfully', 'success')
+    except Exception as e:
+        print(f"Error deleting municipality: {e}")
+        flash('Error deleting municipality. Please try again.', 'error')
+    finally:
+        try:
+            if 'cursor' in locals() and cursor:
+                cursor.close()
+        finally:
+            conn.close()
+
+    return redirect(url_for('peso_dashboard'))
 
 @app.route('/') 
 def home():
-    return render_template('home.html', google_client_id=GOOGLE_CLIENT_ID)
+    municipalities = []
+    conn = get_db_connection()
+    cursor = None
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(
+                "SELECT id, name, province FROM municipalities ORDER BY province, name"
+            )
+            municipalities = cursor.fetchall()
+        except Exception as e:
+            print(f"Error loading municipalities for registration: {e}")
+        finally:
+            try:
+                if cursor:
+                    cursor.close()
+            finally:
+                conn.close()
+
+    return render_template(
+        'home.html',
+        google_client_id=GOOGLE_CLIENT_ID,
+        municipalities=municipalities,
+    )
 
 @app.route('/peso/dashboard')
 @login_required
 @role_required(['provincial_peso'])
 def peso_dashboard():
+    municipalities = []
     conn = get_db_connection()
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
-            # Get municipalities data
+            # Get municipalities data along with basic stats for display
             cursor.execute("""
                 SELECT m.*, 
-                       COUNT(DISTINCT u.id) as admin_count,
-                       COUNT(DISTINCT a.id) as applicant_count
+                       COUNT(DISTINCT u.id) AS admin_count,
+                       COUNT(DISTINCT a.id) AS applicant_count
                 FROM municipalities m
                 LEFT JOIN users u ON u.municipality_id = m.id AND u.role = 'municipal_peso'
                 LEFT JOIN user_info ui ON ui.municipality_id = m.id
                 LEFT JOIN applicants a ON a.user_id = ui.user_id
                 GROUP BY m.id
+                ORDER BY m.province, m.name
             """)
             municipalities = cursor.fetchall()
-            
+
             cursor.execute('SELECT name FROM users WHERE id = %s', (session['user_id'],))
             user = cursor.fetchone()
             if user:
-                return render_template('peso/dashboard.html', username=user['name'])
+                return render_template(
+                    'peso/dashboard.html',
+                    username=user['name'],
+                    municipalities=municipalities,
+                )
         except Exception as e:
+            print(f"Error loading PESO dashboard: {e}")
             flash('An error occurred', 'error')
         finally:
             cursor.close()
@@ -345,9 +436,24 @@ def create_municipal_account():
 
         # Hash password and insert user
         password_hash = hashlib.sha256(password.encode()).hexdigest()
+        slug = re.sub(r'[^a-z0-9]+', '.', username.lower()).strip('.')
+        if not slug:
+            slug = f"municipality{municipality_id}"
+        base_email = f"{slug}.{municipality_id}@autogen.peso"
+
+        # Ensure generated email is unique to satisfy NOT NULL/UNIQUE constraint
+        candidate_email = base_email
+        suffix = 1
+        while True:
+            cursor.execute('SELECT id FROM users WHERE email = %s', (candidate_email,))
+            if not cursor.fetchone():
+                break
+            candidate_email = f"{slug}.{municipality_id}.{suffix}@autogen.peso"
+            suffix += 1
+
         cursor.execute(
-            "INSERT INTO users (name, password_hash, role, municipality_id) VALUES (%s, %s, %s, %s)",
-            (username, password_hash, 'municipal_peso', municipality_id)
+            "INSERT INTO users (name, email, password_hash, role, municipality_id) VALUES (%s, %s, %s, %s, %s)",
+            (username, candidate_email, password_hash, 'municipal_peso', municipality_id)
         )
         conn.commit()
         flash('Municipal PESO account created successfully', 'success')
@@ -596,67 +702,70 @@ def admin_dashboard():
     if session.get('role') != 'municipal_peso':
         return redirect(url_for('login'))
     
+    conn = None
+    cursor = None
     try:
+        municipality_id = get_user_municipality_id()
+        if municipality_id is None:
+            flash('Municipality not found', 'error')
+            return redirect(url_for('home'))
+
         conn = get_db_connection()
+        if not conn:
+            flash('Unable to connect to the database', 'error')
+            return redirect(url_for('home'))
+
         cursor = conn.cursor(dictionary=True)
-        
-        # Get total users
-        cursor.execute("SELECT COUNT(*) as count FROM users")
-        user_count = cursor.fetchone()['count']
-        
-        # Get total applications
-        cursor.execute("SELECT COUNT(*) as count FROM applicants")
-        application_count = cursor.fetchone()['count']
-        
-        # Get total exams
-        cursor.execute("SELECT COUNT(*) as count FROM exams")
-        exam_count = cursor.fetchone()['count']
-        
-        # Get stats for applications
-        stats = {
-            'total_applicants': 0,
-            'pending_applicants': 0,
-            'approved_applicants': 0,
-            'rejected_applicants': 0,
-            'for_exam_applicants': 0,
-            'for_interview_applicants': 0,
-            'total_exams': exam_count
-        }
-        
-        # Get counts by status
-        cursor.execute("""
-            SELECT status, COUNT(*) as count 
-            FROM applicants 
-            GROUP BY status
-        """)
-        status_counts = cursor.fetchall()
-        for status_count in status_counts:
-            status = status_count['status']
-            count = status_count['count']
-            if status == 'pending':
-                stats['pending_applicants'] = count
-            elif status == 'approved':
-                stats['approved_applicants'] = count
-            elif status == 'rejected':
-                stats['rejected_applicants'] = count
-            elif status == 'for exam':
-                stats['for_exam_applicants'] = count
-            elif status == 'for interview':
-                stats['for_interview_applicants'] = count
-        
-        # Get monthly application data
+
+        # Filter every metric to the admin's municipality scope
         cursor.execute("""
             SELECT 
-                DATE_FORMAT(submission_date, '%Y-%m') as month,
-                COUNT(*) as count
-            FROM applicants
-            WHERE submission_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-            GROUP BY DATE_FORMAT(submission_date, '%Y-%m')
+                COUNT(*) AS total_applicants,
+                SUM(CASE WHEN a.status = 'pending' THEN 1 ELSE 0 END) AS pending_applicants,
+                SUM(CASE WHEN a.status = 'approved' THEN 1 ELSE 0 END) AS approved_applicants,
+                SUM(CASE WHEN a.status = 'rejected' THEN 1 ELSE 0 END) AS rejected_applicants,
+                SUM(CASE WHEN a.status = 'for exam' THEN 1 ELSE 0 END) AS for_exam_applicants,
+                SUM(CASE WHEN a.status = 'for interview' THEN 1 ELSE 0 END) AS for_interview_applicants
+            FROM applicants a
+            JOIN users u ON a.user_id = u.id
+            LEFT JOIN user_info ui ON u.id = ui.user_id
+            WHERE (u.municipality_id = %s OR ui.municipality_id = %s)
+        """, (municipality_id, municipality_id))
+        stats_row = cursor.fetchone() or {}
+
+        cursor.execute("""
+            SELECT COUNT(*) AS count
+            FROM exams e
+            WHERE e.created_by = %s
+        """, (session['user_id'],))
+        exam_row = cursor.fetchone()
+        exam_count = exam_row['count'] if exam_row else 0
+
+        stats = {
+            'total_applicants': stats_row.get('total_applicants', 0) or 0,
+            'pending_applicants': stats_row.get('pending_applicants', 0) or 0,
+            'approved_applicants': stats_row.get('approved_applicants', 0) or 0,
+            'rejected_applicants': stats_row.get('rejected_applicants', 0) or 0,
+            'for_exam_applicants': stats_row.get('for_exam_applicants', 0) or 0,
+            'for_interview_applicants': stats_row.get('for_interview_applicants', 0) or 0,
+            'total_exams': exam_count
+        }
+
+        cursor.execute("""
+            SELECT 
+                DATE_FORMAT(a.submission_date, '%Y-%m') AS month,
+                COUNT(*) AS count
+            FROM applicants a
+            JOIN users u ON a.user_id = u.id
+            LEFT JOIN user_info ui ON u.id = ui.user_id
+            WHERE a.submission_date IS NOT NULL
+              AND a.submission_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+              AND (u.municipality_id = %s OR ui.municipality_id = %s)
+            GROUP BY DATE_FORMAT(a.submission_date, '%Y-%m')
             ORDER BY month ASC
-        """)
+        """, (municipality_id, municipality_id))
         monthly_data = cursor.fetchall()
-        
-        # Get exam overview data
+
         exam_overview = {
             'completed': 0,
             'scheduled': 0,
@@ -665,42 +774,42 @@ def admin_dashboard():
         cursor.execute("""
             SELECT 
                 CASE 
-                    WHEN status = 'approved' THEN 'completed'
-                    WHEN status = 'for exam' THEN 'in_progress'
-                    WHEN status = 'for interview' THEN 'scheduled'
+                    WHEN a.status = 'approved' THEN 'completed'
+                    WHEN a.status = 'for exam' THEN 'in_progress'
+                    WHEN a.status = 'for interview' THEN 'scheduled'
                     ELSE NULL
-                END as exam_status,
-                COUNT(*) as count
-            FROM applicants
-            WHERE status IN ('approved', 'for exam', 'for interview')
+                END AS exam_status,
+                COUNT(*) AS count
+            FROM applicants a
+            JOIN users u ON a.user_id = u.id
+            LEFT JOIN user_info ui ON u.id = ui.user_id
+            WHERE a.status IN ('approved', 'for exam', 'for interview')
+              AND (u.municipality_id = %s OR ui.municipality_id = %s)
             GROUP BY exam_status
-        """)
+        """, (municipality_id, municipality_id))
         exam_data = cursor.fetchall()
         for data in exam_data:
             if data['exam_status']:
                 exam_overview[data['exam_status']] = data['count']
-        
-        # Get recent applications
+
         cursor.execute("""
             SELECT 
-                a.id as application_id,
+                a.id AS application_id,
                 a.status,
                 a.submission_date,
-                u.name as applicant_name
+                u.name AS applicant_name
             FROM applicants a
             JOIN users u ON a.user_id = u.id
+            LEFT JOIN user_info ui ON u.id = ui.user_id
+            WHERE (u.municipality_id = %s OR ui.municipality_id = %s)
             ORDER BY a.submission_date DESC
             LIMIT 5
-        """)
+        """, (municipality_id, municipality_id))
         recent_applications = cursor.fetchall()
-        
-        # Format dates
+
         for app in recent_applications:
             if app['submission_date']:
                 app['submission_date'] = app['submission_date'].strftime('%B %d, %Y')
-        
-        cursor.close()
-        conn.close()
         
         return render_template('admin/dashboard.html', 
                              stats=stats,
@@ -711,6 +820,11 @@ def admin_dashboard():
     except Exception as e:
         print(f"Error in admin dashboard: {str(e)}")
         return "An error occurred", 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # announcements
 @app.route('/admin/announcements')
@@ -1224,6 +1338,8 @@ def register():
         applicant_type = request.form['applicantType']
         education_level = request.form.get('educationLevel', '').strip().lower()
         agreed_terms = request.form.get('agree_terms')
+        municipality_id_raw = request.form.get('municipality_id', '').strip()
+        municipality_id = None
         
         # Validation
         if not username:
@@ -1253,6 +1369,16 @@ def register():
         if agreed_terms != 'on':
             flash('You must agree to the Terms and Conditions to continue.', 'error')
             return redirect(url_for('home'))
+
+        if not municipality_id_raw:
+            flash('Please select your municipality.', 'error')
+            return redirect(url_for('home'))
+
+        try:
+            municipality_id = int(municipality_id_raw)
+        except (TypeError, ValueError):
+            flash('Invalid municipality selection.', 'error')
+            return redirect(url_for('home'))
         
         # Hash the password
         password_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -1274,10 +1400,18 @@ def register():
                     flash('Username already taken. Please choose another.', 'error')
                     return redirect(url_for('home'))
                 
+                cursor.execute(
+                    "SELECT id FROM municipalities WHERE id = %s",
+                    (municipality_id,)
+                )
+                if not cursor.fetchone():
+                    flash('Selected municipality not found.', 'error')
+                    return redirect(url_for('home'))
+
                 # Insert into users table
                 cursor.execute(
-                    "INSERT INTO users (name, email, password_hash, role, education_level) VALUES (%s, %s, %s, %s, %s)",
-                    (username, email, password_hash, applicant_type, education_level)
+                    "INSERT INTO users (name, email, password_hash, role, education_level, municipality_id) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (username, email, password_hash, applicant_type, education_level, municipality_id)
                 )
                 conn.commit()
                 flash('Registration successful! Please login.', 'success')
@@ -1372,6 +1506,15 @@ def gmail_login():
         flow_type = (data.get('flowType') or 'login').lower()
         applicant_type = (data.get('applicantType') or 'new').lower()
         education_level = (data.get('educationLevel') or '').lower()
+        municipality_id_raw = data.get('municipalityId')
+        municipality_id = None
+        if municipality_id_raw not in (None, '', 'null'):
+            try:
+                municipality_id = int(municipality_id_raw)
+                if municipality_id <= 0:
+                    municipality_id = None
+            except (TypeError, ValueError):
+                municipality_id = None
         
         if not token:
             resp = jsonify({'success': False, 'message': 'No token provided'})
@@ -1419,6 +1562,22 @@ def gmail_login():
                             user['education_level'] = education_level
                         except Exception as update_error:
                             print(f"Failed to update education level: {update_error}")
+
+                    if flow_type == 'register' and municipality_id and not user.get('municipality_id'):
+                        try:
+                            cursor.execute(
+                                "SELECT id FROM municipalities WHERE id = %s",
+                                (municipality_id,)
+                            )
+                            if cursor.fetchone():
+                                cursor.execute(
+                                    "UPDATE users SET municipality_id = %s WHERE id = %s",
+                                    (municipality_id, user['id'])
+                                )
+                                conn.commit()
+                                user['municipality_id'] = municipality_id
+                        except Exception as update_error:
+                            print(f"Failed to update municipality: {update_error}")
                     session['user_id'] = user['id']
                     session['username'] = user['name']
                     session['role'] = user['role']
@@ -1466,12 +1625,28 @@ def gmail_login():
                         resp.headers['Vary'] = 'Origin'
                         return resp
 
+                    if not municipality_id:
+                        resp = jsonify({'success': False, 'message': 'Please select your municipality.'})
+                        resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                        resp.headers['Vary'] = 'Origin'
+                        return resp
+
+                    cursor.execute(
+                        "SELECT id FROM municipalities WHERE id = %s",
+                        (municipality_id,)
+                    )
+                    if not cursor.fetchone():
+                        resp = jsonify({'success': False, 'message': 'Selected municipality not found.'})
+                        resp.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+                        resp.headers['Vary'] = 'Origin'
+                        return resp
+
                     # New user, create account
                     id_number = generate_id_from_gmail(email)
 
                     cursor.execute(
-                        "INSERT INTO users (name, email, password_hash, role, id_number, education_level) VALUES (%s, %s, %s, %s, %s, %s)",
-                        (name, email, 'gmail_oauth', applicant_type, id_number, education_level)
+                        "INSERT INTO users (name, email, password_hash, role, id_number, education_level, municipality_id) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (name, email, 'gmail_oauth', applicant_type, id_number, education_level, municipality_id)
                     )
                     user_id = cursor.lastrowid
                     conn.commit()
