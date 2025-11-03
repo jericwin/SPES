@@ -26,6 +26,16 @@ import requests
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from dotenv import load_dotenv
+# FAQS
+from flask import Flask, request, jsonify
+from fuzzywuzzy import fuzz
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer, util
+import openai
+
+import difflib
+# FAQS
 
 try:
     import pythoncom
@@ -4983,6 +4993,161 @@ def edit_oath_undertaking():
                 }
             }
         })
+    
+# ---------------------------------------
+# 📘 Admin Chatbot Management Routes
+# ---------------------------------------
+
+
+# Load multilingual model (supports Tagalog + English)
+
+
+# ---------------------------------------
+# 🧩 Admin Chatbot Management (FAQs + Unanswered)
+# ---------------------------------------
+model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+
+@app.route('/admin/chatbot')
+def admin_chatbot():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM faqs ORDER BY id DESC")
+    faqs = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM unanswered_questions ORDER BY created_at DESC")
+    unanswered = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template('admin/chatbot.html', faqs=faqs, unanswered=unanswered)
+
+@app.route('/add_faq', methods=['POST'])
+def add_faq():
+    question = request.form['question']
+    answer = request.form['answer']
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Insert into FAQs
+    cursor.execute("INSERT INTO faqs (question, answer) VALUES (%s, %s)", (question, answer))
+
+    # Delete from unanswered_questions if it exists
+    cursor.execute("DELETE FROM unanswered_questions WHERE question=%s", (question,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    flash('FAQ added successfully!', 'success')
+    return redirect(url_for('admin_chatbot'))
+
+@app.route('/edit_faq/<int:id>', methods=['GET', 'POST'])
+def edit_faq(id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        question = request.form['question']
+        answer = request.form['answer']
+
+        # Update FAQ
+        cursor.execute("UPDATE faqs SET question=%s, answer=%s WHERE id=%s", (question, answer, id))
+
+        # Delete from unanswered_questions if it exists
+        cursor.execute("DELETE FROM unanswered_questions WHERE question=%s", (question,))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash('FAQ updated successfully!', 'success')
+        return redirect(url_for('admin_chatbot'))
+    else:
+        cursor.execute("SELECT * FROM faqs WHERE id=%s", (id,))
+        faq = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return render_template('admin/edit_faq.html', faq=faq)
+
+
+@app.route('/delete_faq/<int:id>')
+def delete_faq(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM faqs WHERE id=%s", (id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash('FAQ deleted successfully!', 'danger')
+    return redirect(url_for('admin_chatbot'))
+
+@app.route('/add_from_unanswered/<int:id>')
+def add_from_unanswered(id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT question FROM unanswered_questions WHERE id=%s", (id,))
+    uq = cursor.fetchone()
+
+    if uq:
+        cursor.execute("INSERT INTO faqs (question, answer) VALUES (%s, %s)", (uq['question'], ''))
+        cursor.execute("DELETE FROM unanswered_questions WHERE id=%s", (id,))
+        conn.commit()
+
+    cursor.close()
+    conn.close()
+    flash('Moved to FAQs. Please add an answer.', 'info')
+    return redirect(url_for('admin_chatbot'))
+
+@app.route('/delete_unanswered/<int:id>')
+def delete_unanswered(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM unanswered_questions WHERE id=%s", (id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash('Unanswered question deleted.', 'danger')
+    return redirect(url_for('admin_chatbot'))
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    user_message = data.get('message', '').strip()
+
+    if not user_message:
+        return jsonify({'response': "Please type a question."})
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get all FAQs from database
+    cursor.execute("SELECT question, answer FROM faqs")
+    faqs = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    # Strict one-to-one matching: exact question (case-insensitive)
+    bot_response = None
+    for faq in faqs:
+        if user_message.lower() == faq['question'].lower():
+            bot_response = faq['answer']
+            break
+
+    if not bot_response:
+        # Save unanswered question
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO unanswered_questions (question) VALUES (%s)", (user_message,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        bot_response = "Sorry, hindi ko pa alam ang sagot niyan. Ipa-forward ko sa admin for review."
+
+    return jsonify({'response': bot_response})
+
+
     
     # Add the feedback page route
 @app.route('/feedback')
