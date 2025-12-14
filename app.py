@@ -3,6 +3,7 @@ from config import get_db_connection
 import hashlib
 import re
 import os
+import json
 import uuid
 import shutil
 import subprocess
@@ -28,10 +29,7 @@ from google.oauth2 import id_token
 from dotenv import load_dotenv
 # FAQS
 from flask import Flask, request, jsonify
-from fuzzywuzzy import fuzz
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer, util
+import google.generativeai as genai
 # import openai
 
 # import difflib
@@ -62,6 +60,52 @@ app.secret_key = 'your-secret-key-here'  # Required for flash messages and sessi
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', 'your-google-client-id-here')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', 'your-google-client-secret-here')
+
+# Gemini Configuration
+GENAI_API_KEY = os.environ.get('GENAI_API_KEY')
+gemini_model = None
+if GENAI_API_KEY:
+    try:
+        genai.configure(api_key=GENAI_API_KEY)
+        
+        # Explicitly prefer gemini-1.5-flash for free tier
+        model_name = 'gemini-1.5-flash' 
+        
+        # Verify if it exists, otherwise fallback to gemini-pro
+        try:
+            print("Checking available Gemini models...")
+            available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            # print(f"Available: {available_models}")
+            
+            # Priority list
+            priorities = ['models/gemini-1.5-flash', 'models/gemini-1.5-flash-latest', 'models/gemini-pro']
+            
+            found = False
+            for p in priorities:
+                if p in available_models:
+                    model_name = p
+                    found = True
+                    break
+            
+            if not found:
+                # Fallback: find anything with 'flash'
+                for m in available_models:
+                    if 'flash' in m:
+                        model_name = m
+                        found = True
+                        break
+            
+            if not found and 'models/gemini-pro' in available_models:
+                model_name = 'models/gemini-pro'
+
+        except Exception as list_err:
+            print(f"Warning: Could not list models ({list_err}). Using default: {model_name}")
+
+        print(f"Selected Gemini Model: {model_name}")
+        gemini_model = genai.GenerativeModel(model_name)
+        print("Gemini AI configured successfully.")
+    except Exception as e:
+        print(f"Error configuring Gemini AI: {e}")
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -5180,7 +5224,7 @@ def edit_oath_undertaking():
 # ---------------------------------------
 # 🧩 Admin Chatbot Management (FAQs + Unanswered)
 # ---------------------------------------
-model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+# model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 
 @app.route('/admin/chatbot')
 def admin_chatbot():
@@ -5294,31 +5338,46 @@ def chat():
     if not user_message:
         return jsonify({'response': "Please type a question."})
 
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # Get all FAQs from database
-    cursor.execute("SELECT question, answer FROM faqs")
-    faqs = cursor.fetchall()
-    cursor.close()
-    conn.close()
-
-    # Strict one-to-one matching: exact question (case-insensitive)
     bot_response = None
-    for faq in faqs:
-        if user_message.lower() == faq['question'].lower():
-            bot_response = faq['answer']
-            break
+
+    # 1. Load FAQs from faqs.json
+    try:
+        with open('faqs.json', 'r', encoding='utf-8') as f:
+            faq_data = json.load(f)
+            faqs = faq_data.get('faqs', [])
+            
+            # Format FAQs for Gemini context
+            faq_context = ""
+            for faq in faqs:
+                faq_context += f"Q: {faq['question']}\nA: {faq['answer']}\n\n"
+    except Exception as e:
+        print(f"Error loading faqs.json: {e}")
+        faq_context = ""
+
+    # 2. Use Gemini API to answer
+    if GENAI_API_KEY and gemini_model and faq_context:
+        try:
+            system_instruction = (
+                "You are the DigiSPES AI Assistant. Your goal is to help students and applicants with the SPES program. "
+                "Answer the user's question in a friendly, conversational, and helpful tone (Taglish is okay if asked in tagalog, but more in ENGLISH, it is preffered.). "
+                "Use ONLY the provided FAQ context below to answer. "
+                "If the context doesn't contain the answer, or if the question is unrelated to SPES, politely say you don't have that specific information. "
+                "Do not make up information. SUMMARIZED but concise answer always unless told to. KEEP IT SHORT!"
+            )
+            
+            prompt = f"{system_instruction}\n\nFAQ Context:\n{faq_context}\n\nUser Question: {user_message}"
+
+            response = gemini_model.generate_content(prompt)
+            bot_response = response.text
+        except Exception as e:
+            print(f"Gemini API Error: {e}")
+            if "429" in str(e):
+                bot_response = "Sorry, I'm receiving too many questions right now. Please try again in a minute."
+            else:
+                bot_response = "Sorry, I'm having trouble connecting to the AI right now."
 
     if not bot_response:
-        # Save unanswered question
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO unanswered_questions (question) VALUES (%s)", (user_message,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        bot_response = "Sorry, hindi ko pa alam ang sagot niyan. Ipa-forward ko sa admin for review."
+        bot_response = "Sorry, hindi ko pa alam ang sagot niyan. Please contact the PESO office."
 
     return jsonify({'response': bot_response})
 
