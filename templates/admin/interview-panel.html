@@ -65,18 +65,54 @@
       }
       .candidate-card {
         transition: all 0.3s ease;
-        border-left: 4px solid #006edc;
+        border-left: 4px solid #6c757d;
+        height: 100%;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       }
       .candidate-card:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-3px);
       }
+      .candidate-card.status-passed { border-left-color: #198754; }
+      .candidate-card.status-failed { border-left-color: #dc3545; }
+      .candidate-card.status-scheduled { border-left-color: #0dcaf0; }
+      .candidate-card.status-completed { border-left-color: #ffc107; }
+      .candidate-card.status-requirements { border-left-color: #0d6efd; }
+
       .status-badge {
-        font-size: 0.8em;
-        padding: 0.4em 0.8em;
+        font-size: 0.75em;
+        padding: 0.5em 0.8em;
+        border-radius: 20px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
       }
       .score-input {
         max-width: 100px;
+      }
+      .filter-bar {
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        margin-bottom: 2rem;
+      }
+      .card-actions {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid #f0f0f0;
+      }
+      .info-label {
+        font-size: 0.8rem;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.2rem;
+      }
+      .info-value {
+        font-weight: 600;
+        color: #333;
+        font-size: 1rem;
       }
     </style>
   </head>
@@ -271,114 +307,88 @@
               <div class="main-container">
                 <div class="container py-4">
                   <!-- Filter Tabs -->
-                  <div
-                    class="d-flex flex-wrap justify-content-between align-items-center mb-3"
-                  >
-                    <div class="btn-group flex-wrap" role="group">
-                      <button
-                        class="btn btn-primary mb-2"
-                        onclick="filterInterviews('all')"
-                      >
-                        All Candidates
-                      </button>
-                      <button
-                        class="btn btn-outline-primary mb-2"
-                        onclick="filterInterviews('requirements_submitted')"
-                      >
-                        Requirements Submitted
-                      </button>
-                      <button
-                        class="btn btn-outline-primary mb-2"
-                        onclick="filterInterviews('scheduled')"
-                      >
-                        Scheduled
-                      </button>
-                      <button
-                        class="btn btn-outline-primary mb-2"
-                        onclick="filterInterviews('completed')"
-                      >
-                        Completed
-                      </button>
-                      <button
-                        class="btn btn-outline-primary mb-2"
-                        onclick="filterInterviews('pending')"
-                      >
-                        Pending Decision
-                      </button>
-                      <button
-                        class="btn btn-outline-success mb-2"
-                        onclick="filterInterviews('passed')"
-                      >
-                        Passed
-                      </button>
-                      <button
-                        class="btn btn-outline-danger mb-2"
-                        onclick="filterInterviews('failed')"
-                      >
-                        Failed
-                      </button>
-                    </div>
+                  <div class="filter-bar d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2 text-secondary"><i class="bi bi-funnel"></i> Status:</span>
+                            <select class="form-select form-select-sm border-secondary" style="width: auto; min-width: 200px;" onchange="filterInterviews(this.value)">
+                                <option value="all">All Candidates</option>
+                                <option value="requirements_submitted">Requirements Submitted</option>
+                                <option value="scheduled">Scheduled Interviews</option>
+                                <option value="completed">Completed Interviews</option>
+                                <option value="pending">Pending Decision</option>
+                                <option value="passed">Passed</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                        </div>
 
-                    <div class="mb-2">
-                      <button
-                        class="btn btn-success"
-                        onclick="generateFinalReport()"
-                      >
-                        <i class="bi bi-file-earmark-text"></i> Generate Final
-                        Report
-                      </button>
+                        <div class="d-flex align-items-center">
+                            <label for="yearFilter" class="me-2 fw-bold text-secondary">Year:</label>
+                            <select id="yearFilter" class="form-select form-select-sm border-secondary" style="width: auto; min-width: 100px;" onchange="window.location.href='?year=' + this.value">
+                                {% for year in available_years %}
+                                <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button class="btn btn-success btn-sm d-flex align-items-center gap-2" onclick="generateFinalReport()">
+                            <i class="bi bi-file-earmark-text"></i> 
+                            <span class="d-none d-md-inline">Generate Report</span>
+                        </button>
                     </div>
                   </div>
 
                   <!-- Statistics Cards -->
-                  <div class="row mb-4">
-                    <div class="col-md-2">
-                      <div class="card bg-warning text-dark">
-                        <div class="card-body text-center">
-                          <h4 id="pendingRequirementsCount">
+                  <div class="row mb-4 g-3 row-cols-1 row-cols-sm-2 row-cols-md-5">
+                    <div class="col d-flex">
+                      <div class="card bg-warning text-dark w-100">
+                        <div class="card-body text-center d-flex flex-column justify-content-center">
+                          <h4 id="pendingRequirementsCount" class="mb-1">
                             {{ stats.pending_requirements_review or 0 }}
                           </h4>
-                          <p>Pending Review</p>
+                          <p class="mb-0 small">Pending Review</p>
                         </div>
                       </div>
                     </div>
-                    <div class="col-md-2">
-                      <div class="card bg-info text-white">
-                        <div class="card-body text-center">
-                          <h4 id="approvedRequirementsCount">
+                    <div class="col d-flex">
+                      <div class="card bg-info text-white w-100">
+                        <div class="card-body text-center d-flex flex-column justify-content-center">
+                          <h4 id="approvedRequirementsCount" class="mb-1">
                             {{ stats.approved_requirements or 0 }}
                           </h4>
-                          <p>Approved Requirements</p>
+                          <p class="mb-0 small">Approved Requirements</p>
                         </div>
                       </div>
                     </div>
-                    <div class="col-md-2">
-                      <div class="card bg-secondary text-white">
-                        <div class="card-body text-center">
-                          <h4 id="pendingInterviewsCount">
+                    <div class="col d-flex">
+                      <div class="card bg-secondary text-white w-100">
+                        <div class="card-body text-center d-flex flex-column justify-content-center">
+                          <h4 id="pendingInterviewsCount" class="mb-1">
                             {{ stats.pending_interviews or 0 }}
                           </h4>
-                          <p>Pending Interviews</p>
+                          <p class="mb-0 small">Pending Interviews</p>
                         </div>
                       </div>
                     </div>
-                    <div class="col-md-2">
-                      <div class="card bg-success text-white">
-                        <div class="card-body text-center">
-                          <h4 id="passedCandidatesCount">
+                    <div class="col d-flex">
+                      <div class="card bg-success text-white w-100">
+                        <div class="card-body text-center d-flex flex-column justify-content-center">
+                          <h4 id="passedCandidatesCount" class="mb-1">
                             {{ stats.passed_candidates or 0 }}
                           </h4>
-                          <p>Passed</p>
+                          <p class="mb-0 small">Passed</p>
                         </div>
                       </div>
                     </div>
-                    <div class="col-md-2">
-                      <div class="card bg-danger text-white">
-                        <div class="card-body text-center">
-                          <h4 id="failedCandidatesCount">
+                    <div class="col d-flex">
+                      <div class="card bg-danger text-white w-100">
+                        <div class="card-body text-center d-flex flex-column justify-content-center">
+                          <h4 id="failedCandidatesCount" class="mb-1">
                             {{ stats.failed_candidates or 0 }}
                           </h4>
-                          <p>Failed</p>
+                          <p class="mb-0 small">Failed</p>
                         </div>
                       </div>
                     </div>
@@ -541,132 +551,128 @@
                   {% endif %}
 
                   <!-- Candidates List -->
-                  <div class="row" id="candidatesContainer">
+                  <div class="row g-4" id="candidatesContainer">
                     {% for candidate in interview_candidates %}
                     <div
-                      class="col-md-6 mb-3 candidate-item"
+                      class="col-md-6 col-lg-4 candidate-item d-flex align-items-stretch"
                       data-status="{{ candidate.interview_status }}"
                       data-decision="{{ candidate.final_decision }}"
                     >
-                      <div class="card candidate-card">
-                        <div
-                          class="card-header d-flex justify-content-between align-items-center"
-                        >
-                          <h6 class="mb-0">
-                            {% if candidate.middle_name and candidate.last_name
-                            %} {{ candidate.first_name }} {{
-                            candidate.middle_name }} {{ candidate.last_name }}
-                            {% elif candidate.last_name and candidate.last_name
-                            != candidate.first_name %} {{ candidate.first_name
-                            }} {{ candidate.last_name }} {% else %} {{
-                            candidate.name }} {% endif %}
-                          </h6>
-                          <span
-                            class="badge status-badge {% if candidate.final_decision == 'passed' %}bg-success {% elif candidate.final_decision == 'failed' %}bg-danger {% elif candidate.interview_status == 'completed' %}bg-warning {% elif candidate.interview_status == 'scheduled' %}bg-info {% else %}bg-secondary{% endif %}"
-                          >
+                      <div class="card candidate-card w-100
+                        {% if candidate.final_decision == 'passed' %}status-passed
+                        {% elif candidate.final_decision == 'failed' %}status-failed
+                        {% elif candidate.interview_status == 'completed' %}status-completed
+                        {% elif candidate.interview_status == 'scheduled' %}status-scheduled
+                        {% else %}status-requirements{% endif %}">
+                        
+                        <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between align-items-start">
+                          <div>
+                            <h6 class="mb-0 fw-bold text-dark">
+                                {% if candidate.middle_name and candidate.last_name %} 
+                                    {{ candidate.first_name }} {{ candidate.middle_name }} {{ candidate.last_name }}
+                                {% elif candidate.last_name and candidate.last_name != candidate.first_name %} 
+                                    {{ candidate.first_name }} {{ candidate.last_name }} 
+                                {% else %} 
+                                    {{ candidate.name }} 
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">{{ candidate.email }}</small>
+                          </div>
+                          <span class="badge status-badge 
+                            {% if candidate.final_decision == 'passed' %}bg-success 
+                            {% elif candidate.final_decision == 'failed' %}bg-danger 
+                            {% elif candidate.interview_status == 'completed' %}bg-warning text-dark
+                            {% elif candidate.interview_status == 'scheduled' %}bg-info text-dark
+                            {% else %}bg-primary{% endif %}">
                             {% if candidate.final_decision == 'passed' %}Passed
-                            {% elif candidate.final_decision == 'failed'
-                            %}Failed {% elif candidate.interview_status ==
-                            'completed' %}Interview Done {% elif
-                            candidate.interview_status == 'scheduled'
-                            %}Scheduled {% else %}Requirements Submitted{% endif
-                            %}
+                            {% elif candidate.final_decision == 'failed' %}Failed 
+                            {% elif candidate.interview_status == 'completed' %}Interview Done 
+                            {% elif candidate.interview_status == 'scheduled' %}Scheduled 
+                            {% else %}Requirements{% endif %}
                           </span>
                         </div>
-                        <div class="card-body">
-                          <div class="row mb-2">
-                            <div class="col-sm-6">
-                              <small class="text-muted">Exam Score:</small
-                              ><br />
-                              <strong>{{ candidate.exam_score }}%</strong>
+                        
+                        <div class="card-body d-flex flex-column">
+                          <hr class="my-2 text-muted opacity-25">
+                          
+                          <div class="row g-2 mb-3">
+                            <div class="col-6">
+                              <div class="info-label">Exam Score</div>
+                              <div class="info-value text-primary">{{ candidate.exam_score }}%</div>
                             </div>
-                            <div class="col-sm-6">
-                              <small class="text-muted"
-                                >Requirements Status:</small
-                              ><br />
-                              <span
-                                class="badge bg-{{ 'success' if candidate.requirements_status == 'approved' else 'warning' }}"
-                              >
-                                {{ candidate.requirements_status|title }}
-                              </span>
+                            <div class="col-6">
+                                <div class="info-label">Requirements</div>
+                                <div>
+                                    <span class="badge bg-{{ 'success' if candidate.requirements_status == 'approved' else 'warning' }} rounded-pill">
+                                        {{ candidate.requirements_status|title }}
+                                    </span>
+                                </div>
                             </div>
                           </div>
 
                           {% if candidate.interview_date %}
-                          <div class="row mb-2">
-                            <div class="col-sm-6">
-                              <small class="text-muted">Interview Date:</small
-                              ><br />
-                              <strong
-                                >{{ candidate.interview_date.strftime('%B %d,
-                                %Y') }}</strong
-                              >
+                          <div class="row g-2 mb-3">
+                            <div class="col-6">
+                              <div class="info-label">Interview Date</div>
+                              <div class="info-value">{{ candidate.interview_date.strftime('%b %d, %Y') }}</div>
                             </div>
-                            <div class="col-sm-6">
-                              <small class="text-muted">Interview Time:</small
-                              ><br />
-                              <strong
-                                >{{ candidate.interview_time.strftime('%I:%M
-                                %p') if candidate.interview_time else 'TBD'
-                                }}</strong
-                              >
+                            <div class="col-6">
+                              <div class="info-label">Time</div>
+                              <div class="info-value">{{ candidate.interview_time.strftime('%I:%M %p') if candidate.interview_time else 'TBD' }}</div>
                             </div>
                           </div>
-                          {% endif %} {% if candidate.interview_score %}
-                          <div class="row mb-2">
-                            <div class="col-sm-6">
-                              <small class="text-muted">Interview Score:</small
-                              ><br />
-                              <strong
-                                >{{ candidate.interview_score }}/100</strong
-                              >
+                          {% endif %} 
+                          
+                          {% if candidate.interview_score %}
+                          <div class="row g-2 mb-3">
+                            <div class="col-12">
+                              <div class="info-label">Interview Score</div>
+                              <div class="info-value">{{ candidate.interview_score }}/100</div>
                             </div>
                           </div>
                           {% endif %}
 
-                          <div class="d-flex gap-2 flex-wrap">
+                          <div class="card-actions d-flex gap-2 flex-wrap justify-content-end mt-auto">
                             <button
-                              class="btn btn-sm btn-outline-primary"
+                              class="btn btn-sm btn-outline-secondary flex-grow-1"
                               onclick="viewRequirements({{ candidate.user_id }})"
+                              title="View Requirements"
                             >
-                              <i class="bi bi-file-text"></i> View Requirements
+                              <i class="bi bi-file-text"></i> Docs
                             </button>
 
-                            {% if candidate.interview_status ==
-                            'requirements_submitted' %}
+                            {% if candidate.interview_status == 'requirements_submitted' or candidate.interview_status == 'requirements_approved' %}
                             <button
-                              class="btn btn-sm btn-primary"
+                              class="btn btn-sm btn-primary flex-grow-1"
                               onclick="scheduleInterview({{ candidate.user_id }}, {{ candidate.exam_id }})"
                             >
                               <i class="bi bi-calendar-plus"></i> Schedule
-                              Interview
                             </button>
-                            {% endif %} {% if candidate.interview_status ==
-                            'scheduled' or candidate.interview_status ==
-                            'completed' %}
+                            {% endif %} 
+                            
+                            {% if candidate.interview_status == 'scheduled' or candidate.interview_status == 'completed' %}
                             <button
-                              class="btn btn-sm btn-info"
+                              class="btn btn-sm btn-info text-white flex-grow-1"
                               onclick="conductInterview({{ candidate.user_id }}, {{ candidate.exam_id }})"
                             >
                               <i class="bi bi-person-check"></i>
-                              {% if candidate.interview_status == 'scheduled'
-                              %}Conduct{% else %}Edit{% endif %} Interview
+                              {% if candidate.interview_status == 'scheduled' %}Conduct{% else %}Edit{% endif %}
                             </button>
-                            {% endif %} {% if candidate.interview_status ==
-                            'completed' and candidate.final_decision ==
-                            'pending' %}
-                            <div class="btn-group">
+                            {% endif %} 
+                            
+                            {% if candidate.interview_status == 'completed' and candidate.final_decision == 'pending' %}
+                            <div class="btn-group flex-grow-1">
                               <button
                                 class="btn btn-sm btn-success"
                                 onclick="markFinalDecision({{ candidate.user_id }}, {{ candidate.exam_id }}, 'passed')"
                               >
-                                <i class="bi bi-check-circle"></i> Pass
+                                <i class="bi bi-check"></i> Pass
                               </button>
                               <button
                                 class="btn btn-sm btn-danger"
                                 onclick="markFinalDecision({{ candidate.user_id }}, {{ candidate.exam_id }}, 'failed')"
                               >
-                                <i class="bi bi-x-circle"></i> Fail
+                                <i class="bi bi-x"></i> Fail
                               </button>
                             </div>
                             {% endif %}
@@ -884,10 +890,13 @@
     <script>
       // Filter functions
       function filterInterviews(status) {
+        console.log("Filtering by status:", status);
         const candidates = document.querySelectorAll(".candidate-item");
         candidates.forEach((candidate) => {
-          const candidateStatus = candidate.dataset.status;
-          const candidateDecision = candidate.dataset.decision;
+          const candidateStatus = (candidate.dataset.status || "").toLowerCase();
+          const candidateDecision = (candidate.dataset.decision || "").toLowerCase();
+          
+          // console.log("Candidate:", candidateStatus, candidateDecision);
 
           let show = false;
 
@@ -898,7 +907,8 @@
             case "requirements_submitted":
               show =
                 candidateStatus === "requirements_submitted" ||
-                candidateStatus === "";
+                candidateStatus === "" || 
+                candidateStatus === "requirements_approved";
               break;
             case "scheduled":
               show = candidateStatus === "scheduled";
@@ -919,20 +929,24 @@
               break;
           }
 
-          candidate.style.display = show ? "" : "none";
+          if (show) {
+            candidate.classList.remove("d-none");
+            candidate.classList.add("d-flex");
+          } else {
+            candidate.classList.remove("d-flex");
+            candidate.classList.add("d-none");
+          }
         });
+      }
 
-        // Update active button
-        document.querySelectorAll(".btn-group .btn").forEach((btn) => {
-          btn.classList.remove("btn-primary");
-          btn.classList.add("btn-outline-primary");
-        });
-        event.target.classList.remove(
-          "btn-outline-primary",
-          "btn-outline-success",
-          "btn-outline-danger"
-        );
-        event.target.classList.add("btn-primary");
+      function applyYearFilter(year) {
+        const url = new URL(window.location.href);
+        if (year) {
+          url.searchParams.set('year', year);
+        } else {
+          url.searchParams.delete('year');
+        }
+        window.location.href = url.toString();
       }
 
       // Requirements Review Functions
