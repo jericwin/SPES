@@ -533,11 +533,20 @@ def new_applicants_dashboard():
     has_submitted = False
     application_status = None
     latest_announcement = None
+    user_info = None
     
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
             
+            # Get user personal info
+            cursor.execute("""
+                SELECT first_name, middle_name, last_name, address, contact_number, birthdate
+                FROM users
+                WHERE id = %s
+            """, (session['user_id'],))
+            user_info = cursor.fetchone()
+
             # Get latest main announcement
             cursor.execute("""
                 SELECT title, description, announcement_date
@@ -574,7 +583,39 @@ def new_applicants_dashboard():
                          username=session['username'], 
                          has_submitted=has_submitted,
                          application_status=application_status,
-                         latest_announcement=latest_announcement)
+                         latest_announcement=latest_announcement,
+                         user_info=user_info)
+
+@app.route('/update-personal-info', methods=['POST'])
+@login_required
+def update_personal_info():
+    if request.method == 'POST':
+        first_name = request.form.get('firstName')
+        middle_name = request.form.get('middleName')
+        last_name = request.form.get('lastName')
+        address = request.form.get('address')
+        contact_number = request.form.get('contactNumber')
+        birthdate = request.form.get('birthDate')
+        
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE users 
+                    SET first_name=%s, middle_name=%s, last_name=%s, address=%s, contact_number=%s, birthdate=%s
+                    WHERE id=%s
+                """, (first_name, middle_name, last_name, address, contact_number, birthdate, session['user_id']))
+                conn.commit()
+                flash('Personal information updated successfully', 'success')
+            except Exception as e:
+                print(f"Error updating personal info: {e}")
+                flash('Error updating personal information', 'error')
+            finally:
+                cursor.close()
+                conn.close()
+        
+        return redirect(url_for('new_applicants_dashboard'))
 
 @app.route('/new-applicants/messages')
 def new_applicants_messages():
@@ -2201,8 +2242,8 @@ def submit_application():
             # Insert into applicants table
             cursor.execute("""
                 INSERT INTO applicants
-                (user_id, status, submission_date)
-                VALUES (%s, 'for exam', CURDATE())
+                (user_id, status, submission_date, year_applied)
+                VALUES (%s, 'for exam', CURDATE(), YEAR(CURDATE()))
             """, (user_id,))
 
             # Insert into examinees if not already present
@@ -5601,11 +5642,27 @@ def admin_reports():
     
     conn = get_db_connection()
     if not conn:
-        return render_template('admin/reports.html', final_reports=[], stats={})
+        return render_template('admin/reports.html', final_reports=[], stats={}, available_years=[], selected_year=None)
     
     try:
         cursor = conn.cursor(dictionary=True)
         municipality_filter = get_municipality_access_filter()
+        
+        # Fix municipality filter for our query (replace ui. with u.)
+        if municipality_filter and "ui.municipality_id" in municipality_filter:
+            municipality_filter = municipality_filter.replace("ui.municipality_id", "u.municipality_id")
+
+        # Get available years
+        cursor.execute("SELECT DISTINCT year_applied FROM applicants ORDER BY year_applied DESC")
+        available_years = [row['year_applied'] for row in cursor.fetchall() if row['year_applied']]
+        
+        selected_year = request.args.get('year')
+        if not selected_year and available_years:
+            selected_year = str(available_years[0])
+        
+        year_filter = ""
+        if selected_year:
+            year_filter = f" AND a.year_applied = {selected_year}"
         
         # Get final reports with candidate details
         cursor.execute(f"""
@@ -5618,8 +5675,10 @@ def admin_reports():
                 m.name as municipality_name
             FROM final_reports fr
             JOIN users u ON fr.user_id = u.id
+            JOIN applicants a ON u.id = a.user_id AND fr.exam_id = a.exam_id
             LEFT JOIN municipalities m ON u.municipality_id = m.id
             WHERE 1=1 {municipality_filter}
+            {year_filter}
             ORDER BY fr.rank_position ASC, fr.total_score DESC
         """)
         final_reports = cursor.fetchall()
@@ -5637,7 +5696,9 @@ def admin_reports():
                 SUM(CASE WHEN fr.total_score < 60 THEN 1 ELSE 0 END) as score_below_60
             FROM final_reports fr
             JOIN users u ON fr.user_id = u.id
+            JOIN applicants a ON u.id = a.user_id AND fr.exam_id = a.exam_id
             WHERE fr.final_status = 'passed' {municipality_filter}
+            {year_filter}
         """)
         stats = cursor.fetchone() or {}
         
@@ -5656,8 +5717,10 @@ def admin_reports():
             SELECT m.name, COUNT(*) as count
             FROM final_reports fr
             JOIN users u ON fr.user_id = u.id
+            JOIN applicants a ON u.id = a.user_id AND fr.exam_id = a.exam_id
             LEFT JOIN municipalities m ON u.municipality_id = m.id
             WHERE fr.final_status = 'passed' {municipality_filter}
+            {year_filter}
             GROUP BY m.name
             ORDER BY count DESC
         """)
@@ -5671,12 +5734,15 @@ def admin_reports():
                              municipality_labels=municipality_labels,
                              municipality_data=municipality_counts,
                              username=session.get('username'), 
-                             role=session.get('role'))
+                             role=session.get('role'),
+                             available_years=available_years,
+                             selected_year=int(selected_year) if selected_year else None)
     
     except Exception as e:
         print(f"Error in admin_reports: {str(e)}")
         return render_template('admin/reports.html', final_reports=[], stats={}, 
-                             username=session.get('username'), role=session.get('role'))
+                             username=session.get('username'), role=session.get('role'),
+                             available_years=[], selected_year=None)
     finally:
         cursor.close()
         conn.close()
@@ -5715,7 +5781,9 @@ def admin_interview_panel():
         return render_template('admin/interview-panel.html', 
                              requirements_for_review=[], 
                              interview_candidates=[], 
-                             stats={})
+                             stats={},
+                             available_years=[],
+                             selected_year=None)
     
     try:
         cursor = conn.cursor(dictionary=True)
@@ -5724,6 +5792,18 @@ def admin_interview_panel():
         # Fix municipality filter for our query (replace ui. with u.)
         if municipality_filter and "ui.municipality_id" in municipality_filter:
             municipality_filter = municipality_filter.replace("ui.municipality_id", "u.municipality_id")
+
+        # Get available years
+        cursor.execute("SELECT DISTINCT year_applied FROM applicants ORDER BY year_applied DESC")
+        available_years = [row['year_applied'] for row in cursor.fetchall() if row['year_applied']]
+        
+        selected_year = request.args.get('year')
+        if not selected_year and available_years:
+            selected_year = str(available_years[0])
+        
+        year_filter = ""
+        if selected_year:
+            year_filter = f" AND a.year_applied = {selected_year}"
         
         # Get requirements submissions that need review (pending_review status)
         cursor.execute(f"""
@@ -5750,12 +5830,14 @@ def admin_interview_panel():
                 u.municipality_id
             FROM requirements_submissions rs
             JOIN users u ON rs.user_id = u.id
+            JOIN applicants a ON u.id = a.user_id AND rs.exam_id = a.exam_id
             JOIN examinees e ON u.id = e.user_id AND rs.exam_id = e.exam_id
             JOIN exams ex ON rs.exam_id = ex.id
             JOIN exam_attempts ea ON u.id = ea.user_id AND rs.exam_id = ea.exam_id
             WHERE rs.submission_status = 'pending_review'
             AND ea.passed = 'passed'
             {municipality_filter}
+            {year_filter}
             ORDER BY rs.submitted_at ASC
         """)
         requirements_for_review = cursor.fetchall()
@@ -5792,6 +5874,7 @@ def admin_interview_panel():
                 ip.interview_notes
             FROM users u
             JOIN examinees e ON u.id = e.user_id
+            JOIN applicants a ON u.id = a.user_id AND e.exam_id = a.exam_id
             JOIN exams ex ON e.exam_id = ex.id
             JOIN exam_attempts ea ON u.id = ea.user_id AND e.exam_id = ea.exam_id
             JOIN requirements_submissions rs ON u.id = rs.user_id AND e.exam_id = rs.exam_id
@@ -5799,6 +5882,7 @@ def admin_interview_panel():
             WHERE rs.submission_status = 'approved'
             AND ea.passed = 'passed'
             {municipality_filter}
+            {year_filter}
             ORDER BY ip.final_decision ASC, rs.submitted_at ASC
         """)
         interview_candidates = cursor.fetchall()
@@ -5813,25 +5897,31 @@ def admin_interview_panel():
                 COUNT(DISTINCT CASE WHEN ip.final_decision = 'failed' THEN u.id END) as failed_candidates
             FROM users u
             JOIN examinees e ON u.id = e.user_id
+            JOIN applicants a ON u.id = a.user_id AND e.exam_id = a.exam_id
             JOIN exam_attempts ea ON u.id = ea.user_id AND e.exam_id = ea.exam_id
             LEFT JOIN requirements_submissions rs ON u.id = rs.user_id AND e.exam_id = rs.exam_id
             LEFT JOIN interview_panel ip ON u.id = ip.user_id AND e.exam_id = ip.exam_id
             WHERE ea.passed = 'passed'
             {municipality_filter}
+            {year_filter}
         """)
         stats = cursor.fetchone() or {}
         
         return render_template('admin/interview-panel.html', 
                              requirements_for_review=requirements_for_review,
                              interview_candidates=interview_candidates, 
-                             stats=stats)
+                             stats=stats,
+                             available_years=available_years,
+                             selected_year=int(selected_year) if selected_year else None)
     
     except Exception as e:
         print(f"Error in admin_interview_panel: {str(e)}")
         return render_template('admin/interview-panel.html', 
                              requirements_for_review=[], 
                              interview_candidates=[], 
-                             stats={})
+                             stats={},
+                             available_years=[],
+                             selected_year=None)
     finally:
         cursor.close()
         conn.close()
