@@ -158,7 +158,7 @@
                   ><span class="ms-3 d-none d-sm-inline">Interviews</span>
                 </a>
               </li>
-              <li>
+              <!-- <li>
                 <a
                   href="{{ url_for('admin_chatbot') }}"
                   class="nav-link px-sm-0 px-2"
@@ -166,7 +166,7 @@
                   <i class="fs-5 bi-robot"></i
                   ><span class="ms-3 d-none d-sm-inline">Chatbot</span>
                 </a>
-              </li>
+              </li> -->
               <li>
                 <a
                   href="{{ url_for('admin_messages') }}"
@@ -258,11 +258,22 @@
         </div>
 
         <!-- this page will fetched and displays applicants who PASSED the examination and PASSED after submitting the last requirements which is the last SPES-FORMS in SPES-FORMS.html -->
-        <div class="col d-flex flex-column h-sm-100">
+        <div class="col-12 col-sm-9 col-xl-10 d-flex flex-column h-sm-100">
           <main class="row overflow-auto">
             <div class="col pt-4">
               <h3>Final Reports</h3>
               <hr />
+              
+              {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                  {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                      {{ message }}
+                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              {% endwith %}
 
               <div class="main-container">
                 <div class="container py-4">
@@ -354,12 +365,9 @@
                             <th>Name</th>
                             <th>ID Number</th>
                             <th>Municipality</th>
-                            <th>Exam Score</th>
-                            <th>Interview Score</th>
                             <th>Total Score</th>
                             <th>Status</th>
                             <th>Date Completed</th>
-                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -386,75 +394,34 @@
                             <td>{{ report.id_number }}</td>
                             <td>{{ report.municipality_name or 'N/A' }}</td>
                             <td>
-                              <span
-                                class="badge bg-{{ 'success' if report.exam_score >= 70 else 'warning' }}"
-                              >
-                                {{ report.exam_score }}%
-                              </span>
-                            </td>
-                            <td>
-                              <span
-                                class="badge bg-{{ 'success' if report.interview_score >= 70 else 'warning' }}"
-                              >
-                                {{ report.interview_score or 'N/A' }}
-                              </span>
-                            </td>
-                            <td>
                               <strong
-                                class="text-{{ 'success' if report.total_score >= 70 else 'warning' }}"
+                                class="text-{{ 'success' if report.total_score and report.total_score >= 70 else 'warning' }}"
                               >
                                 {{ report.total_score }}%
                               </strong>
                             </td>
                             <td>
-                              <span
-                                class="badge bg-{{ 'success' if report.final_status == 'passed' else 'danger' }}"
-                              >
-                                {{ report.final_status|title }}
-                              </span>
                               {% if report.sent_to_provincial %}
-                              <br /><small class="text-success">
-                                <i class="bi bi-check-circle"></i> Sent {{
-                                report.sent_at.strftime('%m/%d/%Y') }}
+                              <span class="badge bg-success">
+                                <i class="bi bi-check-circle"></i> Submitted to Provincial
+                              </span>
+                              <br /><small class="text-muted">
+                                {{ report.sent_at.strftime('%m/%d/%Y') }}
                               </small>
                               {% else %}
-                              <br /><small class="text-warning">
-                                <i class="bi bi-clock"></i> Pending Provincial
-                              </small>
+                              <span class="badge bg-warning text-dark">
+                                <i class="bi bi-clock"></i> Pending
+                              </span>
                               {% endif %}
                             </td>
                             <td>
                               {{ report.report_generated_at.strftime('%B %d,
                               %Y') }}
                             </td>
-                            <td>
-                              <div class="btn-group btn-group-sm">
-                                <button
-                                  class="btn btn-outline-primary"
-                                  onclick="viewCandiateDetails({{ report.user_id }}, {{ report.exam_id }})"
-                                >
-                                  <i class="bi bi-eye"></i>
-                                </button>
-                                {% if not report.sent_to_provincial %}
-                                <button
-                                  class="btn btn-outline-warning"
-                                  onclick="markAsReviewed({{ report.id }})"
-                                >
-                                  <i class="bi bi-check"></i>
-                                </button>
-                                {% endif %}
-                                <button
-                                  class="btn btn-outline-info"
-                                  onclick="downloadCertificate({{ report.user_id }})"
-                                >
-                                  <i class="bi bi-download"></i>
-                                </button>
-                              </div>
-                            </td>
                           </tr>
                           {% else %}
                           <tr>
-                            <td colspan="10" class="text-center py-4">
+                            <td colspan="7" class="text-center py-4">
                               <div class="alert alert-info mb-0">
                                 <i class="bi bi-info-circle"></i> No final
                                 reports available. <br /><small
