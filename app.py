@@ -434,6 +434,100 @@ def peso_dashboard():
     return redirect(url_for('home'))
 
 
+@app.route('/peso/reports')
+@login_required
+@role_required(['provincial_peso'])
+def peso_reports():
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('home'))
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get municipalities for filter
+        cursor.execute("SELECT * FROM municipalities ORDER BY name")
+        municipalities = cursor.fetchall()
+
+        # Get available years
+        cursor.execute("""
+            SELECT DISTINCT YEAR(report_generated_at) as year 
+            FROM final_reports 
+            WHERE sent_to_provincial = 1
+            ORDER BY year DESC
+        """)
+        available_years = [row['year'] for row in cursor.fetchall() if row['year']]
+        
+        # Filters
+        selected_municipality = request.args.get('municipality_id')
+        selected_year = request.args.get('year')
+        
+        if not selected_year and available_years:
+            selected_year = str(available_years[0])
+
+        where_clause = "WHERE fr.sent_to_provincial = 1"
+        params = []
+
+        if selected_municipality:
+            where_clause += " AND u.municipality_id = %s"
+            params.append(selected_municipality)
+            
+        if selected_year:
+            where_clause += " AND YEAR(fr.report_generated_at) = %s"
+            params.append(selected_year)
+
+        # Get reports
+        query = f"""
+            SELECT 
+                fr.*,
+                u.name, u.email, u.id_number,
+                SUBSTRING_INDEX(u.name, ' ', 1) as first_name,
+                SUBSTRING_INDEX(SUBSTRING_INDEX(u.name, ' ', 2), ' ', -1) as middle_name,
+                SUBSTRING_INDEX(u.name, ' ', -1) as last_name,
+                m.name as municipality_name
+            FROM final_reports fr
+            JOIN users u ON fr.user_id = u.id
+            LEFT JOIN municipalities m ON u.municipality_id = m.id
+            {where_clause}
+            ORDER BY fr.report_generated_at DESC, m.name ASC, fr.rank_position ASC
+        """
+        
+        cursor.execute(query, tuple(params))
+        final_reports = cursor.fetchall()
+        
+        # Get stats
+        stats_query = f"""
+            SELECT 
+                COUNT(*) as total_reports,
+                COUNT(DISTINCT u.municipality_id) as total_municipalities,
+                SUM(CASE WHEN fr.total_score >= 90 THEN 1 ELSE 0 END) as score_90_100,
+                SUM(CASE WHEN fr.total_score >= 80 AND fr.total_score < 90 THEN 1 ELSE 0 END) as score_80_89,
+                SUM(CASE WHEN fr.total_score >= 70 AND fr.total_score < 80 THEN 1 ELSE 0 END) as score_70_79,
+                SUM(CASE WHEN fr.total_score < 70 THEN 1 ELSE 0 END) as score_below_70
+            FROM final_reports fr
+            JOIN users u ON fr.user_id = u.id
+            {where_clause}
+        """
+        cursor.execute(stats_query, tuple(params))
+        stats = cursor.fetchone() or {}
+
+        return render_template('peso/reports.html', 
+                             municipalities=municipalities,
+                             final_reports=final_reports,
+                             stats=stats,
+                             available_years=available_years,
+                             selected_year=int(selected_year) if selected_year else None,
+                             selected_municipality=int(selected_municipality) if selected_municipality else None)
+
+    except Exception as e:
+        print(f"Error loading PESO reports: {e}")
+        flash('An error occurred loading reports', 'error')
+        return redirect(url_for('peso_dashboard'))
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @app.route('/peso/create-municipal-account', methods=['POST'])
 @login_required
 @role_required(['provincial_peso'])
@@ -5561,7 +5655,7 @@ def generate_final_report():
                 u.id as user_id,
                 u.name,
                 u.email,
-                e.exam_id,
+                ip.exam_id,
                 ex.title as exam_title,
                 CASE 
                     WHEN ea.total_points > 0 THEN ROUND((ea.score / ea.total_points * 100), 2)
@@ -5573,18 +5667,18 @@ def generate_final_report():
                         ROUND(((ea.score / ea.total_points * 100) + ip.interview_score) / 2, 2)
                     WHEN ea.total_points > 0 THEN 
                         ROUND((ea.score / ea.total_points * 100), 2)
+                    WHEN ip.interview_score IS NOT NULL THEN
+                        ip.interview_score
                     ELSE 0
                 END as total_score,
                 ip.final_decision,
                 m.name as municipality_name
-            FROM users u
-            JOIN examinees e ON u.id = e.user_id
-            JOIN exams ex ON e.exam_id = ex.id
-            JOIN exam_attempts ea ON u.id = ea.user_id AND e.exam_id = ea.exam_id
-            JOIN interview_panel ip ON u.id = ip.user_id AND e.exam_id = ip.exam_id
+            FROM interview_panel ip
+            JOIN users u ON ip.user_id = u.id
+            JOIN exams ex ON ip.exam_id = ex.id
             JOIN municipalities m ON u.municipality_id = m.id
+            LEFT JOIN exam_attempts ea ON ip.user_id = ea.user_id AND ip.exam_id = ea.exam_id
             WHERE ip.final_decision = 'passed'
-            AND ea.passed = 'passed'
             {municipality_filter}
             ORDER BY total_score DESC, u.name ASC
         """)
@@ -5598,7 +5692,7 @@ def generate_final_report():
             cursor.execute("""
                 INSERT INTO final_reports 
                 (user_id, exam_id, interview_panel_id, final_status, exam_score, 
-                 interview_score, total_score, rank_position, generated_by, generated_at)
+                 interview_score, total_score, rank_position, generated_by, report_generated_at)
                 SELECT %s, %s, ip.id, 'passed', %s, %s, %s, %s, %s, NOW()
                 FROM interview_panel ip
                 WHERE ip.user_id = %s AND ip.exam_id = %s
@@ -5609,7 +5703,7 @@ def generate_final_report():
                 total_score = VALUES(total_score),
                 rank_position = VALUES(rank_position),
                 generated_by = VALUES(generated_by),
-                generated_at = VALUES(generated_at)
+                report_generated_at = VALUES(report_generated_at)
             """, (
                 candidate['user_id'], candidate['exam_id'], 
                 candidate['exam_score'], candidate['interview_score'], 
@@ -5642,6 +5736,7 @@ def admin_reports():
     
     conn = get_db_connection()
     if not conn:
+        flash('Database connection failed', 'error')
         return render_template('admin/reports.html', final_reports=[], stats={}, available_years=[], selected_year=None)
     
     try:
@@ -5652,9 +5747,16 @@ def admin_reports():
         if municipality_filter and "ui.municipality_id" in municipality_filter:
             municipality_filter = municipality_filter.replace("ui.municipality_id", "u.municipality_id")
 
-        # Get available years
-        cursor.execute("SELECT DISTINCT year_applied FROM applicants ORDER BY year_applied DESC")
-        available_years = [row['year_applied'] for row in cursor.fetchall() if row['year_applied']]
+        # Get available years (filtered by municipality)
+        cursor.execute(f"""
+            SELECT DISTINCT YEAR(COALESCE(a.submitted_at, a.submission_date)) as year 
+            FROM applicants a
+            JOIN users u ON a.user_id = u.id
+            WHERE (a.submitted_at IS NOT NULL OR a.submission_date IS NOT NULL)
+            {municipality_filter}
+            ORDER BY year DESC
+        """)
+        available_years = [row['year'] for row in cursor.fetchall() if row['year']]
         
         selected_year = request.args.get('year')
         if not selected_year and available_years:
@@ -5662,7 +5764,7 @@ def admin_reports():
         
         year_filter = ""
         if selected_year:
-            year_filter = f" AND a.year_applied = {selected_year}"
+            year_filter = f" AND (YEAR(a.submitted_at) = {selected_year} OR YEAR(a.submission_date) = {selected_year})"
         
         # Get final reports with candidate details
         cursor.execute(f"""
@@ -5675,7 +5777,7 @@ def admin_reports():
                 m.name as municipality_name
             FROM final_reports fr
             JOIN users u ON fr.user_id = u.id
-            JOIN applicants a ON u.id = a.user_id AND fr.exam_id = a.exam_id
+            LEFT JOIN applicants a ON u.id = a.user_id
             LEFT JOIN municipalities m ON u.municipality_id = m.id
             WHERE 1=1 {municipality_filter}
             {year_filter}
@@ -5696,7 +5798,7 @@ def admin_reports():
                 SUM(CASE WHEN fr.total_score < 60 THEN 1 ELSE 0 END) as score_below_60
             FROM final_reports fr
             JOIN users u ON fr.user_id = u.id
-            JOIN applicants a ON u.id = a.user_id AND fr.exam_id = a.exam_id
+            LEFT JOIN applicants a ON u.id = a.user_id
             WHERE fr.final_status = 'passed' {municipality_filter}
             {year_filter}
         """)
@@ -5717,7 +5819,7 @@ def admin_reports():
             SELECT m.name, COUNT(*) as count
             FROM final_reports fr
             JOIN users u ON fr.user_id = u.id
-            JOIN applicants a ON u.id = a.user_id AND fr.exam_id = a.exam_id
+            LEFT JOIN applicants a ON u.id = a.user_id
             LEFT JOIN municipalities m ON u.municipality_id = m.id
             WHERE fr.final_status = 'passed' {municipality_filter}
             {year_filter}
@@ -5740,9 +5842,52 @@ def admin_reports():
     
     except Exception as e:
         print(f"Error in admin_reports: {str(e)}")
+        flash(f"Error loading reports: {str(e)}", 'error')
         return render_template('admin/reports.html', final_reports=[], stats={}, 
                              username=session.get('username'), role=session.get('role'),
                              available_years=[], selected_year=None)
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/send-to-provincial', methods=['POST'])
+@login_required
+@role_required(['municipal_peso'])
+def send_to_provincial():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        cursor = conn.cursor()
+        municipality_filter = get_municipality_access_filter()
+        
+        # Fix municipality filter for our query (replace ui. with u.)
+        if municipality_filter and "ui.municipality_id" in municipality_filter:
+            municipality_filter = municipality_filter.replace("ui.municipality_id", "u.municipality_id")
+            
+        # Update reports
+        query = f"""
+            UPDATE final_reports fr
+            JOIN users u ON fr.user_id = u.id
+            SET fr.sent_to_provincial = 1, fr.sent_at = NOW()
+            WHERE fr.final_status = 'passed' AND fr.sent_to_provincial = 0
+            {municipality_filter}
+        """
+        
+        cursor.execute(query)
+        updated_count = cursor.rowcount
+        conn.commit()
+        
+        if updated_count > 0:
+            return jsonify({'success': True, 'message': f'Successfully sent {updated_count} reports to Provincial PESO'})
+        else:
+            return jsonify({'success': False, 'message': 'No pending reports found to send'})
+            
+    except Exception as e:
+        conn.rollback()
+        print(f"Error sending to provincial: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
     finally:
         cursor.close()
         conn.close()
@@ -6073,6 +6218,24 @@ def mark_final_decision():
     try:
         cursor = conn.cursor(dictionary=True)
         
+        # Check if interview_panel entry exists, if not create it
+        cursor.execute("SELECT id FROM interview_panel WHERE user_id = %s AND exam_id = %s", (user_id, exam_id))
+        if not cursor.fetchone():
+            # Get requirements submission ID
+            cursor.execute("""
+                SELECT id FROM requirements_submissions 
+                WHERE user_id = %s AND exam_id = %s AND submission_status = 'approved'
+            """, (user_id, exam_id))
+            req_submission = cursor.fetchone()
+            
+            if req_submission:
+                # Insert default interview panel entry
+                cursor.execute("""
+                    INSERT INTO interview_panel 
+                    (user_id, exam_id, requirements_submission_id, interview_status, final_decision, interview_score)
+                    VALUES (%s, %s, %s, 'completed', %s, 0)
+                """, (user_id, exam_id, req_submission['id'], final_decision))
+
         # Update interview panel final decision
         cursor.execute("""
             UPDATE interview_panel 
