@@ -405,9 +405,75 @@
         font-size: 1rem;
         color: #4285f4;
       }
+
+      /* Maintenance Notice Pill Style */
+      .maintenance-pill {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        z-index: 1050;
+        opacity: 0;
+        transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+        max-width: 90%;
+        width: max-content;
+      }
+      .maintenance-pill.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+      .maintenance-pill-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 20px;
+        background: rgba(43, 31, 14, 0.9);
+        border: 1px solid #ff9800;
+        border-radius: 50px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        color: #ffe0b2;
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+      .pill-icon {
+        color: #ffb74d;
+        font-size: 1.1rem;
+        animation: pulse-warn 2s infinite;
+      }
+      @keyframes pulse-warn {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+        100% { transform: scale(1); }
+      }
+      .pill-close-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        padding: 0 4px;
+        font-size: 0.95rem;
+        transition: color 0.2s ease, transform 0.2s ease;
+        display: flex;
+        align-items: center;
+      }
+      .pill-close-btn:hover {
+        color: #fff;
+        transform: scale(1.15);
+      }
     </style>
   </head>
   <body>
+    <!-- Maintenance Notice Pill -->
+    <div id="maintenance-notice-pill" class="maintenance-pill" style="display: none;">
+      <div class="maintenance-pill-content">
+        <i class="fas fa-exclamation-triangle pill-icon"></i>
+        <span>This application is no longer actively updated or maintained.</span>
+        <button id="close-maintenance-pill" class="pill-close-btn" aria-label="Close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
     <nav class="navbar navbar-expand-lg navbar-light py-3">
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="#">
@@ -1361,8 +1427,6 @@
             theme: "outline",
             size: "large",
           });
-
-          console.log("Google OAuth initialized successfully");
         } catch (error) {
           console.error("Error initializing Google OAuth:", error);
           showMessage(
@@ -1619,13 +1683,123 @@
         }, 5000);
       }
 
+      // Global Maintenance Notice Toggle System
+      (function() {
+        const pill = document.getElementById('maintenance-notice-pill');
+        const closeBtn = document.getElementById('close-maintenance-pill');
+
+        if (!pill) return;
+
+        // Fetch session-based dismissal (so close button still works locally)
+        let isDismissed = sessionStorage.getItem('maintenance_notice_dismissed') === 'true';
+
+        // Trigger slide-down transition on page load if enabled and not dismissed
+        const initialEnabled = {{ 'true' if maintenance_notice_enabled else 'false' }};
+        if (initialEnabled && !isDismissed) {
+          pill.style.display = 'block';
+          // Force reflow for transitions
+          pill.offsetHeight;
+          pill.classList.add('show');
+        }
+
+        // Close button click handler
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            sessionStorage.setItem('maintenance_notice_dismissed', 'true');
+            pill.classList.remove('show');
+            setTimeout(() => {
+              if (!pill.classList.contains('show')) {
+                pill.style.display = 'none';
+              }
+            }, 300);
+          });
+        }
+
+        // Helper to update the pill visibility dynamically on the page
+        function setLocalPillState(enabled) {
+          if (enabled) {
+            sessionStorage.removeItem('maintenance_notice_dismissed');
+            isDismissed = false;
+            pill.style.display = 'block';
+            pill.offsetHeight; // Force reflow
+            pill.classList.add('show');
+          } else {
+            pill.classList.remove('show');
+            setTimeout(() => {
+              if (!pill.classList.contains('show')) {
+                pill.style.display = 'none';
+              }
+            }, 300);
+          }
+        }
+
+        // Global magic function for console execution
+        window.toggleMaintenanceNotice = function(passcode, action) {
+          if (!passcode) {
+            passcode = prompt("Enter passcode to update maintenance notice status:");
+            if (!passcode) return "Action cancelled: Passcode is required.";
+          }
+          
+          if (action === undefined) {
+            const confirmToggle = confirm("Set maintenance notice state? (OK = ENABLED/ON, Cancel = DISABLED/OFF)");
+            action = confirmToggle ? 'true' : 'false';
+          } else if (action === true || action === 'on') {
+            action = 'true';
+          } else if (action === false || action === 'off') {
+            action = 'false';
+          }
+
+          fetch('/api/maintenance-notice', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ passcode: passcode, action: action })
+          })
+          .then(res => {
+            if (!res.ok) {
+              return res.json().then(data => { throw new Error(data.message || 'Server error'); });
+            }
+            return res.json();
+          })
+          .then(data => {
+            if (data.success) {
+              setLocalPillState(action === 'true');
+              console.log(data.message);
+              alert(data.message);
+            } else {
+              console.error("Error:", data.message);
+              alert("Failed: " + data.message);
+            }
+          })
+          .catch(err => {
+            console.error("Network error:", err);
+            alert("Error: " + err.message);
+          });
+
+          return "Processing global maintenance status change...";
+        };
+
+        // Secret keyboard cheat code: type "digispes-maint" to trigger prompt
+        let inputBuffer = '';
+        const secretCode = 'digispes-maint';
+        
+        window.addEventListener('keydown', (e) => {
+          if (e.key.length === 1) {
+            inputBuffer += e.key.toLowerCase();
+            if (inputBuffer.length > secretCode.length) {
+              inputBuffer = inputBuffer.slice(-secretCode.length);
+            }
+            if (inputBuffer === secretCode) {
+              window.toggleMaintenanceNotice();
+              inputBuffer = '';
+            }
+          }
+        });
+      })();
+
       // Initialize when page loads
       window.onload = function () {
-        console.log("Page loaded, initializing Google OAuth...");
-        console.log("Google Client ID loaded:", GOOGLE_CLIENT_ID);
-        console.log("Current origin:", window.location.origin);
-        console.log("Current hostname:", window.location.hostname);
-        console.log("Current port:", window.location.port);
         initializeGoogleAuth();
 
         // Add click event listeners for debugging

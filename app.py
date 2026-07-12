@@ -57,6 +57,69 @@ elif os.name == 'posix':  # Linux/Mac
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flash messages and sessions
 
+def init_system_settings():
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS system_settings (
+                    setting_key VARCHAR(100) PRIMARY KEY,
+                    setting_value VARCHAR(255) NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+            cursor.execute("SELECT 1 FROM system_settings WHERE setting_key = 'maintenance_notice_enabled'")
+            if not cursor.fetchone():
+                cursor.execute("INSERT INTO system_settings (setting_key, setting_value) VALUES ('maintenance_notice_enabled', 'false')")
+            conn.commit()
+            print("System settings table initialized successfully.")
+        except Exception as e:
+            print(f"Error initializing system settings table: {e}")
+        finally:
+            try:
+                cursor.close()
+            except:
+                pass
+            conn.close()
+
+# Try to initialize settings table on startup
+try:
+    init_system_settings()
+except Exception as e:
+    print(f"Startup initialization warning: {e}")
+
+@app.route('/api/maintenance-notice', methods=['POST'])
+def update_maintenance_notice():
+    data = request.get_json() or {}
+    passcode = data.get('passcode')
+    action = data.get('action') # 'true' or 'false'
+    
+    expected_passcode = os.environ.get('MAINTENANCE_PASSCODE', 'digispes123')
+    
+    if passcode != expected_passcode:
+        return jsonify({'success': False, 'message': 'Unauthorized: Invalid passcode.'}), 403
+        
+    if action not in ['true', 'false']:
+        return jsonify({'success': False, 'message': 'Invalid action. Must be true or false.'}), 400
+        
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE system_settings SET setting_value = %s WHERE setting_key = 'maintenance_notice_enabled'",
+                (action,)
+            )
+            conn.commit()
+            return jsonify({'success': True, 'message': f'Maintenance notice turned {action.upper()} globally.'})
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
+        finally:
+            cursor.close()
+            conn.close()
+            
+    return jsonify({'success': False, 'message': 'Database connection failed.'}), 500
+
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', 'your-google-client-id-here')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', 'your-google-client-secret-here')
@@ -370,6 +433,7 @@ def delete_municipality(municipality_id):
 @app.route('/') 
 def home():
     municipalities = []
+    maintenance_notice_enabled = False
     conn = get_db_connection()
     cursor = None
     if conn:
@@ -379,6 +443,17 @@ def home():
                 "SELECT id, name, province FROM municipalities ORDER BY province, name"
             )
             municipalities = cursor.fetchall()
+            
+            # Fetch maintenance notice status
+            try:
+                cursor.execute(
+                    "SELECT setting_value FROM system_settings WHERE setting_key = 'maintenance_notice_enabled'"
+                )
+                res = cursor.fetchone()
+                if res and res['setting_value'] == 'true':
+                    maintenance_notice_enabled = True
+            except Exception as se:
+                print(f"Error fetching maintenance settings: {se}")
         except Exception as e:
             print(f"Error loading municipalities for registration: {e}")
         finally:
@@ -392,6 +467,7 @@ def home():
         'home.html',
         google_client_id=GOOGLE_CLIENT_ID,
         municipalities=municipalities,
+        maintenance_notice_enabled=maintenance_notice_enabled,
     )
 
 @app.route('/peso/dashboard')
