@@ -48,6 +48,30 @@ except ImportError:
 # Load environment variables from .env file
 load_dotenv()
 
+from collections import defaultdict
+
+# Thread-safe in-memory rate limiter for API security
+class RateLimiter:
+    def __init__(self, max_requests=10, period=60):
+        self.max_requests = max_requests
+        self.period = period
+        self.requests = defaultdict(list)
+        self.lock = threading.Lock()
+
+    def is_allowed(self, client_ip):
+        now = time.time()
+        with self.lock:
+            # Filter out timestamps older than the period window
+            self.requests[client_ip] = [t for t in self.requests[client_ip] if now - t < self.period]
+            if len(self.requests[client_ip]) < self.max_requests:
+                self.requests[client_ip].append(now)
+                return True
+            return False
+
+# Initialize rate limiters for Gemini chatbot to prevent abuse
+chat_burst_limiter = RateLimiter(max_requests=5, period=10)      # Max 5 requests per 10 seconds
+chat_sustained_limiter = RateLimiter(max_requests=20, period=60)  # Max 20 requests per minute
+
 # Configure Tesseract path
 if os.name == 'nt':  # Windows
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -5543,15 +5567,31 @@ def delete_unanswered(id):
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.get_json()
+    # 1. Rate Limiting Check to prevent abuse/attacks (DDOS, cost exploitation)
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+    if not chat_burst_limiter.is_allowed(client_ip) or not chat_sustained_limiter.is_allowed(client_ip):
+        return jsonify({
+            'response': "You are sending questions too quickly. Please wait a moment before trying again."
+        }), 429
+
+    data = request.get_json() or {}
     user_message = data.get('message', '').strip()
 
+    # 2. Input validation & sanitization
     if not user_message:
         return jsonify({'response': "Please type a question."})
 
+    if len(user_message) > 250:
+        return jsonify({
+            'response': "Your question is too long. Please keep it under 250 characters."
+        }), 400
+
+    # Basic tag sanitization to prevent html/script injection
+    user_message = user_message.replace('<', '&lt;').replace('>', '&gt;')
+
     bot_response = None
 
-    # 1. Load FAQs from faqs.json
+    # 3. Load FAQs from faqs.json
     try:
         with open('faqs.json', 'r', encoding='utf-8') as f:
             faq_data = json.load(f)
@@ -5565,7 +5605,7 @@ def chat():
         print(f"Error loading faqs.json: {e}")
         faq_context = ""
 
-    # 2. Use Gemini API to answer
+    # 4. Use Gemini API to answer
     if GENAI_API_KEY and gemini_model and faq_context:
         try:
             system_instruction = (
