@@ -5,7 +5,7 @@ echo "=== DigiSPES Container Initializing ==="
 
 # Check if an external database is configured
 if [ -n "$DATABASE_URL" ] || [ -n "$JAWSDB_URL" ] || { [ -n "$DB_HOST" ] && [ "$DB_HOST" != "localhost" ] && [ "$DB_HOST" != "127.0.0.1" ]; }; then
-    echo "Using external MySQL database configuration..."
+    echo "Using external MySQL database configuration."
 else
     echo "Starting bundled MariaDB server..."
     mkdir -p /var/run/mysqld
@@ -15,6 +15,9 @@ else
         echo "Installing MariaDB system tables..."
         mysql_install_db --user=mysql --datadir=/var/lib/mysql > /dev/null 2>&1
     fi
+
+    # Enable networking on 127.0.0.1
+    sed -i 's/^bind-address.*/bind-address = 0.0.0.0/' /etc/mysql/mariadb.conf.d/50-server.cnf 2>/dev/null || true
 
     service mariadb start || /etc/init.d/mariadb start
 
@@ -26,27 +29,32 @@ else
         sleep 1
     done
 
-    if ! mysql -u root -e "USE digispes;" 2>/dev/null; then
-        echo "Creating digispes database..."
-        mysql -u root -e "CREATE DATABASE IF NOT EXISTS digispes CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    # Setup database and application user
+    mysql -u root -e "CREATE DATABASE IF NOT EXISTS digispes CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    mysql -u root -e "CREATE USER IF NOT EXISTS 'digispes_user'@'%' IDENTIFIED BY 'digispes_pass';"
+    mysql -u root -e "GRANT ALL PRIVILEGES ON digispes.* TO 'digispes_user'@'%';"
+    mysql -u root -e "FLUSH PRIVILEGES;"
 
+    # Check if tables exist, if not import seed dump
+    TABLE_COUNT=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'digispes';" 2>/dev/null || echo 0)
+    if [ "$TABLE_COUNT" -eq 0 ]; then
+        echo "Importing initial database dump (digispes JAN 5.sql)..."
         if [ -f "/app/digispes (JAN 5).sql" ]; then
-            echo "Importing digispes (JAN 5).sql seed data..."
             mysql -u root digispes < "/app/digispes (JAN 5).sql" || true
         elif [ -f "/app/schema.sql" ]; then
-            echo "Importing schema.sql..."
             mysql -u root digispes < "/app/schema.sql" || true
         fi
-        mysql -u root -e "FLUSH PRIVILEGES;" || true
-        echo "Database initialized successfully!"
+        echo "Database imported successfully!"
     else
-        echo "Database digispes already exists."
+        echo "Database already populated ($TABLE_COUNT tables found)."
     fi
-fi
 
-if [ -f "/app/apply_migration.py" ]; then
-    echo "Running migrations..."
-    python /app/apply_migration.py || true
+    # Set default credentials for local MariaDB
+    export DB_HOST="127.0.0.1"
+    export DB_PORT="3306"
+    export DB_USER="digispes_user"
+    export DB_PASSWORD="digispes_pass"
+    export DB_NAME="digispes"
 fi
 
 echo "Starting DigiSPES web application on port ${PORT:-5000}..."
