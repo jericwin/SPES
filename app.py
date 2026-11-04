@@ -6783,7 +6783,13 @@ def submit_requirements():
         cursor.close()
         conn.close()
         
+# Start background exam timer thread
+try:
+    threading.Thread(target=exam_auto_trigger, daemon=True).start()
+except Exception as e:
+    print(f'Notice: Failed to start exam auto trigger thread: {e}')
+
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
-    threading.Thread(target=exam_auto_trigger, daemon=True).start()
-    socketio.run(app, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
