@@ -8,7 +8,8 @@
 -- PHP Version: 8.1.25
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
+SET FOREIGN_KEY_CHECKS=0;
+SET AUTOCOMMIT=1;
 SET time_zone = "+00:00";
 
 
@@ -21,48 +22,7 @@ SET time_zone = "+00:00";
 -- Database: `digispes`
 --
 
-DELIMITER $$
---
--- Procedures
---
-CREATE DEFINER=`root`@`localhost` PROCEDURE `assign_municipal_exam` (IN `exam_id_param` INT, IN `municipality_id_param` INT)   BEGIN
-    DECLARE exam_exists INT DEFAULT 0;
-    DECLARE municipality_exists INT DEFAULT 0;
-    
-    -- Check if exam exists and belongs to the municipality
-    SELECT COUNT(*) INTO exam_exists
-    FROM `exams` 
-    WHERE id = exam_id_param AND municipality_id = municipality_id_param;
-    
-    -- Check if municipality exists
-    SELECT COUNT(*) INTO municipality_exists
-    FROM `municipalities` 
-    WHERE id = municipality_id_param;
-    
-    IF exam_exists > 0 AND municipality_exists > 0 THEN
-        -- Update applicants table
-        UPDATE `applicants` a
-        INNER JOIN `users` u ON a.user_id = u.id
-        SET a.exam_id = exam_id_param
-        WHERE a.status = 'for exam' 
-        AND a.exam_id IS NULL 
-        AND u.municipality_id = municipality_id_param;
-        
-        -- Update examinees table
-        UPDATE `examinees` ex
-        INNER JOIN `users` u ON ex.user_id = u.id
-        SET ex.exam_id = exam_id_param
-        WHERE ex.status = 'for exam' 
-        AND (ex.exam_id IS NULL OR ex.exam_id = '') 
-        AND u.municipality_id = municipality_id_param;
-        
-        SELECT 'Exam assignment completed successfully' as message;
-    ELSE
-        SELECT 'Error: Exam not found or does not belong to the specified municipality' as error_message;
-    END IF;
-END$$
 
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -1993,3 +1953,47 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+
+DELIMITER $$
+--
+-- Procedures
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `assign_municipal_exam` (IN `exam_id_param` INT, IN `municipality_id_param` INT)   BEGIN
+    DECLARE exam_exists INT DEFAULT 0;
+    DECLARE municipality_exists INT DEFAULT 0;
+    
+    -- Check if exam exists and belongs to the municipality
+    SELECT COUNT(*) INTO exam_exists
+    FROM `exams` 
+    WHERE id = exam_id_param AND municipality_id = municipality_id_param;
+    
+    -- Check if municipality exists
+    SELECT COUNT(*) INTO municipality_exists
+    FROM `municipalities` 
+    WHERE id = municipality_id_param;
+    
+    IF exam_exists > 0 AND municipality_exists > 0 THEN
+        -- Update applicants table
+        UPDATE `applicants` a
+        INNER JOIN `users` u ON a.user_id = u.id
+        SET a.exam_id = exam_id_param
+        WHERE a.status = 'for exam' 
+        AND a.exam_id IS NULL 
+        AND u.municipality_id = municipality_id_param;
+        
+        -- Update examinees table
+        UPDATE `examinees` ex
+        INNER JOIN `users` u ON ex.user_id = u.id
+        SET ex.exam_id = exam_id_param
+        WHERE ex.status = 'for exam' 
+        AND (ex.exam_id IS NULL OR ex.exam_id = '') 
+        AND u.municipality_id = municipality_id_param;
+        
+        SELECT 'Exam assignment completed successfully' as message;
+    ELSE
+        SELECT 'Error: Exam not found or does not belong to the specified municipality' as error_message;
+    END IF;
+END$$
+
+DELIMITER ;
