@@ -8,9 +8,15 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import io
 from functools import wraps
-from docx2pdf import convert
 import tempfile
-import pythoncom
+try:
+    from docx2pdf import convert
+    import pythoncom
+    HAS_WIN32_DOCX = True
+except ImportError:
+    HAS_WIN32_DOCX = False
+    convert = None
+    pythoncom = None
 import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
 # import numpy as np
@@ -35,7 +41,7 @@ elif os.name == 'posix':  # Linux/Mac
     pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Required for flash messages and sessions
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')  # Required for flash messages and sessions
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Track active chat timers and sockets
@@ -2540,15 +2546,28 @@ def preview_document(document_type):
         return jsonify({'success': False, 'message': 'Invalid document type'})
         
     try:
-        pythoncom.CoInitialize()  # Initialize COM for this thread
-        
         # Create temporary directory for conversion
         with tempfile.TemporaryDirectory() as temp_dir:
             docx_path = os.path.join('static/spes-forms', templates[document_type])
             pdf_path = os.path.join(temp_dir, f'{document_type}.pdf')
             
             # Convert DOCX to PDF
-            convert(docx_path, pdf_path)
+            if HAS_WIN32_DOCX and pythoncom:
+                pythoncom.CoInitialize()
+                try:
+                    convert(docx_path, pdf_path)
+                finally:
+                    pythoncom.CoUninitialize()
+            else:
+                import subprocess
+                subprocess.run(
+                    ['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', temp_dir, docx_path],
+                    capture_output=True, text=True
+                )
+                if not os.path.exists(pdf_path):
+                    generated = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.endswith('.pdf')]
+                    if generated:
+                        pdf_path = generated[0]
             
             # Read the PDF file
             with open(pdf_path, 'rb') as f:
@@ -2566,10 +2585,7 @@ def preview_document(document_type):
         print(f"Error converting document: {e}")
         return jsonify({'success': False, 'message': 'Error previewing document'})
     finally:
-        try:
-            pythoncom.CoUninitialize()  # Clean up COM
-        except:
-            pass
+        pass
 
 # Define keywords for document validation
 COR_KEYWORDS = [
@@ -3373,7 +3389,13 @@ def chat():
     response = find_answer(user_msg)
     return jsonify({"response": response})
 
+# Start background exam timer thread
+try:
+    threading.Thread(target=exam_auto_trigger, daemon=True).start()
+except Exception as e:
+    print(f'Notice: Failed to start exam auto trigger thread: {e}')
+
 if __name__ == '__main__':
     test_db_connection()  # Test database connection on startup
-    threading.Thread(target=exam_auto_trigger, daemon=True).start()
-    socketio.run(app, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
