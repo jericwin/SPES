@@ -30,11 +30,10 @@ else
     done
 
     # Setup database and application user
-    mysql -u root -e "CREATE DATABASE IF NOT EXISTS digispes CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-    mysql -u root -e "CREATE USER IF NOT EXISTS 'digispes_user'@'%' IDENTIFIED BY 'digispes_pass';"
-    mysql -u root -e "GRANT ALL PRIVILEGES ON digispes.* TO 'digispes_user'@'%';"
-    mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost'; GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1';"
-    mysql -u root -e "FLUSH PRIVILEGES;"
+    mysql -u root -e "CREATE DATABASE IF NOT EXISTS digispes CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" || true
+    mysql -u root -e "CREATE USER IF NOT EXISTS 'digispes_user'@'%' IDENTIFIED BY 'digispes_pass';" || true
+    mysql -u root -e "GRANT ALL PRIVILEGES ON digispes.* TO 'digispes_user'@'%';" || true
+    mysql -u root -e "FLUSH PRIVILEGES;" || true
 
     # Always check if exams table exists, if not import
     HAS_EXAMS=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'digispes' AND table_name = 'exams';" 2>/dev/null || echo 0)
