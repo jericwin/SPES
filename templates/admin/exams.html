@@ -159,11 +159,23 @@
                 </a>
               </li>
               <li>
-                <a href="#" class="nav-link px-sm-0 px-2">
+                <a
+                  href="{{ url_for('admin_interview_panel') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
                   <i class="fs-5 bi-people"></i
-                  ><span class="ms-3 d-none d-sm-inline">Interview Panel</span>
+                  ><span class="ms-3 d-none d-sm-inline">Interviews</span>
                 </a>
               </li>
+              <!-- <li>
+                <a
+                  href="{{ url_for('admin_chatbot') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-robot"></i
+                  ><span class="ms-3 d-none d-sm-inline">Chatbot</span>
+                </a>
+              </li> -->
               <li>
                 <a
                   href="{{ url_for('admin_messages') }}"
@@ -174,9 +186,21 @@
                 </a>
               </li>
               <li>
-                <a href="#" class="nav-link px-sm-0 px-2">
-                  <i class="fs-5 bi-bell"></i
-                  ><span class="ms-3 d-none d-sm-inline">Notifications</span>
+                <a
+                  href="{{ url_for('admin_feedback') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-star"></i
+                  ><span class="ms-3 d-none d-sm-inline">Feedback</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="{{ url_for('admin_reports') }}"
+                  class="nav-link px-sm-0 px-2"
+                >
+                  <i class="fs-5 bi-folder2-open"></i
+                  ><span class="ms-3 d-none d-sm-inline">Reports</span>
                 </a>
               </li>
               <li class="dropdown d-sm-none">

@@ -5,23 +5,26 @@
     <meta content="width=device-width, initial-scale=1" name="viewport" />
     <title>DigiSPES</title>
     <link rel="icon" href="/static/images/spes-logo.png" type="image/png" />
-    <!-- bs for modal -->
+    <!-- Bootstrap CSS -->
     <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
       rel="stylesheet"
-    />
-    <link
-      crossorigin="anonymous"
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
       integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
-      rel="stylesheet"
+      crossorigin="anonymous"
     />
+    <!-- Font Awesome -->
     <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
       rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
     />
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Baloo+2&family=Poppins&display=swap");
+      :root {
+        --primary: #3a5ea8;
+        --accent: #6fc6ff;
+        --gradient-top: #f7fbff;
+        --gradient-mid: #a9d2f9;
+      }
       body,
       html {
         margin: 0;
@@ -30,13 +33,12 @@
         font-family: "Poppins", sans-serif;
         background: linear-gradient(
           to bottom,
-          #f7fbff 0%,
-          #a9d2f9 50%,
-          #a9d2f9 80%,
-          #f7fbff 100%
+          var(--gradient-top) 0%,
+          var(--gradient-mid) 50%,
+          var(--gradient-mid) 80%,
+          var(--gradient-top) 100%
         );
       }
-      /* navbar no backgorund color, transparent instead */
       nav {
         background-color: transparent;
         box-shadow: none;
@@ -53,7 +55,7 @@
         border-bottom: 2px solid #0d6efd;
       }
       .btn-contact {
-        background-color: #3a5ea8;
+        background-color: var(--primary);
         color: white;
         border-radius: 30px;
         padding: 8px 20px;
@@ -64,29 +66,47 @@
         position: relative;
         z-index: 1;
       }
-      .welcome-section {
-        min-height: calc(100vh - 72px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 30px;
+      .navbar-brand img {
+        height: 52px;
+        width: auto;
       }
-      .welcome-text {
-        max-width: 480px;
+      .navbar-toggler {
+        border: none;
+        padding-right: 0;
+      }
+      .navbar-toggler:focus {
+        box-shadow: none;
+      }
+      .welcome-section {
+        padding: clamp(3rem, 8vh, 6rem) 0;
+      }
+      .hero-copy {
+        max-width: 520px;
         color: #2a7bbd;
       }
-      .welcome-text h1 {
+      .hero-title {
         font-family: "Baloo 2", cursive;
         font-weight: 700;
-        font-size: 72px;
+        font-size: clamp(5.5rem, 4vw + 1rem, 4.75rem);
         line-height: 1.1;
-        margin-bottom: 20px;
+        margin-bottom: 1.5rem;
       }
-      .welcome-text p {
-        font-size: 16px;
+      .hero-subtitle {
+        font-size: clamp(1rem, 1.4vw + 0.6rem, 1.25rem);
         color: white;
-        max-width: 480px;
-        margin-bottom: 40px;
+        margin-bottom: 2rem;
+      }
+      /* phone hero subtitle turn to black */
+      @media (max-width: 768px) {
+        .hero-subtitle {
+          color: #2a7bbd;
+        }
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
       }
       .btn-newapp {
         font-family: "Poppins", sans-serif;
@@ -101,7 +121,7 @@
         gap: 8px;
       }
       .btn-newapp.primary {
-        background-color: #6fc6ff;
+        background-color: var(--accent);
         color: white;
       }
       .btn-newapp.primary i {
@@ -109,38 +129,146 @@
       }
       .btn-newapp.secondary {
         background-color: #cfcfcf;
-        color: #9a9a9a;
+        /* color: #9a9a9a; */
       }
       .btn-newapp.secondary i {
         font-size: 18px;
       }
-      .logo-container {
-        max-width: 360px;
-        margin-left: 40px;
+      .hero-media {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.35);
+        border-radius: 32px;
+        box-shadow: 0 20px 45px rgba(58, 94, 168, 0.15);
+        -webkit-backdrop-filter: blur(5px);
+        backdrop-filter: blur(5px);
+      }
+      .hero-media::after {
+        content: "";
+        position: absolute;
+        inset: -12px;
+        border-radius: 36px;
+        border: 2px dashed rgba(63, 122, 189, 0.25);
+      }
+      .hero-media img {
+        max-width: min(360px, 80vw);
+        height: auto;
+      }
+      .hero-badge {
+        display: none;
+        position: absolute;
+        top: -14px;
+        right: -14px;
+        background-color: white;
+        color: var(--primary);
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+      }
+      .about-section {
+        padding: clamp(3rem, 8vh, 5rem) 0;
+      }
+      .about-section .section-heading {
+        max-width: 620px;
+        margin: 0 auto 2.5rem;
+        text-align: center;
+        color: #2a7bbd;
+      }
+      .feature-card {
+        height: 100%;
+        border: none;
+        border-radius: 24px;
+        padding: 1.8rem;
+        background: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 18px 35px rgba(58, 94, 168, 0.12);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      .feature-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 24px 45px rgba(58, 94, 168, 0.18);
+      }
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        color: white;
+        background: var(--primary);
+      }
+      .feature-card h5 {
+        color: var(--primary);
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+      }
+      .feature-card p {
+        color: #4a4a4a;
+        font-size: 0.95rem;
+        margin-bottom: 0;
+      }
+      .impact-metrics {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 2.5rem;
+      }
+      .metric-card {
+        min-width: 180px;
+        padding: 1.1rem 1.5rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
+          0 12px 24px rgba(0, 0, 0, 0.08);
+        text-align: center;
+      }
+      .metric-card h4 {
+        font-weight: 700;
+        font-size: 1.75rem;
+        color: var(--primary);
+        margin-bottom: 0.25rem;
+      }
+      .metric-card span {
+        font-size: 0.85rem;
+        color: #6c757d;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
       }
       @media (max-width: 991.98px) {
-        .welcome-section {
-          flex-direction: column;
+        .navbar-nav .nav-link {
+          padding: 0.5rem 0;
+        }
+        .btn-contact {
+          width: 100%;
+          justify-content: center;
+        }
+        .hero-copy {
           text-align: center;
-          padding: 30px 20px;
+          margin: 0 auto 2rem;
         }
-        .welcome-text {
-          max-width: 100%;
-          margin-bottom: 40px;
-          color: #2a7bbd;
+        .hero-actions {
+          justify-content: center;
         }
-        .welcome-text p {
-          color: white;
+        .hero-media {
+          margin: 0 auto 2.5rem;
         }
-        .logo-container {
-          margin-left: 0;
-          max-width: 280px;
+        .hero-badge {
+          right: 50%;
+          transform: translateX(50%);
+        }
+        .impact-metrics {
+          gap: 1rem;
         }
       }
       @media (max-width: 575.98px) {
-        .welcome-text h1 {
-          font-size: 48px;
-        }
         .btn-contact {
           font-size: 14px;
           padding: 6px 16px;
@@ -149,6 +277,23 @@
           width: 30px;
           height: 30px;
           right: -15px;
+        }
+        .hero-media {
+          padding: 1rem;
+          border-radius: 24px;
+        }
+        .hero-media::after {
+          border-radius: 28px;
+        }
+        .hero-actions {
+          gap: 0.5rem;
+        }
+        .btn-newapp {
+          width: 100%;
+          justify-content: center;
+        }
+        .metric-card {
+          flex: 1 1 calc(50% - 0.5rem);
         }
       }
       .welcome-to {
@@ -176,6 +321,9 @@
       .nav-pills .nav-link.active {
         background-color: #3a5ea8;
         color: white;
+      }
+      .password-progress {
+        height: 6px;
       }
       .form-control,
       .form-select {
@@ -212,419 +360,1455 @@
         opacity: 1;
         transform: translateY(0);
       }
+      .auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        color: #6c757d;
+        margin: 1.75rem 0 1.5rem;
+        justify-content: center;
+      }
+      .auth-divider::before,
+      .auth-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          rgba(0, 0, 0, 0) 0%,
+          #d9dee3 50%,
+          rgba(0, 0, 0, 0) 100%
+        );
+      }
+      .google-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        border: 1px solid #dadce0;
+        background-color: #fff;
+        color: #3c4043;
+        font-weight: 500;
+        border-radius: 999px;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+      }
+      .google-btn:hover {
+        box-shadow: 0 4px 12px rgba(60, 64, 67, 0.15);
+        transform: translateY(-1px);
+        color: #202124;
+        background-color: #f8f9fa;
+      }
+      .google-btn i {
+        font-size: 1rem;
+        color: #4285f4;
+      }
+
+      /* Maintenance Notice Pill Style */
+      .maintenance-pill {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        z-index: 1050;
+        opacity: 0;
+        transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+        max-width: 90%;
+        width: max-content;
+      }
+      .maintenance-pill.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+      .maintenance-pill-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 20px;
+        background: rgba(43, 31, 14, 0.9);
+        border: 1px solid #ff9800;
+        border-radius: 50px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        color: #ffe0b2;
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+      .pill-icon {
+        color: #ffb74d;
+        font-size: 1.1rem;
+        animation: pulse-warn 2s infinite;
+      }
+      @keyframes pulse-warn {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+        100% { transform: scale(1); }
+      }
+      .pill-close-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        padding: 0 4px;
+        font-size: 0.95rem;
+        transition: color 0.2s ease, transform 0.2s ease;
+        display: flex;
+        align-items: center;
+      }
+      .pill-close-btn:hover {
+        color: #fff;
+        transform: scale(1.15);
+      }
     </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg py-3 px-4">
-      <div class="container-fluid justify-content-end gap-2">
-        {% with messages = get_flashed_messages(with_categories=true) %} {% if
-        messages %} {% for category, message in messages %}
-        <div
-          class="alert alert-{{ category }} alert-dismissible fade show"
-          role="alert"
-        >
-          {{ message }}
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="alert"
-            aria-label="Close"
-          ></button>
-        </div>
-        {% endfor %} {% endif %} {% endwith %}
-        <ul class="navbar-nav me-3 gap-3">
-          <li class="nav-item">
-            <a class="nav-link active" href="#"> HOME </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#"> ABOUT </a>
-          </li>
-        </ul>
-        <button
-          class="btn btn-contact d-flex align-items-center"
-          type="button"
-          data-bs-toggle="modal"
-          data-bs-target="#loginModal"
-        >
-          LOGIN
+    <!-- Maintenance Notice Pill -->
+    <div id="maintenance-notice-pill" class="maintenance-pill" style="display: none;">
+      <div class="maintenance-pill-content">
+        <i class="fas fa-exclamation-triangle pill-icon"></i>
+        <span>This application is no longer actively updated or maintained.</span>
+        <button id="close-maintenance-pill" class="pill-close-btn" aria-label="Close">
+          <i class="fas fa-times"></i>
         </button>
+      </div>
+    </div>
 
-        <!-- Account Modal with Tabs -->
-        <div
-          class="modal fade"
-          id="accountModal"
-          tabindex="-1"
-          aria-labelledby="accountModalLabel"
-          aria-hidden="true"
+    <nav class="navbar navbar-expand-lg navbar-light py-3">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+          <img src="/static/images/spes-logo.png" alt="DigiSPES logo" />
+          <span class="fw-bold text-primary">DigiSPES</span>
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#primaryNav"
+          aria-controls="primaryNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
         >
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-              <div class="modal-header border-0 pb-0">
-                <div class="w-100 text-center">
-                  <img
-                    src="/static/images/spes-logo.png"
-                    alt="SPES Logo"
-                    class="mb-3"
-                    style="width: 80px"
-                  />
-                  <h4 class="modal-title" id="accountModalLabel">
-                    Welcome to DigiSPES
-                  </h4>
-                  <p class="text-muted">Your gateway to SPES opportunities</p>
-                </div>
-                <button
-                  type="button"
-                  class="btn-close position-absolute"
-                  style="right: 1rem; top: 1rem"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                ></button>
-              </div>
-              <div class="modal-body px-4">
-                <ul
-                  class="nav nav-pills nav-justified mb-4"
-                  id="accountTab"
-                  role="tablist"
-                >
-                  <li class="nav-item" role="presentation">
-                    <button
-                      class="nav-link active"
-                      id="login-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#login"
-                      type="button"
-                      role="tab"
-                      aria-controls="login"
-                      aria-selected="true"
-                    >
-                      <i class="fas fa-sign-in-alt me-2"></i>Login
-                    </button>
-                  </li>
-                  <li class="nav-item" role="presentation">
-                    <button
-                      class="nav-link"
-                      id="register-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#register"
-                      type="button"
-                      role="tab"
-                      aria-controls="register"
-                      aria-selected="false"
-                    >
-                      <i class="fas fa-user-plus me-2"></i>Register
-                    </button>
-                  </li>
-                </ul>
-                <div class="tab-content" id="accountTabContent">
-                  <!-- Login Tab -->
-                  <div
-                    class="tab-pane fade show active"
-                    id="login"
-                    role="tabpanel"
-                    aria-labelledby="login-tab"
-                  >
-                    <form action="{{ url_for('login') }}" method="POST">
-                      <div class="form-floating mb-3">
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="username"
-                          name="username"
-                          placeholder="Enter your username"
-                          required
-                        />
-                        <label for="username"
-                          ><i class="fas fa-user me-2"></i>Username</label
-                        >
-                      </div>
-                      <div class="form-floating mb-4 position-relative">
-                        <input
-                          type="password"
-                          class="form-control"
-                          id="password"
-                          name="password"
-                          placeholder="Enter your password"
-                          required
-                        />
-                        <label for="password"
-                          ><i class="fas fa-lock me-2"></i>Password</label
-                        >
-                        <i
-                          class="fas fa-eye position-absolute"
-                          style="
-                            top: 50%;
-                            right: 15px;
-                            transform: translateY(-50%);
-                            cursor: pointer;
-                            color: #6c757d;
-                          "
-                          onclick="togglePasswordVisibility('password', this)"
-                        ></i>
-                      </div>
-                      <button
-                        type="submit"
-                        class="btn btn-primary w-100 py-2 mb-3"
-                        style="background-color: #3a5ea8; border: none"
-                      >
-                        <i class="fas fa-sign-in-alt me-2"></i>Login
-                      </button>
-                    </form>
-                  </div>
-                  <!-- Register Tab -->
-                  <div
-                    class="tab-pane fade"
-                    id="register"
-                    role="tabpanel"
-                    aria-labelledby="register-tab"
-                  >
-                    <form action="{{ url_for('register') }}" method="POST">
-                      <div class="form-floating mb-3">
-                        <select
-                          class="form-select"
-                          id="applicantType"
-                          name="applicantType"
-                          aria-label="Applicant Type"
-                          required
-                        >
-                          <option value="">Select Applicant Type</option>
-                          <option value="new">New Applicant</option>
-                          <option value="old">Old Applicant</option>
-                        </select>
-                        <label for="applicantType"
-                          ><i class="fas fa-user-tag me-2"></i>Applicant
-                          Type</label
-                        >
-                      </div>
-                      <div class="form-floating mb-3">
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="username"
-                          name="username"
-                          placeholder="Enter your username"
-                          required
-                        />
-                        <label for="username"
-                          ><i class="fas fa-user me-2"></i>Username</label
-                        >
-                      </div>
-                      <div class="form-floating mb-3">
-                        <input
-                          type="email"
-                          class="form-control"
-                          id="email"
-                          name="email"
-                          placeholder="Enter your email"
-                          required
-                        />
-                        <label for="email"
-                          ><i class="fas fa-envelope me-2"></i>Email</label
-                        >
-                      </div>
-                      <div class="form-floating mb-3 position-relative">
-                        <input
-                          type="password"
-                          class="form-control"
-                          id="passwordRegister"
-                          name="password"
-                          placeholder="Enter your password"
-                          required
-                        />
-                        <label for="passwordRegister"
-                          ><i class="fas fa-lock me-2"></i>Password</label
-                        >
-                        <i
-                          class="fas fa-eye position-absolute"
-                          style="
-                            top: 50%;
-                            right: 15px;
-                            transform: translateY(-50%);
-                            cursor: pointer;
-                            color: #6c757d;
-                          "
-                          onclick="togglePasswordVisibility('passwordRegister', this)"
-                        ></i>
-                      </div>
-                      <div class="form-floating mb-4 position-relative">
-                        <input
-                          type="password"
-                          class="form-control"
-                          id="confirmPassword"
-                          name="confirmPassword"
-                          placeholder="Confirm your password"
-                          required
-                        />
-                        <label for="confirmPassword"
-                          ><i class="fas fa-lock me-2"></i>Confirm
-                          Password</label
-                        >
-                        <i
-                          class="fas fa-eye position-absolute"
-                          style="
-                            top: 50%;
-                            right: 15px;
-                            transform: translateY(-50%);
-                            cursor: pointer;
-                            color: #6c757d;
-                          "
-                          onclick="togglePasswordVisibility('confirmPassword', this)"
-                        ></i>
-                      </div>
-                      <button
-                        type="submit"
-                        class="btn btn-primary w-100 py-2"
-                        style="background-color: #3a5ea8; border: none"
-                      >
-                        <i class="fas fa-user-plus me-2"></i>Register
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="primaryNav">
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div
+            class="alert alert-{{ category }} alert-dismissible fade show w-100"
+            role="alert"
+          >
+            {{ message }}
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+              aria-label="Close"
+            ></button>
           </div>
+          {% endfor %} {% endif %} {% endwith %}
+          <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-3">
+            <li class="nav-item">
+              <a class="nav-link active" href="#">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#about">About</a>
+            </li>
+            <li class="nav-item mt-3 mt-lg-0">
+              <button
+                class="btn btn-contact d-flex align-items-center ms-lg-3"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#loginModal"
+              >
+                Login
+              </button>
+            </li>
+          </ul>
         </div>
-        <!-- login -->
-        <div
-          class="modal fade"
-          id="loginModal"
-          tabindex="-1"
-          aria-labelledby="loginModalLabel"
-          aria-hidden="true"
-        >
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="loginModalLabel">Login</h5>
+      </div>
+    </nav>
+
+    <!-- Account Modal with Tabs -->
+    <div
+      class="modal fade"
+      id="accountModal"
+      tabindex="-1"
+      aria-labelledby="accountModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header border-0 pb-0">
+            <div class="w-100 text-center">
+              <img
+                src="/static/images/spes-logo.png"
+                alt="SPES Logo"
+                class="mb-3"
+                style="width: 80px"
+              />
+              <h4 class="modal-title" id="accountModalLabel">
+                Welcome to DigiSPES
+              </h4>
+              <p class="text-muted">Your gateway to SPES opportunities</p>
+            </div>
+            <button
+              type="button"
+              class="btn-close position-absolute"
+              style="right: 1rem; top: 1rem"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body px-4">
+            <ul
+              class="nav nav-pills nav-justified mb-4"
+              id="accountTab"
+              role="tablist"
+            >
+              <li class="nav-item" role="presentation">
                 <button
+                  class="nav-link active"
+                  id="login-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#login"
                   type="button"
-                  class="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                ></button>
-              </div>
-              <div class="modal-body">
+                  role="tab"
+                  aria-controls="login"
+                  aria-selected="true"
+                >
+                  <i class="fas fa-sign-in-alt me-2"></i>Login
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  id="register-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#register"
+                  type="button"
+                  role="tab"
+                  aria-controls="register"
+                  aria-selected="false"
+                >
+                  <i class="fas fa-user-plus me-2"></i>Register
+                </button>
+              </li>
+            </ul>
+            <div class="tab-content" id="accountTabContent">
+              <!-- Login Tab -->
+              <div
+                class="tab-pane fade show active"
+                id="login"
+                role="tabpanel"
+                aria-labelledby="login-tab"
+              >
                 <form action="{{ url_for('login') }}" method="POST">
                   <div class="form-floating mb-3">
                     <input
                       type="text"
                       class="form-control"
-                      id="usernameLogin"
+                      id="username"
                       name="username"
                       placeholder="Enter your username"
                       required
                     />
-                    <label for="usernameLogin">Username</label>
+                    <label for="username"
+                      ><i class="fas fa-user me-2"></i>Username</label
+                    >
+                  </div>
+                  <div class="form-floating mb-4 position-relative">
+                    <input
+                      type="password"
+                      class="form-control"
+                      id="password"
+                      name="password"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <label for="password"
+                      ><i class="fas fa-lock me-2"></i>Password</label
+                    >
+                    <i
+                      class="fas fa-eye position-absolute"
+                      style="
+                        top: 50%;
+                        right: 15px;
+                        transform: translateY(-50%);
+                        cursor: pointer;
+                        color: #6c757d;
+                      "
+                      onclick="togglePasswordVisibility('password', this)"
+                    ></i>
+                  </div>
+                  <button
+                    type="submit"
+                    class="btn btn-primary w-100 py-2 mb-3"
+                    style="background-color: #3a5ea8; border: none"
+                  >
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                  </button>
+
+                  <!-- Gmail Login Section -->
+                  <div class="auth-divider"><span>Or sign in with</span></div>
+
+                  <div class="d-grid">
+                    <button
+                      type="button"
+                      class="btn google-btn w-100 py-2 btn-google-action"
+                      onclick="initiateGoogleSignIn('login')"
+                    >
+                      <i class="fab fa-google"></i>
+                      Continue with Google
+                    </button>
+                  </div>
+                </form>
+              </div>
+              <!-- Register Tab -->
+              <div
+                class="tab-pane fade"
+                id="register"
+                role="tabpanel"
+                aria-labelledby="register-tab"
+              >
+                <form action="{{ url_for('register') }}" method="POST">
+                  <div class="form-floating mb-3">
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="username"
+                      name="username"
+                      placeholder="Enter your username"
+                      required
+                    />
+                    <label for="username"
+                      ><i class="fas fa-user me-2"></i>Username</label
+                    >
+                  </div>
+                  <div class="form-floating mb-3">
+                    <input
+                      type="email"
+                      class="form-control"
+                      id="email"
+                      name="email"
+                      placeholder="Enter your email"
+                      required
+                    />
+                    <label for="email"
+                      ><i class="fas fa-envelope me-2"></i>Email</label
+                    >
                   </div>
                   <div class="form-floating mb-3 position-relative">
                     <input
                       type="password"
                       class="form-control"
-                      id="passwordLogin"
+                      id="passwordRegister"
                       name="password"
                       placeholder="Enter your password"
                       required
                     />
-                    <label for="passwordLogin">Password</label>
+                    <label for="passwordRegister"
+                      ><i class="fas fa-lock me-2"></i>Password</label
+                    >
                     <i
                       class="fas fa-eye position-absolute"
                       style="
                         top: 50%;
-                        right: 10px;
+                        right: 15px;
                         transform: translateY(-50%);
                         cursor: pointer;
+                        color: #6c757d;
                       "
-                      onclick="togglePasswordVisibility('passwordLogin', this)"
+                      onclick="togglePasswordVisibility('passwordRegister', this)"
                     ></i>
                   </div>
-                  <button type="submit" class="btn btn-primary w-100 mb-3">
-                    Login
+                  <div class="mb-3">
+                    <div class="progress password-progress">
+                      <div
+                        id="passwordStrengthBar"
+                        class="progress-bar bg-danger"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+                    <small id="passwordStrengthText" class="text-muted"
+                      >Enter a password to see its strength.</small
+                    >
+                  </div>
+                  <div class="form-floating mb-4 position-relative">
+                    <input
+                      type="password"
+                      class="form-control"
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      placeholder="Confirm your password"
+                      required
+                    />
+                    <label for="confirmPassword"
+                      ><i class="fas fa-lock me-2"></i>Confirm Password</label
+                    >
+                    <i
+                      class="fas fa-eye position-absolute"
+                      style="
+                        top: 50%;
+                        right: 15px;
+                        transform: translateY(-50%);
+                        cursor: pointer;
+                        color: #6c757d;
+                      "
+                      onclick="togglePasswordVisibility('confirmPassword', this)"
+                    ></i>
+                    <small
+                      id="passwordMatchText"
+                      class="form-text d-none"
+                    ></small>
+                  </div>
+
+                  <div class="form-floating mb-3">
+                    <select
+                      class="form-select"
+                      id="applicantType"
+                      name="applicantType"
+                      aria-label="Applicant Type"
+                      required
+                    >
+                      <option value="">Select Applicant Type</option>
+                      <option value="new">New Applicant</option>
+                      <option value="old">Old Applicant</option>
+                    </select>
+                    <label for="applicantType"
+                      ><i class="fas fa-user-tag me-2"></i>Applicant Type</label
+                    >
+                  </div>
+                  <div class="form-floating mb-3">
+                    <select
+                      class="form-select"
+                      id="educationLevel"
+                      name="educationLevel"
+                      aria-label="Education Level"
+                      required
+                    >
+                      <option value="">Select Education Level</option>
+                      <option value="highschool">High School</option>
+                      <option value="college">College</option>
+                    </select>
+                    <label for="educationLevel"
+                      ><i class="fas fa-graduation-cap me-2"></i>Education
+                      Level</label
+                    >
+                  </div>
+
+                  <div class="form-floating mb-3">
+                    <select
+                      class="form-select"
+                      id="municipalityId"
+                      name="municipality_id"
+                      aria-label="Municipality"
+                      required
+                    >
+                      <option value="">Select Municipality</option>
+                      {% for municipality in municipalities %}
+                      <option value="{{ municipality.id }}">
+                        {{ municipality.name }}{% if municipality.province %},
+                        {{ municipality.province }}{% endif %}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <label for="municipalityId"
+                      ><i class="fas fa-map-marker-alt me-2"></i
+                      >Municipality</label
+                    >
+                  </div>
+
+                  <div class="mb-3 text-muted small">
+                    By continuing, I acknowledge that I have reviewed the
+                    <a
+                      href="#"
+                      class="fw-semibold link-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#termsModal"
+                      >Terms and Conditions</a
+                    >.
+                  </div>
+                  <div class="form-check text-start mb-4">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      value="on"
+                      id="agreeTerms"
+                      name="agree_terms"
+                      required
+                    />
+                    <label class="form-check-label small" for="agreeTerms">
+                      I have read and agree to the Terms and Conditions.
+                    </label>
+                  </div>
+                  <button
+                    type="submit"
+                    class="btn btn-primary w-100 py-2 mb-3"
+                    style="background-color: #3a5ea8; border: none"
+                  >
+                    <i class="fas fa-user-plus me-2"></i>Register
                   </button>
+
+                  <!-- Gmail Registration Section -->
+                  <div class="auth-divider"><span>Or sign up with</span></div>
+
+                  <div class="d-grid">
+                    <button
+                      type="button"
+                      class="btn google-btn w-100 py-2 btn-google-action"
+                      onclick="openGoogleRegisterModal()"
+                    >
+                      <i class="fab fa-google"></i>
+                      Sign up with Google
+                    </button>
+                  </div>
                 </form>
-                <p class="text-center">
-                  Applicants?
-                  <a
-                    href="javascript(void)"
-                    data-bs-target="#accountModal"
-                    data-bs-toggle="modal"
-                  >
-                    Apply here</a
-                  >
-                </p>
               </div>
             </div>
           </div>
         </div>
-
-        <script>
-          function togglePasswordVisibility(inputId, icon) {
-            const input = document.getElementById(inputId);
-            if (input.type === "password") {
-              input.type = "text";
-              icon.classList.remove("fa-eye");
-              icon.classList.add("fa-eye-slash");
-            } else {
-              input.type = "password";
-              icon.classList.remove("fa-eye-slash");
-              icon.classList.add("fa-eye");
-            }
-          }
-        </script>
-        <!--  -->
       </div>
-    </nav>
-    <section class="welcome-section d-flex container gap-5">
-      <div class="welcome-text">
-        <h1 class="bold">
-          <span class="welcome-to">Welcome to</span>
-          <br />
-          <span
-            style="
-              font-size: 7rem;
-              font-family: 'Times New Roman', Times, serif;
-            "
-            >DigiSPES</span
-          >
-        </h1>
-        <p>
-          DigiSPES is a web-based platform for the Special Program for the
-          Employment of Students, making it easier to apply, track your status,
-          receive updates, and connect with PESO — all in one place.
-        </p>
-        <div class="d-flex gap-3 flex-wrap">
-          <button
-            class="btn btn-newapp primary"
-            type="button"
-            data-bs-toggle="modal"
-            data-bs-target="#accountModal"
-          >
-            Apply Now
-            <i class="fas fa-arrow-right"> </i>
-          </button>
-          <!-- <button
-            class="btn btn-newapp secondary"
-            type="button"
-            data-bs-toggle="modal"
-            data-bs-target="#loginModal"
-          >
-            Old Applicants
-            <i class="fas fa-arrow-right"> </i>
-          </button> -->
+    </div>
+    <!-- login -->
+    <div
+      class="modal fade"
+      id="loginModal"
+      tabindex="-1"
+      aria-labelledby="loginModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="loginModalLabel">Login</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form action="{{ url_for('login') }}" method="POST">
+              <div class="form-floating mb-3">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="usernameLogin"
+                  name="username"
+                  placeholder="Enter your username"
+                  required
+                />
+                <label for="usernameLogin">Username</label>
+              </div>
+              <div class="form-floating mb-3 position-relative">
+                <input
+                  type="password"
+                  class="form-control"
+                  id="passwordLogin"
+                  name="password"
+                  placeholder="Enter your password"
+                  required
+                />
+                <label for="passwordLogin">Password</label>
+                <i
+                  class="fas fa-eye position-absolute"
+                  style="
+                    top: 50%;
+                    right: 10px;
+                    transform: translateY(-50%);
+                    cursor: pointer;
+                  "
+                  onclick="togglePasswordVisibility('passwordLogin', this)"
+                ></i>
+              </div>
+              <button type="submit" class="btn btn-primary w-100 mb-3">
+                Login
+              </button>
+            </form>
+            <p class="text-center">
+              Applicants?
+              <a
+                href="javascript(void)"
+                data-bs-target="#accountModal"
+                data-bs-toggle="modal"
+              >
+                Apply here</a
+              >
+            </p>
+          </div>
         </div>
       </div>
+    </div>
+
+    <!-- Google Registration Preferences Modal -->
+    <div
+      class="modal fade"
+      id="googleRegisterModal"
+      tabindex="-1"
+      aria-labelledby="googleRegisterModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="googleRegisterModalLabel">
+              Complete Your Registration
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted mb-3">
+              Choose your applicant type and education level before continuing
+              with Google.
+            </p>
+            <div class="mb-4">
+              <label class="form-label fw-semibold d-block"
+                >Applicant Type</label
+              >
+              <div class="btn-group" role="group" aria-label="Applicant type">
+                <input
+                  type="radio"
+                  class="btn-check"
+                  name="googleApplicantType"
+                  id="googleApplicantNew"
+                  value="new"
+                  autocomplete="off"
+                />
+                <label class="btn btn-outline-primary" for="googleApplicantNew"
+                  >New Applicant</label
+                >
+
+                <input
+                  type="radio"
+                  class="btn-check"
+                  name="googleApplicantType"
+                  id="googleApplicantOld"
+                  value="old"
+                  autocomplete="off"
+                />
+                <label class="btn btn-outline-primary" for="googleApplicantOld"
+                  >Old Applicant</label
+                >
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="googleEducationLevel"
+                >Education Level</label
+              >
+              <select
+                class="form-select"
+                id="googleEducationLevel"
+                aria-label="Education Level"
+              >
+                <option value="">Select education level</option>
+                <option value="highschool">High School</option>
+                <option value="college">College</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="googleMunicipality"
+                >Municipality</label
+              >
+              <select
+                class="form-select"
+                id="googleMunicipality"
+                aria-label="Municipality"
+              >
+                <option value="">Select municipality</option>
+                {% for municipality in municipalities %}
+                <option value="{{ municipality.id }}">
+                  {{ municipality.name }}{% if municipality.province %}, {{
+                  municipality.province }}{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="confirmGoogleRegister()"
+            >
+              Continue with Google
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terms and Conditions Modal -->
+    <div
+      class="modal fade"
+      id="termsModal"
+      tabindex="-1"
+      aria-labelledby="termsModalLabel"
+      aria-hidden="true"
+    >
       <div
-        class="logo-container d-flex align-items-center justify-content-center"
+        class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"
       >
-        <img
-          alt="spes-logo"
-          class="img-fluid"
-          height="360"
-          src="/static/images/hero-logo.png"
-          width="360"
-        />
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="termsModalLabel">
+              Terms and Conditions
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              By using this website, I agree to comply with the Terms and
+              Conditions, including the protection of my personal information
+              under the Data Privacy Act of 2012. I understand that my data will
+              be collected, stored, and processed securely, and that my privacy
+              rights will be respected. I acknowledge that I have read and
+              understood these terms, and I consent to the handling of my data
+              as described.
+            </p>
+            <ol class="ps-3">
+              <li class="mb-2">
+                <strong>Acceptance of Terms.</strong>
+                By using this site, I agree to follow the website's rules and
+                understand any changes may be made over time.
+              </li>
+              <li class="mb-2">
+                <strong>Data Privacy.</strong>
+                My personal information will be handled in accordance with the
+                Data Privacy Act of 2012, ensuring it is collected and processed
+                securely.
+              </li>
+              <li class="mb-2">
+                <strong>User Responsibilities.</strong>
+                I agree to provide accurate information, use the website
+                legally, and respect the rights of others.
+              </li>
+              <li class="mb-2">
+                <strong>Account Security.</strong>
+                I am responsible for maintaining the security of my account and
+                ensuring the confidentiality of my login details.
+              </li>
+              <li>
+                <strong>Limitations of Liability.</strong>
+                The website is not responsible for any damages resulting from my
+                use of the site.
+              </li>
+            </ol>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              I Understand
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function togglePasswordVisibility(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+          input.type = "text";
+          icon.classList.remove("fa-eye");
+          icon.classList.add("fa-eye-slash");
+        } else {
+          input.type = "password";
+          icon.classList.remove("fa-eye-slash");
+          icon.classList.add("fa-eye");
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const passwordInput = document.getElementById("passwordRegister");
+        const confirmInput = document.getElementById("confirmPassword");
+        const strengthBar = document.getElementById("passwordStrengthBar");
+        const strengthText = document.getElementById("passwordStrengthText");
+        const matchText = document.getElementById("passwordMatchText");
+
+        function calculateStrength(value) {
+          let score = 0;
+          if (value.length >= 8) score += 1;
+          if (value.length >= 12) score += 1;
+          if (/[A-Z]/.test(value)) score += 1;
+          if (/[a-z]/.test(value)) score += 1;
+          if (/\d/.test(value)) score += 1;
+          if (/[^A-Za-z0-9]/.test(value)) score += 1;
+          return score;
+        }
+
+        function updatePasswordStrength(value) {
+          if (!strengthBar || !strengthText) {
+            return;
+          }
+
+          if (!value) {
+            strengthBar.style.width = "0%";
+            strengthBar.className = "progress-bar bg-danger";
+            strengthBar.setAttribute("aria-valuenow", "0");
+            strengthText.textContent = "Enter a password to see its strength.";
+            return;
+          }
+
+          const score = calculateStrength(value);
+          let info = {
+            percent: 40,
+            className: "bg-danger",
+            message: "Weak password. Add numbers, mixed case, or symbols.",
+          };
+
+          if (score <= 2) {
+            info = {
+              percent: 40,
+              className: "bg-danger",
+              message: "Weak password. Add numbers, mixed case, or symbols.",
+            };
+          } else if (score === 3) {
+            info = {
+              percent: 60,
+              className: "bg-warning",
+              message:
+                "Fair password. Add more variety for a stronger password.",
+            };
+          } else if (score === 4) {
+            info = {
+              percent: 80,
+              className: "bg-info",
+              message:
+                "Good password. A bit more length or symbols would help.",
+            };
+          } else {
+            info = {
+              percent: 100,
+              className: "bg-success",
+              message: "Strong password!",
+            };
+          }
+
+          strengthBar.style.width = `${info.percent}%`;
+          strengthBar.className = `progress-bar ${info.className}`;
+          strengthBar.setAttribute("aria-valuenow", String(info.percent));
+          strengthText.textContent = info.message;
+        }
+
+        function updatePasswordMatch() {
+          if (!matchText) {
+            return;
+          }
+
+          const passwordValue = passwordInput ? passwordInput.value : "";
+          const confirmValue = confirmInput ? confirmInput.value : "";
+
+          if (!passwordValue && !confirmValue) {
+            matchText.classList.add("d-none");
+            matchText.textContent = "";
+            matchText.classList.remove("text-danger", "text-success");
+            return;
+          }
+
+          matchText.classList.remove("d-none");
+          if (passwordValue === confirmValue) {
+            matchText.textContent = "Passwords match.";
+            matchText.classList.remove("text-danger");
+            matchText.classList.add("text-success");
+          } else {
+            matchText.textContent = "Passwords do not match yet.";
+            matchText.classList.remove("text-success");
+            matchText.classList.add("text-danger");
+          }
+        }
+
+        if (passwordInput) {
+          updatePasswordStrength(passwordInput.value);
+          passwordInput.addEventListener("input", function (event) {
+            updatePasswordStrength(event.target.value);
+            updatePasswordMatch();
+          });
+        }
+
+        if (confirmInput) {
+          confirmInput.addEventListener("input", updatePasswordMatch);
+        }
+      });
+    </script>
+    <section class="welcome-section">
+      <div class="container">
+        <div class="row align-items-center justify-content-between g-4">
+          <div class="col-lg-6 order-2 order-lg-1">
+            <div class="hero-copy">
+              <h1 class="hero-title">
+                <span class="welcome-to d-block">Welcome to</span>
+                DigiSPES
+              </h1>
+              <p class="hero-subtitle">
+                A web-based platform for the Special Program for the Employment
+                of Students, making it easier to apply, track your status,
+                receive updates, and connect with PESO — all in one place.
+              </p>
+              <div class="hero-actions">
+                <button
+                  class="btn btn-newapp primary"
+                  type="button"
+                  data-bs-toggle="modal"
+                  data-bs-target="#accountModal"
+                >
+                  Apply Now
+                  <i class="fas fa-arrow-right"></i>
+                </button>
+                <a class="btn btn-newapp secondary" href="#about">
+                  Learn More
+                  <i class="fas fa-book-open"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-5 order-1 order-lg-2 text-center">
+            <div class="hero-media">
+              <span class="hero-badge">Version 2.0</span>
+              <img
+                src="/static/images/hero-logo.png"
+                alt="DigiSPES illustration"
+                class="img-fluid"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </section>
+    <section id="about" class="about-section">
+      <div class="container">
+        <div class="section-heading">
+          <h2 class="fw-bold mb-3">Built for every SPES journey</h2>
+          <p class="lead text-muted">
+            DigiSPES streamlines application, evaluation, and communication so
+            students and PESO teams can stay aligned from submission to
+            employment.
+          </p>
+        </div>
+        <div class="row g-4">
+          <div class="col-md-6 col-xl-4">
+            <div class="feature-card h-100">
+              <span class="feature-icon"
+                ><i class="fas fa-file-signature"></i
+              ></span>
+              <h5>Smart Applications</h5>
+              <p>
+                Guided forms, document validation, and one-click submissions
+                help applicants finish their requirements without the
+                back-and-forth.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-4">
+            <div class="feature-card h-100">
+              <span class="feature-icon"
+                ><i class="fas fa-chart-line"></i
+              ></span>
+              <h5>Real-time Tracking</h5>
+              <p>
+                Status dashboards, notifications, and exam monitoring keep
+                everyone informed about next steps and deadlines.
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-4">
+            <div class="feature-card h-100">
+              <span class="feature-icon"><i class="fas fa-headset"></i></span>
+              <h5>Direct Support</h5>
+              <p>
+                Built-in messaging and interview scheduling connect applicants
+                with PESO coordinators without leaving the platform.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="impact-metrics">
+          <div class="metric-card">
+            <h4>5K+</h4>
+            <span>Applications Processed</span>
+          </div>
+          <div class="metric-card">
+            <h4>24/7</h4>
+            <span>Access Anywhere</span>
+          </div>
+          <div class="metric-card">
+            <h4>100%</h4>
+            <span>Data Privacy Aligned</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- Google OAuth Script -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <!-- script for bs modal -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Google OAuth Configuration
+      // Client ID is now loaded from server-side .env file
+      const GOOGLE_CLIENT_ID = "{{ google_client_id }}";
+
+      // Initialize Google OAuth
+      function initializeGoogleAuth() {
+        // Check if Google OAuth is loaded
+        if (typeof google === "undefined" || !google.accounts) {
+          console.error("Google OAuth library not loaded");
+          showMessage(
+            "Google OAuth library failed to load. Please refresh the page.",
+            "error"
+          );
+          return;
+        }
+
+        // Check if Client ID is valid
+        if (
+          !GOOGLE_CLIENT_ID ||
+          GOOGLE_CLIENT_ID === "your-google-client-id-here"
+        ) {
+          console.error("Invalid Google Client ID:", GOOGLE_CLIENT_ID);
+          showMessage(
+            "Google OAuth not configured. Please contact administrator.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse,
+            ux_mode: "popup",
+            auto_select: false,
+            use_fedcm_for_prompt: false,
+          });
+
+          // Render a hidden Google button to ensure popup flow is available
+          let hidden = document.getElementById("gsi_btn");
+          if (!hidden) {
+            hidden = document.createElement("div");
+            hidden.id = "gsi_btn";
+            hidden.style.display = "none";
+            document.body.appendChild(hidden);
+          }
+          google.accounts.id.renderButton(hidden, {
+            theme: "outline",
+            size: "large",
+          });
+        } catch (error) {
+          console.error("Error initializing Google OAuth:", error);
+          showMessage(
+            "Failed to initialize Google OAuth. Please refresh the page.",
+            "error"
+          );
+        }
+      }
+
+      // Handle the credential response from Google
+      let googleSigninFlow = "login";
+      let googleApplicantType = null;
+      let googleEducationLevel = null;
+      let googleMunicipalityId = null;
+      let googleRegisterModalInstance = null;
+
+      function ensureGoogleModalInstance() {
+        if (!googleRegisterModalInstance) {
+          const modalElement = document.getElementById("googleRegisterModal");
+          if (!modalElement) {
+            return null;
+          }
+          googleRegisterModalInstance = new bootstrap.Modal(modalElement, {
+            backdrop: "static",
+          });
+
+          modalElement.addEventListener("hidden.bs.modal", () => {
+            document
+              .querySelectorAll('input[name="googleApplicantType"]')
+              .forEach((input) => {
+                input.checked = false;
+              });
+            const educationSelect = document.getElementById(
+              "googleEducationLevel"
+            );
+            if (educationSelect) {
+              educationSelect.value = "";
+            }
+            const municipalitySelect =
+              document.getElementById("googleMunicipality");
+            if (municipalitySelect) {
+              municipalitySelect.value = "";
+            }
+            googleMunicipalityId = null;
+          });
+        }
+        return googleRegisterModalInstance;
+      }
+
+      function openGoogleRegisterModal() {
+        googleSigninFlow = "register";
+        googleApplicantType = null;
+        googleEducationLevel = null;
+        const modal = ensureGoogleModalInstance();
+        if (!modal) {
+          showMessage("Unable to open registration dialog.", "error");
+          return;
+        }
+        const defaultRadio = document.getElementById("googleApplicantNew");
+        if (defaultRadio) {
+          defaultRadio.checked = true;
+          googleApplicantType = defaultRadio.value;
+        }
+        const educationSelect = document.getElementById("googleEducationLevel");
+        if (educationSelect) {
+          educationSelect.value = "";
+        }
+        const municipalitySelect =
+          document.getElementById("googleMunicipality");
+        if (municipalitySelect) {
+          municipalitySelect.value = "";
+        }
+        googleMunicipalityId = null;
+        modal.show();
+      }
+
+      function confirmGoogleRegister() {
+        const selectedApplicant = document.querySelector(
+          'input[name="googleApplicantType"]:checked'
+        );
+        const educationSelect = document.getElementById("googleEducationLevel");
+        const municipalitySelect =
+          document.getElementById("googleMunicipality");
+
+        if (!selectedApplicant) {
+          showMessage("Please choose your applicant type.", "warning");
+          return;
+        }
+
+        if (!educationSelect || !educationSelect.value) {
+          showMessage("Please select your education level.", "warning");
+          return;
+        }
+
+        if (!municipalitySelect || !municipalitySelect.value) {
+          showMessage("Please select your municipality.", "warning");
+          return;
+        }
+
+        googleSigninFlow = "register";
+        googleApplicantType = selectedApplicant.value;
+        googleEducationLevel = educationSelect.value;
+        googleMunicipalityId = municipalitySelect.value;
+
+        const modal = ensureGoogleModalInstance();
+        if (modal) {
+          modal.hide();
+        }
+
+        triggerGoogleSignIn();
+      }
+
+      function initiateGoogleSignIn(flow) {
+        googleSigninFlow = flow === "register" ? "register" : "login";
+        if (googleSigninFlow === "login") {
+          googleApplicantType = null;
+          googleEducationLevel = null;
+          googleMunicipalityId = null;
+          triggerGoogleSignIn();
+        }
+      }
+
+      function triggerGoogleSignIn() {
+        const actionMessage =
+          googleSigninFlow === "register"
+            ? "Opening Google to finish your registration..."
+            : "Opening Google sign-in...";
+        showMessage(actionMessage, "info");
+
+        if (
+          typeof google === "undefined" ||
+          !google.accounts ||
+          !google.accounts.id
+        ) {
+          showMessage(
+            "Google OAuth not loaded. Please refresh the page and try again.",
+            "error"
+          );
+          return;
+        }
+
+        if (
+          !GOOGLE_CLIENT_ID ||
+          GOOGLE_CLIENT_ID === "your-google-client-id-here"
+        ) {
+          console.error("Invalid Google Client ID:", GOOGLE_CLIENT_ID);
+          showMessage(
+            "Google OAuth not configured. Please contact administrator.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          const gBtn = document.querySelector('#gsi_btn div[role="button"]');
+          if (gBtn) {
+            gBtn.click();
+          } else {
+            google.accounts.id.prompt();
+          }
+        } catch (error) {
+          console.error("Error launching Google sign-in:", error);
+          showMessage(
+            "Failed to open Google authentication. Please try again.",
+            "error"
+          );
+        }
+      }
+
+      function handleCredentialResponse(response) {
+        const token = response.credential;
+
+        fetch("/gmail-login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token: token,
+            flowType: googleSigninFlow,
+            applicantType: googleApplicantType,
+            educationLevel: googleEducationLevel,
+            municipalityId: googleMunicipalityId,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              showMessage(data.message || "Success", "success");
+              googleSigninFlow = "login";
+              googleApplicantType = null;
+              googleEducationLevel = null;
+              googleMunicipalityId = null;
+              setTimeout(() => {
+                window.location.href = data.redirect || "/";
+              }, 800);
+              return;
+            }
+
+            if (data.needsRegistration) {
+              showMessage(
+                data.message ||
+                  "We couldn't find an account for this email. Please register first.",
+                "warning"
+              );
+              openGoogleRegisterModal();
+              return;
+            }
+
+            showMessage(
+              data.message || "Google authentication failed.",
+              "error"
+            );
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showMessage(
+              "Google authentication failed. Please try again.",
+              "error"
+            );
+          });
+      }
+
+      // Show message function
+      function showMessage(message, type) {
+        // Create a toast notification
+        const toast = document.createElement("div");
+
+        // Determine alert class based on type
+        let alertClass = "danger"; // default
+        if (type === "success") {
+          alertClass = "success";
+        } else if (type === "info") {
+          alertClass = "info";
+        } else if (type === "warning") {
+          alertClass = "warning";
+        }
+
+        toast.className = `alert alert-${alertClass} alert-dismissible fade show position-fixed`;
+        toast.style.cssText =
+          "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+        toast.innerHTML = `
+          ${message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+          }
+        }, 5000);
+      }
+
+      // Global Maintenance Notice Toggle System
+      (function() {
+        const pill = document.getElementById('maintenance-notice-pill');
+        const closeBtn = document.getElementById('close-maintenance-pill');
+
+        if (!pill) return;
+
+        // Fetch session-based dismissal (so close button still works locally)
+        let isDismissed = sessionStorage.getItem('maintenance_notice_dismissed') === 'true';
+
+        // Trigger slide-down transition on page load if enabled and not dismissed
+        const initialEnabled = {{ 'true' if maintenance_notice_enabled else 'false' }};
+        if (initialEnabled && !isDismissed) {
+          pill.style.display = 'block';
+          // Force reflow for transitions
+          pill.offsetHeight;
+          pill.classList.add('show');
+        }
+
+        // Close button click handler
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            sessionStorage.setItem('maintenance_notice_dismissed', 'true');
+            pill.classList.remove('show');
+            setTimeout(() => {
+              if (!pill.classList.contains('show')) {
+                pill.style.display = 'none';
+              }
+            }, 300);
+          });
+        }
+
+        // Helper to update the pill visibility dynamically on the page
+        function setLocalPillState(enabled) {
+          if (enabled) {
+            sessionStorage.removeItem('maintenance_notice_dismissed');
+            isDismissed = false;
+            pill.style.display = 'block';
+            pill.offsetHeight; // Force reflow
+            pill.classList.add('show');
+          } else {
+            pill.classList.remove('show');
+            setTimeout(() => {
+              if (!pill.classList.contains('show')) {
+                pill.style.display = 'none';
+              }
+            }, 300);
+          }
+        }
+
+        // Global magic function for console execution
+        window.toggleMaintenanceNotice = function(passcode, action) {
+          if (!passcode) {
+            passcode = prompt("Enter passcode to update maintenance notice status:");
+            if (!passcode) return "Action cancelled: Passcode is required.";
+          }
+          
+          if (action === undefined) {
+            const confirmToggle = confirm("Set maintenance notice state? (OK = ENABLED/ON, Cancel = DISABLED/OFF)");
+            action = confirmToggle ? 'true' : 'false';
+          } else if (action === true || action === 'on') {
+            action = 'true';
+          } else if (action === false || action === 'off') {
+            action = 'false';
+          }
+
+          fetch('/api/maintenance-notice', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ passcode: passcode, action: action })
+          })
+          .then(res => {
+            if (!res.ok) {
+              return res.json().then(data => { throw new Error(data.message || 'Server error'); });
+            }
+            return res.json();
+          })
+          .then(data => {
+            if (data.success) {
+              setLocalPillState(action === 'true');
+              console.log(data.message);
+              alert(data.message);
+            } else {
+              console.error("Error:", data.message);
+              alert("Failed: " + data.message);
+            }
+          })
+          .catch(err => {
+            console.error("Network error:", err);
+            alert("Error: " + err.message);
+          });
+
+          return "Processing global maintenance status change...";
+        };
+
+        // Secret keyboard cheat code: type "digispes-maint" to trigger prompt
+        let inputBuffer = '';
+        const secretCode = 'digispes-maint';
+        
+        window.addEventListener('keydown', (e) => {
+          if (e.key.length === 1) {
+            inputBuffer += e.key.toLowerCase();
+            if (inputBuffer.length > secretCode.length) {
+              inputBuffer = inputBuffer.slice(-secretCode.length);
+            }
+            if (inputBuffer === secretCode) {
+              window.toggleMaintenanceNotice();
+              inputBuffer = '';
+            }
+          }
+        });
+      })();
+
+      // Initialize when page loads
+      window.onload = function () {
+        initializeGoogleAuth();
+
+        // Add click event listeners for debugging
+        document.querySelectorAll(".btn-google-action").forEach((button) => {
+          button.addEventListener("click", function () {
+            console.log("Gmail button clicked:", this.textContent.trim());
+          });
+        });
+      };
+    </script>
   </body>
 </html>

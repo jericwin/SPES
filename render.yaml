@@ -1,21 +1,13 @@
 services:
   - type: web
     name: digispes
-    runtime: docker
+    env: docker
     plan: free
-    region: singapore
-    dockerContext: .
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: Dockerfile
+    buildCommand: ""
+    startCommand: ""
     envVars:
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DB_HOST
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: DB_PORT
-        value: 3306
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"

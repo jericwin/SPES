@@ -1,0 +1,1213 @@
+{
+  "faqs": [
+    {
+      "id": 1,
+      "question": "What is DigiSPES?",
+      "answer": "Ang DigiSPES ay isang web-based system na nagdi-digitalize ng Special Program for Employment of Students (SPES) para mas mapabilis at maging mas maayos ang application, examination, at management process."
+    },
+    {
+      "id": 2,
+      "question": "Ano ang SPES?",
+      "answer": "Ang SPES o Special Program for Employment of Students ay isang programa ng DOLE na nagbibigay ng pansamantalang trabaho sa mga estudyante mula sa low-income families."
+    },
+    {
+      "id": 3,
+      "question": "Sino ang pwedeng gumamit ng DigiSPES?",
+      "answer": "Maaaring gumamit ng DigiSPES ang SPES applicants, beneficiaries, Municipal PESO staff, at Provincial PESO staff."
+    },
+    {
+      "id": 4,
+      "question": "Libre ba ang paggamit ng DigiSPES?",
+      "answer": "Oo, libre ang paggamit ng DigiSPES para sa lahat ng SPES applicants at beneficiaries."
+    },
+    {
+      "id": 5,
+      "question": "Kailangan ba ng account para makagamit ng DigiSPES?",
+      "answer": "Oo, kailangan gumawa ng account upang makapag-apply, makapag-exam, at ma-track ang application status."
+    },
+    {
+      "id": 6,
+      "question": "Paano gumawa ng DigiSPES account?",
+      "answer": "I-click ang Register button sa DigiSPES website at punan ang required personal at academic information."
+    },
+    {
+      "id": 7,
+      "question": "Pwede bang gumamit ng cellphone sa DigiSPES?",
+      "answer": "Oo, mobile-friendly ang DigiSPES at maaaring gamitin sa cellphone, tablet, o computer."
+    },
+    {
+      "id": 8,
+      "question": "Anong browser ang recommended?",
+      "answer": "Mas mainam gumamit ng updated browsers tulad ng Google Chrome, Microsoft Edge, o Mozilla Firefox."
+    },
+    {
+      "id": 9,
+      "question": "Ano ang requirements para makapag-apply sa SPES?",
+      "answer": "Karaniwang requirements ay school ID, certificate of enrollment, barangay clearance, at proof of income."
+    },
+    {
+      "id": 10,
+      "question": "Pwede bang mag-upload ng picture ng documents?",
+      "answer": "Oo, basta malinaw at readable ang uploaded document images."
+    },
+
+    {
+      "id": 11,
+      "question": "May deadline ba ang application?",
+      "answer": "Oo, may specific application period ang SPES na ina-announce ng PESO."
+    },
+    {
+      "id": 12,
+      "question": "Paano malalaman kung submitted na ang application?",
+      "answer": "Makikita ang application status sa dashboard ng iyong DigiSPES account."
+    },
+    {
+      "id": 13,
+      "question": "Pwede ko bang i-edit ang application?",
+      "answer": "Hindi na maaaring i-edit ang application kapag ito ay na-submit na."
+    },
+    {
+      "id": 14,
+      "question": "Ano ang online examination?",
+      "answer": "Ito ay isang digital assessment sa DigiSPES na sinusukat ang basic skills ng applicant."
+    },
+    {
+      "id": 15,
+      "question": "Required ba ang exam?",
+      "answer": "Oo, required ang online examination bilang bahagi ng screening process."
+    },
+    {
+      "id": 16,
+      "question": "Gaano katagal ang online exam?",
+      "answer": "Ang exam duration ay depende sa configuration ng PESO, karaniwang 20–30 minutes."
+    },
+    {
+      "id": 17,
+      "question": "Automatic ba ang checking ng exam?",
+      "answer": "Oo, automatic na chine-check ng system ang exam results."
+    },
+    {
+      "id": 18,
+      "question": "Makikita ba agad ang exam result?",
+      "answer": "Oo, makikita agad ang result pagkatapos ng exam."
+    },
+    {
+      "id": 19,
+      "question": "Paano kung bumagsak sa exam?",
+      "answer": "Kung hindi pumasa, maaaring mag-apply muli sa susunod na SPES cycle."
+    },
+    {
+      "id": 20,
+      "question": "May passing score ba ang exam?",
+      "answer": "Oo, may minimum passing score na itinakda ng PESO."
+    },
+
+    {
+      "id": 21,
+      "question": "Paano malalaman kung approved ang application?",
+      "answer": "Makakatanggap ng notification sa system at email kapag approved na."
+    },
+    {
+      "id": 22,
+      "question": "Ano ang status na 'Under Review'?",
+      "answer": "Ibig sabihin ay kasalukuyang sinusuri ng PESO ang iyong application."
+    },
+    {
+      "id": 23,
+      "question": "Ano ang status na 'Rejected'?",
+      "answer": "Ibig sabihin ay hindi na-approve ang application base sa evaluation."
+    },
+    {
+      "id": 24,
+      "question": "Makikita ba ang reason ng rejection?",
+      "answer": "Oo, maaaring makita ang remarks o reason kung bakit na-reject."
+    },
+    {
+      "id": 25,
+      "question": "Paano kung may maling impormasyon sa account?",
+      "answer": "Makipag-ugnayan sa PESO para sa account correction."
+    },
+    {
+      "id": 26,
+      "question": "Pwede bang mag-apply ulit kung na-reject?",
+      "answer": "Oo, sa susunod na application period."
+    },
+    {
+      "id": 27,
+      "question": "Ano ang role ng Municipal PESO?",
+      "answer": "Sila ang nagre-review at nagma-manage ng applications sa kanilang municipality."
+    },
+    {
+      "id": 28,
+      "question": "Ano ang role ng Provincial PESO?",
+      "answer": "Sila ang nagmo-monitor at nagco-consolidate ng SPES data sa probinsya."
+    },
+    {
+      "id": 29,
+      "question": "Ano ang data analytics sa DigiSPES?",
+      "answer": "Ito ay reports at statistics na tumutulong sa PESO sa decision-making."
+    },
+    {
+      "id": 30,
+      "question": "Secure ba ang personal data ko?",
+      "answer": "Oo, ang DigiSPES ay sumusunod sa Data Privacy Act at gumagamit ng security measures."
+    },
+
+    {
+      "id": 31,
+      "question": "May password recovery ba?",
+      "answer": "Oo, may 'Forgot Password' feature ang DigiSPES."
+    },
+    {
+      "id": 32,
+      "question": "Paano mag-log out sa system?",
+      "answer": "I-click ang Logout button sa account menu."
+    },
+    {
+      "id": 33,
+      "question": "Pwede bang mag-apply kahit walang internet?",
+      "answer": "Hindi, kailangan ng internet connection para magamit ang DigiSPES."
+    },
+    {
+      "id": 34,
+      "question": "May help desk ba ang DigiSPES?",
+      "answer": "Oo, maaaring makipag-ugnayan sa PESO para sa assistance."
+    },
+    {
+      "id": 35,
+      "question": "May chatbot ba ang DigiSPES?",
+      "answer": "Oo, may chatbot na sumasagot sa common questions ng users."
+    },
+    {
+      "id": 36,
+      "question": "Available ba ang DigiSPES 24/7?",
+      "answer": "Oo, bukas ang system anumang oras maliban sa maintenance."
+    },
+    {
+      "id": 37,
+      "question": "Ano ang system maintenance?",
+      "answer": "Ito ay scheduled update o improvement ng system."
+    },
+    {
+      "id": 38,
+      "question": "Makikita ba ang employment assignment?",
+      "answer": "Oo, makikita ito sa account kapag assigned na."
+    },
+    {
+      "id": 39,
+      "question": "May orientation ba bago magtrabaho?",
+      "answer": "Oo, karaniwang may orientation ang PESO."
+    },
+    {
+      "id": 40,
+      "question": "Ilang oras ang trabaho sa SPES?",
+      "answer": "Ang working hours ay base sa guidelines ng DOLE at PESO."
+    },
+
+    {
+      "id": 41,
+      "question": "May sweldo ba ang SPES?",
+      "answer": "Oo, may sahod ang SPES beneficiaries ayon sa minimum wage rules."
+    },
+    {
+      "id": 42,
+      "question": "Paano binibigay ang sweldo?",
+      "answer": "Karaniwang through payroll o cash release ng LGU."
+    },
+    {
+      "id": 43,
+      "question": "Ilang beses pwedeng mag-SPES?",
+      "answer": "Depende ito sa guidelines ng DOLE at availability ng slots."
+    },
+    {
+      "id": 44,
+      "question": "Pwede bang working student na mag-SPES?",
+      "answer": "Oo, basta pasok sa eligibility requirements."
+    },
+    {
+      "id": 45,
+      "question": "Pwede bang college at senior high students?",
+      "answer": "Oo, parehong college at SHS students ay pwedeng mag-apply."
+    },
+    {
+      "id": 46,
+      "question": "Ano ang age requirement?",
+      "answer": "Karaniwang 15–30 years old, base sa SPES guidelines."
+    },
+    {
+      "id": 47,
+      "question": "Pwede bang mag-apply kahit irregular student?",
+      "answer": "Oo, basta currently enrolled."
+    },
+    {
+      "id": 48,
+      "question": "May limit ba ang slots?",
+      "answer": "Oo, limited ang slots depende sa budget ng LGU."
+    },
+    {
+      "id": 49,
+      "question": "First come, first served ba?",
+      "answer": "Depende sa evaluation process ng PESO."
+    },
+    {
+      "id": 50,
+      "question": "Pwede bang mag-apply sa ibang municipality?",
+      "answer": "Karaniwan ay sa municipality kung saan ka residente."
+    },
+
+    {
+      "id": 51,
+      "question": "Ano ang dashboard?",
+      "answer": "Ito ang main page kung saan makikita ang status at impormasyon ng application."
+    },
+    {
+      "id": 52,
+      "question": "Makikita ba ang history ng application?",
+      "answer": "Oo, naka-record ang application history sa system."
+    },
+    {
+      "id": 53,
+      "question": "May printable form ba?",
+      "answer": "Oo, maaaring i-print ang application summary kung kailangan."
+    },
+    {
+      "id": 54,
+      "question": "Pwede bang gamitin ang DigiSPES sa computer shop?",
+      "answer": "Oo, basta secure ang login at huwag kalimutan mag-log out."
+    },
+    {
+      "id": 55,
+      "question": "Ano ang notification feature?",
+      "answer": "Ito ay alerts para sa updates ng application at exam."
+    },
+    {
+      "id": 56,
+      "question": "May email notification ba?",
+      "answer": "Oo, may email alerts ang DigiSPES."
+    },
+    {
+      "id": 57,
+      "question": "Paano i-update ang profile?",
+      "answer": "Maaaring i-update ang profile details sa account settings."
+    },
+    {
+      "id": 58,
+      "question": "Pwede bang magpalit ng email?",
+      "answer": "Oo, pero kailangan ng verification."
+    },
+    {
+      "id": 59,
+      "question": "May admin access ba ang students?",
+      "answer": "Wala, admin access ay para lamang sa PESO staff."
+    },
+    {
+      "id": 60,
+      "question": "Ano ang role-based access?",
+      "answer": "Ito ay system security na naglilimita ng access base sa role ng user."
+    },
+
+    {
+      "id": 61,
+      "question": "Ano ang purpose ng DigiSPES chatbot?",
+      "answer": "Ang chatbot ay tumutulong sa pagsagot ng common questions ng users."
+    },
+    {
+      "id": 62,
+      "question": "Accurate ba ang sagot ng chatbot?",
+      "answer": "Oo, ang chatbot ay base sa official DigiSPES information."
+    },
+    {
+      "id": 63,
+      "question": "Pwede bang mag-report ng system error?",
+      "answer": "Oo, i-report ito sa PESO o system administrator."
+    },
+    {
+      "id": 64,
+      "question": "Ano ang system analytics?",
+      "answer": "Ito ay statistical reports tungkol sa applications, exams, at beneficiaries."
+    },
+    {
+      "id": 65,
+      "question": "Ginagamit ba ang data para sa research?",
+      "answer": "Oo, ngunit aggregated at anonymized ang data."
+    },
+    {
+      "id": 66,
+      "question": "May backup ba ang system?",
+      "answer": "Oo, may regular data backup ang DigiSPES."
+    },
+    {
+      "id": 67,
+      "question": "Ano ang audit trail?",
+      "answer": "Ito ay record ng actions sa system para sa transparency."
+    },
+    {
+      "id": 68,
+      "question": "Pwede bang i-delete ang account?",
+      "answer": "Oo, sa pamamagitan ng request sa PESO."
+    },
+    {
+      "id": 69,
+      "question": "May training ba para sa PESO staff?",
+      "answer": "Oo, may orientation at training para sa system usage."
+    },
+    {
+      "id": 70,
+      "question": "Ano ang advantage ng DigiSPES?",
+      "answer": "Mas mabilis, mas transparent, at mas organized ang SPES process."
+    },
+
+    {
+      "id": 71,
+      "question": "Paperless ba ang DigiSPES?",
+      "answer": "Oo, karamihan ng transactions ay digital na."
+    },
+    {
+      "id": 72,
+      "question": "Pwede bang gamitin offline ang exam?",
+      "answer": "Hindi, online lamang ang exam."
+    },
+    {
+      "id": 73,
+      "question": "May time limit ba ang exam?",
+      "answer": "Oo, may set time limit ang bawat exam."
+    },
+    {
+      "id": 74,
+      "question": "Automatic ba ang logout kapag inactive?",
+      "answer": "Oo, para sa security ng account."
+    },
+    {
+      "id": 75,
+      "question": "May CAPTCHA ba ang login?",
+      "answer": "Oo, para maiwasan ang unauthorized access."
+    },
+    {
+      "id": 76,
+      "question": "May user manual ba ang DigiSPES?",
+      "answer": "Oo, may available guide na maaaring i-download."
+    },
+    {
+      "id": 77,
+      "question": "Pwede bang gamitin sa low-end devices?",
+      "answer": "Oo, optimized ang system para sa basic devices."
+    },
+    {
+      "id": 78,
+      "question": "Ano ang objective ng DigiSPES?",
+      "answer": "Mapahusay ang efficiency at transparency ng SPES implementation."
+    },
+    {
+      "id": 79,
+      "question": "May feedback feature ba?",
+      "answer": "Oo, maaaring magbigay ng feedback ang users."
+    },
+    {
+      "id": 80,
+      "question": "Sino ang developer ng DigiSPES?",
+      "answer": "Ang DigiSPES ay binuo bilang research-based system para sa PESO."
+    },
+
+    {
+      "id": 81,
+      "question": "Academic project ba ang DigiSPES?",
+      "answer": "Oo, ito ay isang system na dinevelop bilang academic and practical solution."
+    },
+    {
+      "id": 82,
+      "question": "Pwede bang i-customize ng LGU ang DigiSPES?",
+      "answer": "Oo, maaaring i-configure base sa LGU needs."
+    },
+    {
+      "id": 83,
+      "question": "May logs ba ang user activities?",
+      "answer": "Oo, naka-log ang activities para sa monitoring."
+    },
+    {
+      "id": 84,
+      "question": "May reporting feature ba?",
+      "answer": "Oo, may downloadable reports ang system."
+    },
+    {
+      "id": 85,
+      "question": "Compatible ba sa government standards?",
+      "answer": "Oo, sumusunod ito sa government system requirements."
+    },
+    {
+      "id": 86,
+      "question": "Ano ang future plan ng DigiSPES?",
+      "answer": "Maaaring idagdag ang mobile app at additional features."
+    },
+    {
+      "id": 87,
+      "question": "Pwede bang i-integrate sa ibang system?",
+      "answer": "Oo, possible ang system integration."
+    },
+    {
+      "id": 88,
+      "question": "May version history ba ang system?",
+      "answer": "Oo, documented ang system updates."
+    },
+    {
+      "id": 89,
+      "question": "May role ba ang DOLE sa DigiSPES?",
+      "answer": "Oo, ang DigiSPES ay aligned sa DOLE SPES guidelines."
+    },
+    {
+      "id": 90,
+      "question": "Pwede bang gamitin nationwide?",
+      "answer": "Oo, ang DigiSPES ay scalable para sa national use."
+    },
+
+    {
+      "id": 91,
+      "question": "Ano ang pinakamalaking benepisyo ng DigiSPES?",
+      "answer": "Mas mabilis na processing at mas kaunting pila para sa students."
+    },
+    {
+      "id": 92,
+      "question": "May transparency ba ang selection process?",
+      "answer": "Oo, malinaw ang status at evaluation sa system."
+    },
+    {
+      "id": 93,
+      "question": "Makakatulong ba ito sa PESO workload?",
+      "answer": "Oo, nababawasan ang manual processing ng PESO staff."
+    },
+    {
+      "id": 94,
+      "question": "Student-friendly ba ang interface?",
+      "answer": "Oo, simple at madaling gamitin ang system interface."
+    },
+    {
+      "id": 95,
+      "question": "May accessibility features ba?",
+      "answer": "Oo, designed ang system para sa madaling navigation."
+    },
+    {
+      "id": 96,
+      "question": "Ano ang role ng analytics sa decision-making?",
+      "answer": "Tinutulungan nito ang PESO sa policy at planning decisions."
+    },
+    {
+      "id": 97,
+      "question": "May feedback loop ba ang system?",
+      "answer": "Oo, ginagamit ang feedback para sa system improvement."
+    },
+    {
+      "id": 98,
+      "question": "Ano ang vision ng DigiSPES?",
+      "answer": "Isang efficient, transparent, at digital SPES implementation."
+    },
+    {
+      "id": 99,
+      "question": "Pwede bang gamitin ng future researchers?",
+      "answer": "Oo, bilang reference system for future studies."
+    },
+    {
+      "id": 100,
+      "question": "Paano makakatulong ang DigiSPES sa students?",
+      "answer": "Pinapadali nito ang application, exam, at monitoring ng SPES para sa mga estudyante."
+    },
+    {
+      "id": 101,
+      "question": "Sino ang dapat kontakin kung may problema sa account?",
+      "answer": "Maaaring makipag-ugnayan sa Municipal PESO o sa DigiSPES support team sa email o hotline na makikita sa website."
+    },
+    {
+      "id": 102,
+      "question": "Sino ang pwedeng tanungin tungkol sa requirements?",
+      "answer": "Pwede kang magtanong sa local PESO staff o sa chatbot ng DigiSPES para sa complete requirements."
+    },
+    {
+      "id": 103,
+      "question": "Sino ang contact person kung may technical issue?",
+      "answer": "Makipag-ugnayan sa system administrator o DigiSPES support."
+    },
+    {
+      "id": 104,
+      "question": "Paano makukuha ang exam schedule?",
+      "answer": "Makikita ang exam schedule sa DigiSPES dashboard o sa notification email mula sa PESO."
+    },
+    {
+      "id": 105,
+      "question": "Pwede bang baguhin ang exam schedule?",
+      "answer": "Hindi, fixed ang schedule ngunit maaari kang makipag-ugnayan sa PESO kung may emergency."
+    },
+    {
+      "id": 106,
+      "question": "Sino ang pwedeng kontakin kung hindi pumasa sa exam?",
+      "answer": "Pwede kang magtanong sa PESO para sa guidance sa next application."
+    },
+    {
+      "id": 107,
+      "question": "Paano malalaman ang employment assignment?",
+      "answer": "Makikita ito sa account kapag approved na ang application at naka-assign na sa employer."
+    },
+    {
+      "id": 108,
+      "question": "Sino ang contact para sa employer assignment?",
+      "answer": "Municipal PESO staff ang contact person para sa employment assignment queries."
+    },
+    {
+      "id": 109,
+      "question": "Paano malalaman ang start date ng trabaho?",
+      "answer": "Makikita sa DigiSPES account o sa notification mula sa PESO at employer."
+    },
+    {
+      "id": 110,
+      "question": "Paano makukuha ang sahod?",
+      "answer": "Depende sa LGU, kadalasan ay cash release o payroll deposit."
+    },
+    {
+      "id": 111,
+      "question": "Sino ang pwedeng tanungin tungkol sa sweldo?",
+      "answer": "Municipal PESO payroll officer o assigned HR ng LGU."
+    },
+    {
+      "id": 112,
+      "question": "Paano malalaman kung nakareceive na ang salary?",
+      "answer": "Pwede mong i-check sa account o makipag-ugnayan sa PESO payroll officer."
+    },
+    {
+      "id": 113,
+      "question": "Sino ang pwedeng kontakin kung may lost document?",
+      "answer": "Makipag-ugnayan agad sa Municipal PESO para ma-verify at ma-resubmit ang documents."
+    },
+    {
+      "id": 114,
+      "question": "Pwede bang mag-appeal kung na-reject ang application?",
+      "answer": "Oo, sa pamamagitan ng formal request sa PESO office."
+    },
+    {
+      "id": 115,
+      "question": "Sino ang contact kung may error sa exam result?",
+      "answer": "Makipag-ugnayan sa PESO at system administrator para ma-verify ang result."
+    },
+    {
+      "id": 116,
+      "question": "Paano makukuha ang SPES certificate?",
+      "answer": "Ibibigay ng PESO matapos makumpleto ang employment period, at pwede ring i-download sa DigiSPES account."
+    },
+    {
+      "id": 117,
+      "question": "Sino ang pwedeng kontakin kung may discrepancy sa certificate?",
+      "answer": "Municipal PESO o system admin ang dapat kontakin para ma-correct."
+    },
+    {
+      "id": 118,
+      "question": "Pwede bang i-reschedule ang orientation?",
+      "answer": "Depende sa availability ng PESO, makipag-ugnayan sa kanila para sa approval."
+    },
+    {
+      "id": 119,
+      "question": "Sino ang contact para sa orientation schedule?",
+      "answer": "Municipal PESO staff o DigiSPES notification system."
+    },
+    {
+      "id": 120,
+      "question": "Paano malalaman kung officially accepted ang application?",
+      "answer": "Makikita sa status sa DigiSPES dashboard bilang 'Approved' at may notification email."
+    },
+    {
+      "id": 121,
+      "question": "Sino ang pwedeng tanungin tungkol sa LGU requirements?",
+      "answer": "Municipal PESO staff ang pinakamainam na contact."
+    },
+    {
+      "id": 122,
+      "question": "Paano malaman kung eligible sa SPES?",
+      "answer": "Sa DigiSPES eligibility check module at sa guidance ng PESO."
+    },
+    {
+      "id": 123,
+      "question": "May contact para sa scholarship conflicts?",
+      "answer": "Oo, maaaring makipag-ugnayan sa PESO kung may conflict sa other grants o scholarships."
+    },
+    {
+      "id": 124,
+      "question": "Paano mag-follow up sa application?",
+      "answer": "Pwede sa DigiSPES dashboard o direktang tawag/email sa PESO."
+    },
+    {
+      "id": 125,
+      "question": "Sino ang contact kung hindi pumasok sa exam?",
+      "answer": "Makipag-ugnayan sa Municipal PESO para sa rescheduling options."
+    },
+    {
+      "id": 126,
+      "question": "May hotline ba para sa DigiSPES?",
+      "answer": "Oo, nakalagay sa official DigiSPES website."
+    },
+    {
+      "id": 127,
+      "question": "Pwede bang magtanong sa Facebook page ng PESO?",
+      "answer": "Oo, maraming LGU PESO offices ang may FB pages para sa inquiries."
+    },
+    {
+      "id": 128,
+      "question": "Paano i-report ang technical bug sa website?",
+      "answer": "Gamitin ang contact form o email ng system admin sa DigiSPES site."
+    },
+    {
+      "id": 129,
+      "question": "Sino ang contact kung may problema sa uploaded document?",
+      "answer": "Municipal PESO staff para sa verification at replacement."
+    },
+    {
+      "id": 130,
+      "question": "Paano malaman ang exam venue?",
+      "answer": "Makikita sa DigiSPES notification at dashboard kung may in-person exam, kung online, makikita rin ang link."
+    },
+    {
+      "id": 131,
+      "question": "Pwede bang magtanong sa guidance office tungkol sa SPES?",
+      "answer": "Oo, maaaring makatulong ang school guidance counselor sa application queries."
+    },
+    {
+      "id": 132,
+      "question": "Sino ang contact kung may lost notification email?",
+      "answer": "Makipag-ugnayan sa PESO para i-resend ang notification."
+    },
+    {
+      "id": 133,
+      "question": "Paano malalaman kung kailangan ng additional document?",
+      "answer": "Makikita sa DigiSPES dashboard o notification mula sa PESO."
+    },
+    {
+      "id": 134,
+      "question": "Sino ang contact kung may error sa uploaded photo?",
+      "answer": "System admin o Municipal PESO."
+    },
+    {
+      "id": 135,
+      "question": "May contact para sa payroll questions?",
+      "answer": "Oo, PESO payroll officer ang dapat kontakin."
+    },
+    {
+      "id": 136,
+      "question": "Pwede bang magtanong tungkol sa leave or absences?",
+      "answer": "Oo, sa employer at PESO staff."
+    },
+    {
+      "id": 137,
+      "question": "Sino ang contact para sa emergency habang on-duty?",
+      "answer": "Employer at PESO contact number."
+    },
+    {
+      "id": 138,
+      "question": "Pwede bang magtanong tungkol sa OT o extra hours?",
+      "answer": "Makipag-ugnayan sa employer at PESO."
+    },
+    {
+      "id": 139,
+      "question": "Sino ang contact kung kailangan ng verification letter?",
+      "answer": "Municipal PESO staff o DigiSPES admin."
+    },
+    {
+      "id": 140,
+      "question": "Paano malaman kung kompleto ang application?",
+      "answer": "Makikita sa DigiSPES dashboard at sa system notifications."
+    },
+        {
+      "id": 141,
+      "question": "Pwede bang mag-apply kung wala pang school ID?",
+      "answer": "Oo, pero kailangan mong i-upload ito kapag available na bago ma-finalize ang application."
+    },
+    {
+      "id": 142,
+      "question": "Sino ang contact kung may problema sa DigiSPES login?",
+      "answer": "Makipag-ugnayan sa Municipal PESO o sa system admin gamit ang contact info sa website."
+    },
+    {
+      "id": 143,
+      "question": "Paano mag-update ng personal information?",
+      "answer": "Sa account settings ng DigiSPES, maaari mong i-update ang email, contact number, at address."
+    },
+    {
+      "id": 144,
+      "question": "Pwede bang mag-apply kahit hindi residente ng LGU?",
+      "answer": "Karaniwang requirement na residente ka ng municipality para sa SPES application."
+    },
+    {
+      "id": 145,
+      "question": "Sino ang contact kung may na-miss na deadline?",
+      "answer": "Makipag-ugnayan sa Municipal PESO para sa guidance at possible extension."
+    },
+    {
+      "id": 146,
+      "question": "Paano malalaman kung eligible sa stipend?",
+      "answer": "Makikita sa eligibility check module ng DigiSPES at sa verification ng PESO."
+    },
+    {
+      "id": 147,
+      "question": "Pwede bang baguhin ang employer assignment?",
+      "answer": "Depende sa PESO, maaari kang makipag-ugnayan kung may valid reason."
+    },
+    {
+      "id": 148,
+      "question": "Sino ang contact kung hindi dumating ang salary?",
+      "answer": "PESOs payroll officer o Municipal HR officer."
+    },
+    {
+      "id": 149,
+      "question": "Paano i-download ang SPES certificate?",
+      "answer": "Makikita sa DigiSPES dashboard sa employment section kapag kumpleto na ang work period."
+    },
+    {
+      "id": 150,
+      "question": "Pwede bang mag-apply sa parehong year sa ibang LGU?",
+      "answer": "Depende sa rules ng SPES, karaniwan ay sa iyong LGU residence lang."
+    },
+    {
+      "id": 151,
+      "question": "Paano i-check ang exam result?",
+      "answer": "Makikita ito sa DigiSPES dashboard sa 'Examination Results' section."
+    },
+    {
+      "id": 152,
+      "question": "Sino ang contact kung mali ang exam score?",
+      "answer": "Makipag-ugnayan sa PESO o system admin para ma-verify ang score."
+    },
+    {
+      "id": 153,
+      "question": "May alert ba para sa pending documents?",
+      "answer": "Oo, may notification sa dashboard kung kulang ang documents."
+    },
+    {
+      "id": 154,
+      "question": "Pwede bang mag-request ng duplicate certificate?",
+      "answer": "Oo, sa pamamagitan ng PESO request form."
+    },
+    {
+      "id": 155,
+      "question": "Sino ang contact kung may conflict sa schedule?",
+      "answer": "Municipal PESO staff ang dapat kontakin."
+    },
+    {
+      "id": 156,
+      "question": "Paano malalaman ang work duration?",
+      "answer": "Makikita sa employment assignment sa dashboard o notification email."
+    },
+    {
+      "id": 157,
+      "question": "Pwede bang mag-apply sa SPES kung part-time student?",
+      "answer": "Oo, basta currently enrolled at eligible sa program."
+    },
+    {
+      "id": 158,
+      "question": "Sino ang contact kung may missing notification?",
+      "answer": "Makipag-ugnayan sa PESO o system admin."
+    },
+    {
+      "id": 159,
+      "question": "Paano i-verify ang employment assignment?",
+      "answer": "Makikita sa DigiSPES dashboard sa employment section."
+    },
+    {
+      "id": 160,
+      "question": "Pwede bang mag-submit ng late document?",
+      "answer": "Depende sa PESO, maaaring tanggapin sa special cases."
+    },
+    {
+      "id": 161,
+      "question": "Sino ang contact kung may problema sa uploaded photo?",
+      "answer": "Municipal PESO staff o system admin."
+    },
+    {
+      "id": 162,
+      "question": "Paano malalaman ang official start date?",
+      "answer": "Makikita sa employment notification sa dashboard o sa email."
+    },
+    {
+      "id": 163,
+      "question": "Pwede bang magtanong tungkol sa leave days?",
+      "answer": "Makipag-ugnayan sa employer at PESO."
+    },
+    {
+      "id": 164,
+      "question": "Sino ang contact kung may payroll discrepancy?",
+      "answer": "Payroll officer ng PESO o HR ng LGU."
+    },
+    {
+      "id": 165,
+      "question": "Paano malalaman kung approved ang stipend?",
+      "answer": "Makikita sa DigiSPES dashboard at may confirmation email mula sa PESO."
+    },
+    {
+      "id": 166,
+      "question": "Pwede bang mag-apply kung may ibang scholarship?",
+      "answer": "Depende sa guidelines, kailangan i-disclose sa application."
+    },
+    {
+      "id": 167,
+      "question": "Sino ang contact kung may conflict sa employer?",
+      "answer": "Makipag-ugnayan sa Municipal PESO para sa resolution."
+    },
+    {
+      "id": 168,
+      "question": "Paano malaman kung kompleto na ang application?",
+      "answer": "Makikita sa dashboard sa 'Application Status' at notifications."
+    },
+    {
+      "id": 169,
+      "question": "Pwede bang magtanong sa chatbot tungkol sa employment?",
+      "answer": "Oo, makakatulong ang chatbot sa basic employment inquiries."
+    },
+    {
+      "id": 170,
+      "question": "Sino ang contact kung may technical issue sa exam?",
+      "answer": "System admin o PESO IT support."
+    },
+    {
+      "id": 171,
+      "question": "Pwede bang magtanong kung ilan ang available slots?",
+      "answer": "Oo, Municipal PESO ang dapat kontakin para sa slot availability."
+    },
+    {
+      "id": 172,
+      "question": "Paano malalaman ang location ng employer?",
+      "answer": "Makikita sa employment assignment section ng DigiSPES dashboard."
+    },
+    {
+      "id": 173,
+      "question": "Sino ang contact kung may conflict sa schedule ng training?",
+      "answer": "Municipal PESO staff ang dapat kontakin."
+    },
+    {
+      "id": 174,
+      "question": "Pwede bang magtanong sa school tungkol sa SPES?",
+      "answer": "Oo, school guidance counselors ay makakatulong sa inquiries."
+    },
+    {
+      "id": 175,
+      "question": "Paano malalaman kung kailangan ng additional documents?",
+      "answer": "Makikita sa dashboard o notifications mula sa PESO."
+    },
+    {
+      "id": 176,
+      "question": "Pwede bang i-resubmit ang document?",
+      "answer": "Oo, sa pamamagitan ng PESO request kung may errors."
+    },
+    {
+      "id": 177,
+      "question": "Sino ang contact kung may problema sa salary release?",
+      "answer": "Payroll officer ng PESO o HR ng LGU."
+    },
+    {
+      "id": 178,
+      "question": "Paano i-check ang final approval?",
+      "answer": "Makikita sa DigiSPES dashboard at sa email notification."
+    },
+    {
+      "id": 179,
+      "question": "Pwede bang magtanong tungkol sa stipend computation?",
+      "answer": "Oo, Municipal PESO payroll officer ang pwedeng tanungin."
+    },
+    {
+      "id": 180,
+      "question": "Sino ang contact kung may issue sa DigiSPES chatbot?",
+      "answer": "Makipag-ugnayan sa system admin o Municipal PESO IT support."
+    },
+        {
+      "id": 181,
+      "question": "Who can I contact for general inquiries?",
+      "answer": "For general inquiries, you can contact your Municipal PESO office or the DigiSPES support team via email or hotline. / Para sa general inquiries, makipag-ugnayan sa Municipal PESO o DigiSPES support team."
+    },
+    {
+      "id": 182,
+      "question": "How do I know my application is complete?",
+      "answer": "Check your DigiSPES dashboard for 'Application Status' and any pending notifications. / Tingnan ang DigiSPES dashboard sa 'Application Status' at notifications kung kumpleto na ang application."
+    },
+    {
+      "id": 183,
+      "question": "Who do I contact for exam schedule changes?",
+      "answer": "Contact your Municipal PESO office for possible adjustments. / Makipag-ugnayan sa Municipal PESO para sa schedule adjustments."
+    },
+    {
+      "id": 184,
+      "question": "Where can I see my exam results?",
+      "answer": "Exam results are available on your DigiSPES dashboard under 'Examination Results'. / Makikita ang exam results sa DigiSPES dashboard sa 'Examination Results'."
+    },
+    {
+      "id": 185,
+      "question": "Who do I contact if my exam score is wrong?",
+      "answer": "Contact the system administrator or Municipal PESO to verify your score. / Makipag-ugnayan sa system admin o Municipal PESO para ma-verify ang score."
+    },
+    {
+      "id": 186,
+      "question": "How do I know my employment assignment?",
+      "answer": "Employment assignment details appear on your DigiSPES dashboard once approved. / Makikita ang employment assignment sa DigiSPES dashboard kapag approved na."
+    },
+    {
+      "id": 187,
+      "question": "Who do I contact if my employment assignment is incorrect?",
+      "answer": "Contact your Municipal PESO office for corrections. / Makipag-ugnayan sa Municipal PESO para sa correction ng assignment."
+    },
+    {
+      "id": 188,
+      "question": "How do I check my stipend or salary?",
+      "answer": "Check your payroll section on the DigiSPES dashboard or contact PESO payroll officer. / Tingnan sa payroll section ng DigiSPES o kontakin ang PESO payroll officer."
+    },
+    {
+      "id": 189,
+      "question": "Who do I contact if salary is delayed?",
+      "answer": "Contact your PESO payroll officer or HR representative of the LGU. / Kontakin ang PESO payroll officer o HR ng LGU."
+    },
+    {
+      "id": 190,
+      "question": "Where can I download my SPES certificate?",
+      "answer": "Once your employment period is complete, download from DigiSPES dashboard. / Kapag tapos na ang employment period, i-download sa DigiSPES dashboard."
+    },
+    {
+      "id": 191,
+      "question": "Who do I contact if SPES certificate has errors?",
+      "answer": "Contact your Municipal PESO staff or system admin for corrections. / Makipag-ugnayan sa Municipal PESO o system admin para sa correction."
+    },
+    {
+      "id": 192,
+      "question": "How do I reset my DigiSPES password?",
+      "answer": "Use the 'Forgot Password' link on the login page or contact support. / Gamitin ang 'Forgot Password' sa login page o kontakin ang support."
+    },
+    {
+      "id": 193,
+      "question": "Who do I contact for technical issues with DigiSPES?",
+      "answer": "Contact the system administrator or IT support via email or hotline. / Makipag-ugnayan sa system admin o IT support via email o hotline."
+    },
+    {
+      "id": 194,
+      "question": "How can I update my contact information?",
+      "answer": "Update it in your account settings on DigiSPES. / I-update sa account settings sa DigiSPES."
+    },
+    {
+      "id": 195,
+      "question": "Who do I contact if I missed the application deadline?",
+      "answer": "Contact your Municipal PESO for guidance on possible extensions. / Makipag-ugnayan sa Municipal PESO para sa extension options."
+    },
+    {
+      "id": 196,
+      "question": "How do I submit additional documents?",
+      "answer": "Upload through your DigiSPES account if the system allows or submit to PESO staff. / I-upload sa DigiSPES account o isumite sa PESO staff."
+    },
+    {
+      "id": 197,
+      "question": "Who can help if I encounter errors during the online exam?",
+      "answer": "Contact the system admin or your Municipal PESO office immediately. / Makipag-ugnayan sa system admin o Municipal PESO agad."
+    },
+    {
+      "id": 198,
+      "question": "How do I know if I am eligible for SPES?",
+      "answer": "Check the eligibility module in DigiSPES or verify with PESO staff. / Tingnan ang eligibility module sa DigiSPES o i-verify sa PESO."
+    },
+    {
+      "id": 199,
+      "question": "Who do I contact if I want to appeal a rejected application?",
+      "answer": "Submit a formal request to your Municipal PESO office. / Mag-submit ng formal request sa Municipal PESO."
+    },
+    {
+      "id": 200,
+      "question": "How can DigiSPES help me as a student?",
+      "answer": "It simplifies the SPES application, examination, and employment tracking process. / Pinapadali nito ang SPES application, exam, at employment tracking para sa mga estudyante."
+    },
+        {
+      "id": 201,
+      "question": "What should I do if I forget my DigiSPES password?",
+      "answer": "Click 'Forgot Password' on the login page and follow instructions, or contact support. / I-click ang 'Forgot Password' sa login page at sundin ang instructions o kontakin ang support."
+    },
+    {
+      "id": 202,
+      "question": "How do I know when my application is being reviewed?",
+      "answer": "Check your dashboard for status updates like 'Under Review'. / Tingnan ang dashboard para sa status tulad ng 'Under Review'."
+    },
+    {
+      "id": 203,
+      "question": "Who do I contact for help with uploading documents?",
+      "answer": "Municipal PESO staff or system admin can assist. / Municipal PESO staff o system admin ang pwedeng makatulong."
+    },
+    {
+      "id": 204,
+      "question": "Can I apply for SPES online from home?",
+      "answer": "Yes, DigiSPES is web-based and accessible anywhere with an internet connection. / Oo, ang DigiSPES ay web-based at puwedeng gamitin kahit saan basta may internet."
+    },
+    {
+      "id": 205,
+      "question": "What if my internet connection fails during the online exam?",
+      "answer": "Contact Municipal PESO immediately to report and request assistance. / Makipag-ugnayan agad sa Municipal PESO para i-report at humingi ng tulong."
+    },
+    {
+      "id": 206,
+      "question": "How do I check my pending documents?",
+      "answer": "Pending documents are listed in your DigiSPES dashboard notifications. / Nakalista ang pending documents sa dashboard notifications."
+    },
+    {
+      "id": 207,
+      "question": "Who should I contact for questions about SPES eligibility?",
+      "answer": "Your Municipal PESO staff is the best contact. / Municipal PESO staff ang pinakamainam na contact."
+    },
+    {
+      "id": 208,
+      "question": "Can I print my application form?",
+      "answer": "Yes, you can download and print the summary from your DigiSPES account. / Oo, puwede i-download at i-print ang application summary sa DigiSPES account."
+    },
+    {
+      "id": 209,
+      "question": "Who do I contact if I want to update my profile photo?",
+      "answer": "Upload through your account or contact PESO for assistance. / I-upload sa account o kontakin ang PESO para sa tulong."
+    },
+    {
+      "id": 210,
+      "question": "What should I do if my exam link doesn’t work?",
+      "answer": "Contact the system admin or PESO IT support immediately. / Makipag-ugnayan agad sa system admin o PESO IT support."
+    },
+    {
+      "id": 211,
+      "question": "Can I edit my application after submitting?",
+      "answer": "No, once submitted, edits are not allowed. Contact PESO for corrections. / Hindi, kapag na-submit na, hindi puwedeng i-edit. Kontakin ang PESO para sa correction."
+    },
+    {
+      "id": 212,
+      "question": "How do I know my stipend has been approved?",
+      "answer": "Check your DigiSPES dashboard and notification email from PESO. / Tingnan sa dashboard at notification email mula sa PESO."
+    },
+    {
+      "id": 213,
+      "question": "Who should I contact if I have issues with the SPES certificate?",
+      "answer": "Municipal PESO staff or system admin can assist. / Municipal PESO staff o system admin ang pwedeng makatulong."
+    },
+    {
+      "id": 214,
+      "question": "How can I check my work schedule?",
+      "answer": "Check your employment assignment section on DigiSPES dashboard. / Tingnan ang employment assignment section sa DigiSPES dashboard."
+    },
+    {
+      "id": 215,
+      "question": "What should I do if I didn’t receive notifications?",
+      "answer": "Contact your Municipal PESO or check your spam/junk email folder. / Kontakin ang Municipal PESO o tingnan ang spam/junk folder ng email."
+    },
+    {
+      "id": 216,
+      "question": "Who do I contact for problems with salary computation?",
+      "answer": "PESO payroll officer or HR officer of your LGU. / Kontakin ang PESO payroll officer o HR officer ng LGU."
+    },
+    {
+      "id": 217,
+      "question": "How can I submit missing documents after deadline?",
+      "answer": "Contact PESO for approval to resubmit. / Makipag-ugnayan sa PESO para sa approval ng resubmission."
+    },
+    {
+      "id": 218,
+      "question": "Who should I contact for employment conflicts?",
+      "answer": "Municipal PESO staff will assist in resolving issues. / Municipal PESO staff ang tutulong sa resolution."
+    },
+    {
+      "id": 219,
+      "question": "Can I apply if I am under 18 years old?",
+      "answer": "Yes, but you need parental consent and meet SPES requirements. / Oo, pero kailangan ng parental consent at SPES eligibility."
+    },
+    {
+      "id": 220,
+      "question": "Who do I contact for technical errors in DigiSPES?",
+      "answer": "System admin or PESO IT support. / System admin o PESO IT support."
+    },
+    {
+      "id": 221,
+      "question": "Can I apply if I am a part-time student?",
+      "answer": "Yes, you are eligible as long as you are currently enrolled. / Oo, eligible basta currently enrolled."
+    },
+    {
+      "id": 222,
+      "question": "How can I verify my assigned employer?",
+      "answer": "Check the employment assignment section on your dashboard. / Tingnan ang employment assignment section sa dashboard."
+    },
+    {
+      "id": 223,
+      "question": "Who should I contact if my uploaded photo is rejected?",
+      "answer": "Contact system admin or Municipal PESO for guidance. / Kontakin ang system admin o Municipal PESO para sa guidance."
+    },
+    {
+      "id": 224,
+      "question": "Can I reschedule my SPES orientation?",
+      "answer": "Contact PESO to request a reschedule. / Makipag-ugnayan sa PESO para mag-request ng reschedule."
+    },
+    {
+      "id": 225,
+      "question": "How do I know the location of my assigned workplace?",
+      "answer": "Check the employment assignment section on DigiSPES dashboard. / Tingnan ang employment assignment section sa dashboard."
+    },
+    {
+      "id": 226,
+      "question": "Who do I contact if my employment start date is delayed?",
+      "answer": "Contact Municipal PESO or your assigned employer. / Makipag-ugnayan sa Municipal PESO o employer."
+    },
+    {
+      "id": 227,
+      "question": "How can I know if my stipend has been released?",
+      "answer": "Check the payroll section on your dashboard or contact PESO payroll officer. / Tingnan ang payroll section sa dashboard o kontakin ang PESO payroll officer."
+    },
+    {
+      "id": 228,
+      "question": "What should I do if my DigiSPES dashboard shows errors?",
+      "answer": "Clear browser cache, refresh the page, or contact system admin. / I-clear ang browser cache, refresh, o kontakin ang system admin."
+    },
+    {
+      "id": 229,
+      "question": "Who can help me with SPES eligibility questions?",
+      "answer": "Municipal PESO staff or your school guidance counselor. / Municipal PESO staff o school guidance counselor."
+    },
+    {
+      "id": 230,
+      "question": "Can I check my previous SPES applications?",
+      "answer": "Yes, all past applications are recorded in your DigiSPES account. / Oo, naka-record lahat ng past applications sa account."
+    },
+    {
+      "id": 231,
+      "question": "Who do I contact if my DigiSPES account is locked?",
+      "answer": "Contact system admin or Municipal PESO to unlock your account. / Kontakin ang system admin o Municipal PESO para i-unlock ang account."
+    },
+    {
+      "id": 232,
+      "question": "How do I check my pending tasks?",
+      "answer": "Pending tasks appear in the dashboard notifications. / Nakalista ang pending tasks sa dashboard notifications."
+    },
+    {
+      "id": 233,
+      "question": "Can I access DigiSPES on my phone?",
+      "answer": "Yes, DigiSPES is mobile-friendly. / Oo, mobile-friendly ang DigiSPES."
+    },
+    {
+      "id": 234,
+      "question": "Who do I contact if notifications are not received?",
+      "answer": "Check spam/junk folder or contact Municipal PESO. / Tingnan spam/junk folder o kontakin ang Municipal PESO."
+    },
+    {
+      "id": 235,
+      "question": "How can I change my contact number in DigiSPES?",
+      "answer": "Update it in account settings or contact PESO for assistance. / I-update sa account settings o kontakin ang PESO para tulong."
+    },
+    {
+      "id": 236,
+      "question": "Who do I contact for issues with the online exam platform?",
+      "answer": "System admin or Municipal PESO IT support. / System admin o Municipal PESO IT support."
+    },
+    {
+      "id": 237,
+      "question": "Can I apply for SPES if I have other government aid?",
+      "answer": "Yes, disclose other aid in your application. / Oo, i-disclose ang ibang aid sa application."
+    },
+    {
+      "id": 238,
+      "question": "How do I download DigiSPES reports?",
+      "answer": "Reports can be downloaded from your dashboard if permitted. / Puwedeng i-download ang reports sa dashboard kung pinapayagan."
+    },
+    {
+      "id": 239,
+      "question": "Who do I contact if DigiSPES system is down?",
+      "answer": "Contact system admin or Municipal PESO for status updates. / Kontakin ang system admin o Municipal PESO para sa update."
+    },
+    {
+      "id": 240,
+      "question": "Can I track my employment history in DigiSPES?",
+      "answer": "Yes, all assigned jobs are tracked in your account. / Oo, naka-track lahat ng employment sa account."
+    }
+  ]
+}
