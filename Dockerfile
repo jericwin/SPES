@@ -26,5 +26,5 @@ COPY . .
 # Expose port (Render sets $PORT dynamically)
 EXPOSE 5000
 
-# Run with Gunicorn using Eventlet worker for Flask-SocketIO support
-CMD ["sh", "-c", "gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:${PORT:-5000} app:app"]
+# Run with Gunicorn using GeventWebSocketWorker for full Flask-SocketIO support
+CMD ["sh", "-c", "gunicorn --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 --bind 0.0.0.0:${PORT:-5000} app:app"]

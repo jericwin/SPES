@@ -9,5 +9,8 @@ numpy==1.26.2
 setuptools>=68.0.0
 Flask-SocketIO>=5.3.6
 gunicorn>=21.2.0
+gevent>=24.2.1
+gevent-websocket>=0.10.1
 eventlet>=0.35.2
+greenlet>=3.0.3
 pytz>=2024.1
