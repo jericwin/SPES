@@ -35,16 +35,24 @@ else
     mysql -u root -e "GRANT ALL PRIVILEGES ON digispes.* TO 'digispes_user'@'%';" || true
     mysql -u root -e "FLUSH PRIVILEGES;" || true
 
-    # Always check if exams table exists, if not import
-    HAS_EXAMS=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'digispes' AND table_name = 'exams';" 2>/dev/null || echo 0)
-    if [ "$HAS_EXAMS" -eq 0 ]; then
-        echo "Importing initial database dump (digispes JAN 5.sql)..."
-        if [ -f "/app/digispes (JAN 5).sql" ]; then
-            mysql -u root --force --default-character-set=utf8mb4 digispes < "/app/digispes (JAN 5).sql" || true
+    # Always check if municipalities table exists, if not import
+    HAS_MUNICIPALITIES=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'digispes' AND table_name = 'municipalities';" 2>/dev/null || echo 0)
+    if [ "$HAS_MUNICIPALITIES" -eq 0 ]; then
+        echo "Importing initial database dump..."
+        if [ -f "/app/digispes_init.sql" ]; then
+            echo "Using /app/digispes_init.sql..."
+            mysql -u root --force --default-character-set=utf8mb4 digispes < "/app/digispes_init.sql"
+        elif [ -f "/app/digispes (JAN 5).sql" ]; then
+            echo "Using /app/digispes (JAN 5).sql..."
+            mysql -u root --force --default-character-set=utf8mb4 digispes < "/app/digispes (JAN 5).sql"
         elif [ -f "/app/schema.sql" ]; then
-            mysql -u root --force --default-character-set=utf8mb4 digispes < "/app/schema.sql" || true
+            echo "Using /app/schema.sql..."
+            mysql -u root --force --default-character-set=utf8mb4 digispes < "/app/schema.sql"
+        else
+            echo "ERROR: No SQL dump file found in /app!"
         fi
-        echo "Database imported successfully!"
+        TABLE_COUNT=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'digispes';" 2>/dev/null || echo 0)
+        echo "Database import completed. Total tables in digispes: $TABLE_COUNT"
     else
         echo "Database already populated."
     fi

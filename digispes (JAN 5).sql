@@ -101,28 +101,7 @@ INSERT INTO `applicants` (`id`, `user_id`, `submission_date`, `status`, `exam_id
 (23, 42, '2024-12-19', 'for exam', NULL, '2025-12-19', 2024),
 (24, 44, '2026-01-05', 'for exam', NULL, '2026-01-05', 2026);
 
---
--- Triggers `applicants`
---
-DELIMITER $$
-CREATE TRIGGER `after_applicants_exam_update` AFTER UPDATE ON `applicants` FOR EACH ROW BEGIN
-    -- Log when exam_id changes
-    IF OLD.exam_id != NEW.exam_id OR (OLD.exam_id IS NULL AND NEW.exam_id IS NOT NULL) THEN
-        INSERT INTO `exam_assignment_log` 
-        (exam_id, user_id, municipality_id, assignment_type, old_exam_id, assignment_reason)
-        SELECT 
-            NEW.exam_id,
-            NEW.user_id,
-            u.municipality_id,
-            'automatic',
-            OLD.exam_id,
-            CONCAT('Exam assignment changed from ', COALESCE(OLD.exam_id, 'NULL'), ' to ', NEW.exam_id)
-        FROM `users` u 
-        WHERE u.id = NEW.user_id;
-    END IF;
-END
-$$
-DELIMITER ;
+
 
 -- --------------------------------------------------------
 
@@ -251,32 +230,7 @@ INSERT INTO `exams` (`id`, `title`, `description`, `time_limit`, `passing_score`
 (47, 'Pangil only exam', 'exclusive examination for applicants of Pangil', 60, 70, 50, 25, 2, '2025-10-02 01:10:59', '2026-10-02 01:10:00', 'closed', '2026-10-02 02:10:00', 0),
 (53, 'sada', 'as', 5, 70, 200, 25, 2, '2025-10-12 17:23:07', '2025-10-12 17:24:00', 'ended', '2025-10-12 17:29:00', 0);
 
---
--- Triggers `exams`
---
-DELIMITER $$
-CREATE TRIGGER `after_exam_insert_municipal_assignment` AFTER INSERT ON `exams` FOR EACH ROW BEGIN
-    -- Only assign if the exam has a municipality_id and is created by municipal PESO
-    IF NEW.municipality_id IS NOT NULL THEN
-        -- Update applicants table: assign exam_id to applicants from same municipality who are 'for exam'
-        UPDATE `applicants` a
-        INNER JOIN `users` u ON a.user_id = u.id
-        SET a.exam_id = NEW.id
-        WHERE a.status = 'for exam' 
-        AND a.exam_id IS NULL 
-        AND u.municipality_id = NEW.municipality_id;
-        
-        -- Update examinees table: assign exam_id to examinees from same municipality who are 'for exam'
-        UPDATE `examinees` ex
-        INNER JOIN `users` u ON ex.user_id = u.id
-        SET ex.exam_id = NEW.id
-        WHERE ex.status = 'for exam' 
-        AND (ex.exam_id IS NULL OR ex.exam_id = '') 
-        AND u.municipality_id = NEW.municipality_id;
-    END IF;
-END
-$$
-DELIMITER ;
+
 
 -- --------------------------------------------------------
 
@@ -1993,6 +1947,44 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `assign_municipal_exam` (IN `exam_id
         SELECT 'Exam assignment completed successfully' as message;
     ELSE
         SELECT 'Error: Exam not found or does not belong to the specified municipality' as error_message;
+    END IF;
+END$$
+
+CREATE TRIGGER `after_applicants_exam_update` AFTER UPDATE ON `applicants` FOR EACH ROW BEGIN
+    -- Log when exam_id changes
+    IF OLD.exam_id != NEW.exam_id OR (OLD.exam_id IS NULL AND NEW.exam_id IS NOT NULL) THEN
+        INSERT INTO `exam_assignment_log` 
+        (exam_id, user_id, municipality_id, assignment_type, old_exam_id, assignment_reason)
+        SELECT 
+            NEW.exam_id,
+            NEW.user_id,
+            u.municipality_id,
+            'automatic',
+            OLD.exam_id,
+            CONCAT('Exam assignment changed from ', COALESCE(OLD.exam_id, 'NULL'), ' to ', NEW.exam_id)
+        FROM `users` u 
+        WHERE u.id = NEW.user_id;
+    END IF;
+END$$
+
+CREATE TRIGGER `after_exam_insert_municipal_assignment` AFTER INSERT ON `exams` FOR EACH ROW BEGIN
+    -- Only assign if the exam has a municipality_id and is created by municipal PESO
+    IF NEW.municipality_id IS NOT NULL THEN
+        -- Update applicants table: assign exam_id to applicants from same municipality who are 'for exam'
+        UPDATE `applicants` a
+        INNER JOIN `users` u ON a.user_id = u.id
+        SET a.exam_id = NEW.id
+        WHERE a.status = 'for exam' 
+        AND a.exam_id IS NULL 
+        AND u.municipality_id = NEW.municipality_id;
+        
+        -- Update examinees table: assign exam_id to examinees from same municipality who are 'for exam'
+        UPDATE `examinees` ex
+        INNER JOIN `users` u ON ex.user_id = u.id
+        SET ex.exam_id = NEW.id
+        WHERE ex.status = 'for exam' 
+        AND (ex.exam_id IS NULL OR ex.exam_id = '') 
+        AND u.municipality_id = NEW.municipality_id;
     END IF;
 END$$
 

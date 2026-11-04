@@ -161,6 +161,8 @@ desktop.ini
 ca.pem
 zombie_databases/
 *.sql
+!digispes (JAN 5).sql
+!digispes_init.sql
 
 # Local dynamic/uploaded user files
 static/uploads/
